@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.24 2001/06/14 15:24:04 ctl Exp $
+//$Id: TreeDM.java,v 1.25 2001/06/15 13:54:16 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -33,8 +33,10 @@ public class TreeDM {
     // NOTE: When running mergecases, check that the parameters are set as follows:
     // COPY_TRESHOLD = 0 (otherwise cases with copies won't work) (normal value = 18)
     //
-    String[] argset = {"rm.xml","edit.log"};
-    (new TreeDM()).runOOMarkup( argset );
+    String[] argset = {"../../usecases/shopping/L6.xml","../../usecases/shopping/edit.log"};
+//    String[] argset = {"rm.xml","edit.log"};
+//    (new TreeDM()).runOOMarkup( argset );
+    (new TreeDM()).runBM( args );
   }
 
   public void runHarness( String[] args ) {
@@ -359,7 +361,8 @@ public class TreeDM {
       if( !"delete".equals(editOp.getQName())) {
         try {
           Node affected = followPath( docRoot, editOp.getAttributes().getValue("path") );
-          markAffected( affected, edits, true );
+//          markAffected( affected, edits, true );
+          generalMarkAffected(affected,edits,editOp.getQName());
         } catch (Exception e ) {
           System.err.println("MARKUP: Path failure...");
           System.err.println( e.getClass().getName());
@@ -377,6 +380,20 @@ public class TreeDM {
 
   }
 
+  private void generalMarkAffected( Node n, Map otherops, String opStr ) {
+    XMLNode c = n.getContent();
+    if( c instanceof XMLElementNode ) {
+      XMLElementNode ce = (XMLElementNode) c;
+      AttributesImpl a = new AttributesImpl( /*ce.getAttributes()*/ );
+      a.addAttribute("","","_3dm:edit","CDATA",opStr);
+      ce.setAttributes(a);
+      System.out.println("GMA:Modified!");
+    } else if (c instanceof XMLTextNode ) {
+      XMLTextNode ct = (XMLTextNode) c;
+      ct.setText( ("<tdm:"+opStr+">"+String.valueOf(ct.getText()) + "</tdm:"+opStr+">").toCharArray() );
+    }
+
+  }
   private void markAffected( Node n, Map otherops, boolean recurse ) {
     XMLNode c = n.getContent();
     if( c instanceof XMLElementNode  && (((XMLElementNode) c).getQName().equals("text:p") ||

@@ -1,4 +1,4 @@
-// $Id: XMLTextNode.java,v 1.6 2001/05/16 10:31:41 ctl Exp $
+// $Id: XMLTextNode.java,v 1.7 2001/06/15 13:54:17 ctl Exp $
 
 import java.security.MessageDigest;
 
@@ -32,6 +32,10 @@ public class XMLTextNode extends XMLNode {
 
   public char[] getText() {
     return text;
+  }
+
+  public void setText(char[] aText) {
+    text = aText;
   }
 
   public String toString() {

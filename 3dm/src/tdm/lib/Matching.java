@@ -1,4 +1,4 @@
-// $Id: Matching.java,v 1.12 2001/06/14 13:12:43 ctl Exp $
+// $Id: Matching.java,v 1.13 2001/06/15 13:54:16 ctl Exp $
 
 import java.util.Vector;
 import java.util.Iterator;
@@ -235,7 +235,7 @@ public class Matching {
   }
 
   public static int COPY_THRESHOLD = 32;
-  static final int EDGE_BYTES = 8;
+  static final int EDGE_BYTES = 4;
 
   private void removeSmallCopies( BranchNode root ) {
     BaseNode base = root.getBaseMatch();

@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.28 2001/06/14 13:12:43 ctl Exp $
+// $Id: Merge.java,v 1.29 2001/06/15 13:54:16 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -55,6 +55,7 @@ public class Merge {
   if( mlistA.getEntryCount() > 30 )
       debug=1;
 */
+/*
     if(debug>0 || mlistA.getEntryCount()>40) {
     System.out.println("Merge A list");
     if( mlistA != null )
@@ -67,6 +68,7 @@ public class Merge {
     else
       System.out.println("--none--");
     }
+*/
     // Generate merge pair List
     if( mlistA != null && mlistB != null )
       merged = makeMergePairList( mlistA, mlistB ); // Merge lists
@@ -436,10 +438,12 @@ public class Merge {
       // Check if the hangons match _exactly_ (no inserts, and exactly same sequence of copies)
       // Then we can include the hangons just once. This resembles the case when content of
       // two nodes has been updated the same way... not a conflict, but maybe suspicious
+      // NOTE! We need to match the entire subtrees rooted at the hangon, that's why treeMatches is used.
+      // (Otherwise <p>Hello</p> and <p>World</p> would be considered equal (since <p>=<p>)
       if( eb.getHangonCount() == ea.getHangonCount() ) {
         hangonsAreEqual = true;
         for(int i=0;hangonsAreEqual && i<ea.getHangonCount();i++)
-          hangonsAreEqual = matches( eb.getHangon(i).getNode(),  ea.getHangon(i).getNode() );
+          hangonsAreEqual = treeMatches( eb.getHangon(i).getNode(),  ea.getHangon(i).getNode() );
       }
       // Both have hangons,
       // add CONFLICTCODE here
@@ -904,6 +908,17 @@ public class Merge {
 /*    if( a.getContent() == null )
       throw new RuntimeException("NULL content?");*/
     return a.getContent().contentEquals(b.getContent());
+  }
+
+  protected boolean treeMatches( Node a, Node b ) {
+    if( !matches(a,b) )
+      return false;
+    if( a.getChildCount() != b.getChildCount() )
+      return false;
+    boolean matches = true;
+    for( int i=0;i<a.getChildCount() && matches;i++)
+      matches &= treeMatches(a.getChildAsNode(i),b.getChildAsNode(i));
+    return matches;
   }
 
 }
