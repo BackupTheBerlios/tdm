@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.28 2001/06/18 10:02:09 ctl Exp $
+//$Id: TreeDM.java,v 1.29 2001/06/19 11:26:59 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -33,11 +33,11 @@ public class TreeDM {
     // NOTE: When running mergecases, check that the parameters are set as follows:
     // COPY_TRESHOLD = 0 (otherwise cases with copies won't work) (normal value = 18)
     //
-    String[] argset = {"../../usecases/shopping/L6.xml","../../usecases/shopping/edit.log"};
+    String[] argset = {"../../usecases/pdaedit/ccs-complex-2.html","../../usecases/pdaedit/edit.log"};
 //    String[] argset = {"rm.xml","edit.log"};
-//    (new TreeDM()).runOOMarkup( argset );
-//    (new TreeDM()).runBM( args );
-    (new TreeDM()).runHarness( args );
+    //(new TreeDM()).runOOMarkup( argset );
+    (new TreeDM()).runBM( args );
+    //(new TreeDM()).runHarness( args );
   }
 
   public void runHarness( String[] args ) {
@@ -242,7 +242,7 @@ public class TreeDM {
   public void runBM( String[] args ) {
    BranchNode docA=null;
    BaseNode docBase=null;
-   final String OTHER = "1";
+   final String OTHER = "2";
     if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
       System.exit(0);

@@ -1,7 +1,9 @@
-// $Id: Merge.java,v 1.31 2001/06/18 10:02:09 ctl Exp $
+// $Id: Merge.java,v 1.32 2001/06/19 11:26:59 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
+import org.xml.sax.Attributes;
+import org.xml.sax.helpers.AttributesImpl;
 import java.util.Vector;
 import java.util.Set;
 import java.util.HashSet;
@@ -167,10 +169,21 @@ public class Merge {
         logUpdateOperation(a);
         return a.getContent();
       } else {
-
-        //
-        // CONFLICTCODE here
+        XMLNode merged = null;
         // if XMLElementNode try merging attributes if XMLTextnode give up
+        if( a.getContent() instanceof XMLElementNode && b.getContent() instanceof XMLElementNode ) {
+          /*System.err.println("EMMERGE");
+          System.err.println("base="+a.getBaseMatch().getContent().toString());
+          System.err.println("a="+a.getContent().toString());
+          System.err.println("b="+b.getContent().toString());*/
+          merged = mergeElementNodes( (XMLElementNode) a.getBaseMatch().getContent(),
+            (XMLElementNode) a.getContent(), (XMLElementNode) b.getContent() );
+          //System.err.println("m=" + (merged==null ? "CONFLICT" : merged.toString()));
+        }
+        if( merged != null )
+          return merged;
+        // XMLTextNodes, or failed to merge element nodes => conflict
+        // CONFLICTCODE here
         clog.addNodeConflict(ConflictLog.UPDATE,"Node updated in both branches, using branch 1",
           a.getBaseMatch(),a,b);
 /*
@@ -194,6 +207,58 @@ public class Merge {
       return a.getContent();
     } else
       return a.getContent(); // none modified, a or b is ok
+  }
+
+  private XMLElementNode mergeElementNodes( XMLElementNode baseN, XMLElementNode aN, XMLElementNode bN ) {
+    //System.err.println("!!! in mergeElementNodes");
+    String tagName ="";
+    if( baseN.getQName().equals(bN.getQName()))
+      tagName = aN.getQName();
+    else if( baseN.getQName().equals(aN.getQName()))
+      tagName = bN.getQName();
+    else
+      return null; // CONFLICT: Both changed (possibly same, but let's be careful)
+    Attributes base = baseN.getAttributes(), a = aN.getAttributes(), b=bN.getAttributes();
+    // Check deleted attribs
+    Set deletia = new HashSet();
+    for( int i=0;i<base.getLength();i++) {
+      int ixa = a.getIndex(base.getQName(i));
+      int ixb = b.getIndex(base.getQName(i));
+      if( (ixa == -1 && ixb!= -1 && !base.getValue(i).equals(b.getValue(ixb))) ||
+          (ixb == -1 && ixa!= -1 && !base.getValue(i).equals(a.getValue(ixa))) )
+        return null; // CONFLICTCODE: attrib deleted & changed
+      if( ixa == -1 || ixb == -1 )
+        deletia.add(base.getQName(i));
+    }
+    AttributesImpl merged = new AttributesImpl();
+    // Build combined list (inserts from A + updated common in A & B)
+    for( int i=0;i<a.getLength();i++) {
+      String qName = a.getQName(i);
+      String value = a.getValue(i);
+      if( deletia.contains(qName) )
+        continue; // was deleted
+      int ixb = b.getIndex(qName);
+      if( ixb == -1 )
+        merged.addAttribute("","",qName,a.getType(i),value); // Insert
+      else {
+        String valueB = b.getValue(ixb);
+        String valueBase = base.getValue(qName);
+        if( valueB.equals(valueBase) )
+          merged.addAttribute("","",qName,a.getType(i),value); // A possibly updated
+        else if( value.equals(valueBase) )
+          merged.addAttribute("","",qName,b.getType(ixb),valueB); // B possibly updated
+        else
+          return null; // CONFLICT: Both changed (possibly same, but let's be careful)
+      }
+    }
+    // Insertions from b
+    for( int i=0;i<b.getLength();i++) {
+      String qName = b.getQName(i);
+      if( deletia.contains(qName) || a.getIndex(qName) != -1)
+        continue; // was deleted or already processed
+      merged.addAttribute("","",qName,b.getType(i),b.getValue(i)); // Insert
+    }
+    return new XMLElementNode( tagName, merged );
   }
 
   private MergeList makeMergeList( BranchNode parent ) {
