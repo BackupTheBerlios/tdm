@@ -1,4 +1,4 @@
-// $Id: Editgen.java,v 1.4 2002/10/29 09:01:55 ctl Exp $
+// $Id: Editgen.java,v 1.5 2002/10/29 10:09:33 ctl Exp $
 package editgen;
 
 import XMLNode;
@@ -16,7 +16,7 @@ import java.util.Iterator;
 
 public class Editgen {
 
-  static java.util.Random rnd = new java.util.Random( 31415926L ); // repeatable runs!
+  static java.util.Random rnd = new java.util.Random( 314159269L ); // repeatable runs!
   static int idCounter = 1000000;
 
   public static void main(String[] args) {
@@ -73,13 +73,15 @@ public class Editgen {
     // Decide if node should be edited
     if( ! base.isMarked() ) {
       _visitCount++;
-      editNode = rnd.nextDouble() > 0.7;
+      editNode = rnd.nextDouble() > 0.5;
     }
     BranchNode n = null; // used by edit ops
     boolean after = false;
     MarkableBaseNode dest = null;
     if( editNode ) {
-      int op = 4;// (int) (rnd.nextDouble() *5.0);
+      int op = (int) (rnd.nextDouble() *5.0);
+//      if( op==1) op = 4;
+//      if( op==0) op = 3;
       switch(op) {
         case 0: // Delete node
           System.err.println("DEL");
@@ -284,6 +286,8 @@ public class Editgen {
                            boolean left ) {
     MatchedNodes m = null;
     //BranchNode deletedNode = null;
+    if( src != null && "dc12e".equals(  _getId(src) ) && left )
+      System.err.println("!! Size="+src.getLeft().getMatches().size());
     if( src != null ) {
       // We should detach all matches of src
       // NOTE! for move with multiple matches, assumes all matches are identical!
@@ -303,12 +307,16 @@ public class Editgen {
         int ix = match.getChildPos() + (after ? 1: 0);
         if (!cloneInsTree) {
           if( src != null ) {
+            System.err.println("XXXXX going in untested branch");
             ((BranchNode) insTree).setBaseMatch( src, BranchNode.MATCH_FULL );
             (left ? src.getLeft() : src.getRight()).addMatch((BranchNode)insTree);
           }
           match.getParent().addChild(ix,insTree);
         } else {
-          match.getParent().addChild(ix,clonedAndMatchedTree(insTree,left,false));
+          match.getParent().addChild(ix,clonedAndMatchedTree(
+          insTree instanceof BaseNode ? (left ? ((BaseNode) insTree).getLeft().getFullMatch() :
+          ((BaseNode) insTree).getRight().getFullMatch() ) : insTree
+          ,left,false));
         }
       }
     }
@@ -317,11 +325,15 @@ public class Editgen {
   protected BranchNode clonedAndMatchedTree( Node n, boolean left, boolean resetMatches ) {
     BaseNode b = n instanceof BaseNode ? (BaseNode) n : ((BranchNode) n).getBaseMatch();
     BranchNode nc = new BranchNode( n.getContent() );
-    nc.setBaseMatch(b,BranchNode.MATCH_FULL);
-    MatchedNodes mn = left ? b.getLeft() : b.getRight();
-    if( resetMatches )
-      mn.clearMatches();
-    mn.addMatch(nc);
+    if( left && "dc12e".equals(_getId(n)) )
+      System.err.println("kang");
+    if( b != null ) { // Set matches for non-inserted nodes
+      nc.setBaseMatch(b,BranchNode.MATCH_FULL);
+      MatchedNodes mn = left ? b.getLeft() : b.getRight();
+      if( resetMatches )
+        mn.clearMatches();
+      mn.addMatch(nc);
+    }
     for( int i=0;i<n.getChildCount();i++)
       nc.addChild(clonedAndMatchedTree(n.getChildAsNode(i),left,resetMatches));
     return nc;
@@ -381,12 +393,21 @@ public class Editgen {
         };
 
   private void _getByIds( Node n, String id, java.util.Set nodes ) {
-    XMLNode c = n.getContent();
-    if( c instanceof XMLElementNode &&
-        id.equals( ((XMLElementNode) c).getAttributes().getValue("id") ) )
+    if( id.equals(_getId(n)) )
         nodes.add(n);
     for(int i=0;i<n.getChildCount();i++)
       _getByIds(n.getChildAsNode(i),id,nodes);
   }
+
+  private String _getId( Node n ) {
+    XMLNode c = n.getContent();
+    if( c instanceof XMLElementNode ) {
+      XMLElementNode ce = (XMLElementNode) c;
+      return ce.getAttributes().getValue("id");
+    } else {
+      return ((XMLTextNode) c).toString();
+    }
+  }
+
 
 }
