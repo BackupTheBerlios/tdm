@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- $Id: build.xml,v 1.1 2003/01/09 14:47:04 ctl Exp $ -->
+<!-- $Id: build.xml,v 1.2 2003/02/05 14:16:18 ctl Exp $ -->
 <project name="3dm" default="3dm" basedir=".">
     <description>
         3DM build file
@@ -51,4 +51,55 @@
   <target name="3dm" depends="compile-lib,compile-tool"
         description="generate 3dm" >
   </target>
+
+  <target name="diff" depends="3dm">
+    <java classname="tdm.tool.TreeDiffMerge" fork="yes">
+      <classpath>
+        <path refid="libpath" />
+        <pathelement path="${build}" /> 
+      </classpath>
+      <arg value="--diff"/>
+      <arg file="${base}"/>
+      <arg file="${branch}"/>
+    </java>
+  </target>
+
+  <target name="patch" depends="3dm">
+    <java classname="tdm.tool.TreeDiffMerge" fork="yes">
+      <classpath>
+        <path refid="libpath" />
+        <pathelement path="${build}" /> 
+      </classpath>
+      <arg value="--patch"/>
+      <arg file="${base}"/>
+      <arg file="${patch}"/>
+    </java>
+  </target>
+
+  <target name="merge" depends="3dm">
+    <java classname="tdm.tool.TreeDiffMerge" fork="yes">
+      <classpath>
+        <path refid="libpath" />
+        <pathelement path="${build}" /> 
+      </classpath>
+      <arg value="--merge"/>
+      <arg file="${base}"/>
+      <arg file="${branch1}"/>
+      <arg file="${branch2}"/>
+    </java>
+  </target>
+
 </project>
+
+
+
+
+
+
+
+
+
+
+
+
+
