@@ -1,4 +1,4 @@
-// $Id: ElementNode.java,v 1.1 2001/03/14 08:23:54 ctl Exp $
+// $Id: ElementNode.java,v 1.2 2001/03/30 13:49:41 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 import org.xml.sax.Attributes;
@@ -11,7 +11,7 @@ public class ElementNode extends ONode {
   public Vector children = new Vector();
   public String nameSpace = null;
   public String name = null;
-  public Map attributes = null;
+  public Map attributes = new java.util.HashMap();
 
   public ElementNode( String ns, String ename, Attributes attr ) {
 //    System.out.println("EN " +ename +"; "+ (attr == null ? "(null)" : attr.toString() ));

@@ -1,4 +1,4 @@
-// $Id: ProtoBestMatching.java,v 1.7 2001/03/29 14:51:48 ctl Exp $
+// $Id: ProtoBestMatching.java,v 1.8 2001/03/30 13:49:41 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 //import TreeMatching;
@@ -77,7 +77,7 @@ public class ProtoBestMatching  {
     resolveAmbiguities( atRoot, base, derived );
     nodeMap.clear(); // Free all mappings
     makeMap( atRoot );
-    matchSamePosUnmatched( base, derived);
+//    matchSamePosUnmatched( base, derived);
     //
   }
 
@@ -86,8 +86,11 @@ public class ProtoBestMatching  {
       ; // Unmapped
     else if( n.getCandidateCount() < 2)
       dfsExactMatch( n.getNode(), n.getCandidate(0), true, 0, null );
-    else
-      System.out.println("makeMap: leaving ambiguity...");
+    else {
+      System.out.println("makeMap: leaving ambiguity...:" + n.getNode().toString() );
+      for(int i=0;i<n.getCandidateCount();i++)
+        dfsExactMatch( n.getNode(), n.getCandidate(i), true, 0, null );
+    }
     for( int i=0;i<n.getChildCount();i++)
       makeMap( n.getChild(i) );
   }
@@ -238,7 +241,26 @@ public class ProtoBestMatching  {
     HashSet candidates = new HashSet();
     Vector bestCandidates = new Vector();
     double bestCount = 0;
-    fuzzyFindCandidates( candidates, dstTreeNode, baseDoc ); // candidates in baseDoc
+    findCandidates( candidates, dstTreeNode, baseDoc ); // candidates in baseDoc
+    if( candidates.isEmpty() ) {
+      System.out.println("!!!!: No exact candidate for " + dstTreeNode.toString());
+      // No exact candidates, try fuzzy search
+      double minmc = fuzzyFindCandidates( candidates, dstTreeNode, baseDoc, 1e+99 ); // candidates in baseDoc
+      if( minmc > 0.2 )
+        candidates.clear(); // All candidates bad
+      else {
+        Set c2= candidates;
+        candidates = new HashSet();
+        for( Iterator i2=c2.iterator();i2.hasNext();) {
+          Candidate c = (Candidate) i2.next();
+          if( c.mc < 2*minmc ) {
+            candidates.add(c.node);
+            System.out.println("!!!!: Fuzzy candidate (mc="+ c.mc + "):" + c.node.toString());
+          }
+        }
+      }
+    }
+
     for( Iterator i = candidates.iterator(); i.hasNext(); ) {
       ONode candidate = (ONode) i.next();
       double thisCount = dfsExactMatch( dstTreeNode, candidate , false, 0, null );
@@ -272,14 +294,14 @@ public class ProtoBestMatching  {
         stopNodes = ((ElementNode) dstTreeNode).children;
     }
     if( stopNodes != null ) {
-//      System.out.println("stopNodes are:" +stopNodes.toString() );
+      //System.out.println("stopNodes are:" +stopNodes.toString() );
       for( int i=0;i<stopNodes.size();i++) {
         AreaNode atChild = new AreaNode((ONode) stopNodes.elementAt(i));
         atNode.addChild( atChild );
         buildAreaTree( (ONode) stopNodes.elementAt(i), atChild, baseDoc );
       }
     } else
-      System.out.println("stopNodes are: (null)" );
+      ;//System.out.println("stopNodes are: (null)" );
 
   }
 
@@ -289,22 +311,34 @@ public class ProtoBestMatching  {
     Vector stopNodes ) {
 /*DEBUG to get breakpoint   if( docA instanceof ElementNode && ((ElementNode) docA).name.endsWith("text:p") )
       count = count + 0.00001;*/
-    double matchGoodness = matchGoodness(docA,docB);
+/*    double matchGoodness = matchGoodness(docA,docB);
     if( !(matchGoodness >0.0) )
       throw new RuntimeException("dfsExactMatch: Assertion failed, docA != docB");
+*/
     if( addMatchings ) {
       addMatching( docA,docB );
       addMatching( docB, docA );
     }
     if( !(docA instanceof ElementNode))
-      return count+matchGoodness; // No more matches, but docA and docB matched
+      return count+1; //+matchGoodness; // No more matches, but docA and docB matched
     boolean childrenMatch = true;
     Vector children = ((ElementNode) docA).children;
     if( children.size() == ((ElementNode) docB).children.size() ) {
       // Only match children, if there are equally many
-      for( int i=0; childrenMatch && i<children.size(); i ++ )
-        childrenMatch = matchGoodness( (ONode) ((ElementNode) docA).children.elementAt(i),
-                                (ONode) ((ElementNode) docB).children.elementAt(i) ) > 0.0;
+      for( int i=0; childrenMatch && i<children.size(); i ++ ) {
+        childrenMatch = matches(docA.getChild(i),docB.getChild(i));
+        if( !childrenMatch ) {
+          double mc = (new MisCorrelation()).correlate( (ONode) ((ElementNode) docA).children.elementAt(i),
+                                (ONode) ((ElementNode) docB).children.elementAt(i) ).getValue();
+
+//          System.out.println("!!!!: Fuzzmatching (mc=" + mc + "): " + docA.getChild(i).toString() +"," +
+//              docB.getChild(i).toString());
+          childrenMatch =  mc < 0.2;
+          if(childrenMatch)
+            System.out.println("!!!!: Fuzzmatched (mc=" + mc + "): " + docA.getChild(i).toString() +"," +
+              docB.getChild(i).toString());
+        }
+      }
     } else
       childrenMatch = false;
     if( !childrenMatch ) {
@@ -318,7 +352,7 @@ public class ProtoBestMatching  {
                                 (ONode) ((ElementNode) docB).children.elementAt(i), addMatchings, 0, stopNodes );
 
     }
-  return count + matchGoodness; // +1 because docA and docB match
+  return count + 1; // +1 because docA and docB match
   }
 
   protected double matchGoodness( ONode a, ONode b ) {
@@ -339,17 +373,33 @@ public class ProtoBestMatching  {
     return value;
   }
 
+  class Candidate {
+    double mc=-1;
+    ONode node=null;
+  }
  // Candidates in treeRoot tree
-  protected void fuzzyFindCandidates( HashSet candidates, ONode key, ONode treeRoot ) {
-    // Threshold should probably depend on dostance from previous match etc.
-    if( matchGoodness( key, treeRoot ) > 0.0 /*  key.contentEquals(treeRoot) */ )
-      candidates.add(treeRoot);
-    // Process children
+  protected double fuzzyFindCandidates( HashSet candidates, ONode key, ONode treeRoot, double mmc ) {
+    // Threshold should probably depend on distance from previous match etc.
+    MisCorrelation mc = new MisCorrelation();
+    mc.correlate(key,treeRoot);
+    double cval =  mc.getValue();
+    if( cval < 1.0 ) { // 1.0 Magic correlation for candidates
+      Candidate c = new Candidate();
+      c.mc=cval;
+      c.node=treeRoot;
+      candidates.add(c);
+      if( cval < mmc )
+        mmc = cval;
+    }
+
     if( treeRoot instanceof ElementNode ) {
       Vector children = ((ElementNode) treeRoot).children;
-      for(int i=0;i<children.size();i++)
-        fuzzyFindCandidates(candidates, key, (ONode) children.elementAt(i) );
+      for(int i=0;i<children.size();i++) {
+        double thatmin = fuzzyFindCandidates(candidates, key, (ONode) children.elementAt(i), mmc );
+        mmc = thatmin < mmc ? thatmin : mmc;
+      }
     }
+    return mmc;
   }
 
 
@@ -472,6 +522,12 @@ public class ProtoBestMatching  {
                             // A perfect match of C bytes gets correlation 0.5
                             // as matches ->perfect, miscorrelation -> 0
     public MisCorrelation correlate( ONode a, ONode b ) {
+      if( ( a instanceof TextNode && b instanceof ElementNode ) ||
+          ( b instanceof TextNode && a instanceof ElementNode ) ) {
+          total=1;
+          mismatched=1; // Totallly different
+          return this;
+      }
       if( a instanceof TextNode ) {
         TextNode ta = (TextNode) a,tb=(TextNode) b;
         total+=Math.max( ta.text.length(), tb.text.length() );
@@ -540,10 +596,10 @@ public class ProtoBestMatching  {
     }
     int distance = 0;
     int s1len =s1.length();
-    for(int i=0;i<s1len;i+=3) {
-     String chunk = s1.substring(i,((i+3) > s1len ? s1len : i+3) );
+    for(int i=0;i<s1len;i+=4) {
+     String chunk = s1.substring(i,((i+4) > s1len ? s1len : i+4) );
       if( s2.indexOf(chunk) == -1 )
-        distance +=3;
+        distance +=chunk.length();
     }
 //    System.out.println("Distance is " + distance  );
 //    System.out.println("Lengths " + s2.length() + " and " + s1.length() );
