@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.22 2001/06/06 21:44:18 ctl Exp $
+// $Id: Merge.java,v 1.23 2001/06/07 08:35:48 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -398,12 +398,12 @@ public class Merge {
         // How should we encode the inserts, i.e. tell which nodes were inserted
         clog.addListWarning(ConflictLog.INSERT,"Equal insertions/copies in both branches after the context nodes.",
           ea.getNode().getBaseMatch() != null ? ea.getNode().getBaseMatch() : eb.getNode().getBaseMatch(),
-          ea.getNode(), eb.getNode() /*, mla, mlb*/ );
+          ea.getNode() != START ? ea.getNode() : null , eb.getNode() != START ? eb.getNode() : null /*, mla, mlb*/ );
         //System.out.println(); // as updated(or A if no update)-Other");
       else
         clog.addListWarning(ConflictLog.INSERT,"Insertions/copies in both branches after the context nodes. Sequencing the insertions.",
           ea.getNode().getBaseMatch() != null ? ea.getNode().getBaseMatch() : eb.getNode().getBaseMatch(),
-          ea.getNode(), eb.getNode() /*, mla, mlb*/ );
+          ea.getNode() != START ? ea.getNode() : null, eb.getNode() != START ? eb.getNode() : null /*, mla, mlb*/ );
 
 //            System.out.println("CONFLICTW; both nodes have hangons; sequencing them"); // as updated(or A if no update)-Other");
 /*        System.out.println("First list:");

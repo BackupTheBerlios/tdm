@@ -1,4 +1,4 @@
-// $Id: ConflictLog.java,v 1.2 2001/06/06 21:44:18 ctl Exp $
+// $Id: ConflictLog.java,v 1.3 2001/06/07 08:35:48 ctl Exp $
 
 import java.util.List;
 import java.util.Collections;
@@ -137,20 +137,11 @@ public class ConflictLog {
     ch.endElement("","",TYPETAGS[ce.type]);
   }
 
-/*
-  public void add( int type, BranchNode conflictingNode, String text ) {
-    System.out.println("CONFLICT:"+text);
-    System.out.println("path="+getPath());
-  }
-
-  public void addWarning( int type, BranchNode conflictingNode, String text ) {
-    System.out.println("CONFLICTW:"+text);
-    System.out.println("path="+getPath());
-  }
-*/
   private String getPathString( LinkedList path ) {
     StringBuffer p = new StringBuffer();
-    for( Iterator i=path.iterator();i.hasNext();) {
+    Iterator i=path.iterator(); // Skip artificial root node
+    i.next();
+    for(;i.hasNext();) {
       p.append(PATHSEP);
       p.append(((Integer) i.next()).toString());
     }
@@ -162,7 +153,7 @@ public class ConflictLog {
     do {
       path.addLast(new Integer(n.getChildPos()));
     } while( (n = n.getParentAsNode()) != null);
-    path.removeLast(); // We don't want the artificial root node in the path
+//    path.removeLast(); // We don't want the artificial root node in the path
     Collections.reverse(path);
     return path;
   }
