@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.16 2001/04/26 17:27:16 ctl Exp $
+// $Id: Merge.java,v 1.17 2001/04/27 16:59:10 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -663,8 +663,8 @@ public class Merge {
 
   // Merge list start and end markers. Cleaner if they were in MergeList, but
   // Java doesn't allow statics in nested classes
-  static BranchNode START = new BranchNode(null,-1,new XMLTextNode("__START__"));
-  static BranchNode END = new BranchNode(null,-1,new XMLTextNode("__END__"));
+  static BranchNode START = new BranchNode(/*null,-1,*/new XMLTextNode("__START__"));
+  static BranchNode END = new BranchNode(/*null,-1,*/new XMLTextNode("__END__"));
 
   // TODO: START end END markers should be completely hidden if possible
   class MergeList {

@@ -1,4 +1,4 @@
-// $Id: BaseNode.java,v 1.4 2001/04/26 17:27:15 ctl Exp $
+// $Id: BaseNode.java,v 1.5 2001/04/27 16:59:08 ctl Exp $
 
 public class BaseNode extends Node {
 
@@ -6,8 +6,8 @@ public class BaseNode extends Node {
   MatchedNodes left=null;
   MatchedNodes right=null;
 
-  public BaseNode( Node aParent, int achildPos, XMLNode aContent ) {
-    super( aParent,achildPos);
+  public BaseNode( /*Node aParent, int achildPos,*/ XMLNode aContent ) {
+    super();// aParent,achildPos);
     left = new MatchedNodes(this);
     right = new MatchedNodes(this);
     content = aContent;

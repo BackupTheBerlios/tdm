@@ -1,4 +1,4 @@
-// $Id: Node.java,v 1.6 2001/04/26 17:27:16 ctl Exp $
+// $Id: Node.java,v 1.7 2001/04/27 16:59:10 ctl Exp $
 
 import java.util.Vector;
 
@@ -8,13 +8,16 @@ public abstract class Node {
   protected XMLNode content = null;
   protected Node parent = null;
   protected int childPos=-1; // zero-based, i.e. first child = 0
+  protected MatchArea area = null;
 
-  public Node( Node aParent, int achildPos ) {
-    parent = aParent;
-    childPos = achildPos;
+  public Node( /*Node aParent, int achildPos */) {
+    parent = null; //aParent;
+    childPos = -1; //achildPos;
   }
 
   public void addChild( Node n) {
+    n.parent=this;
+    n.childPos=children.size();
     children.add(n);
   }
 
@@ -62,6 +65,14 @@ public abstract class Node {
 
   public int getChildPos() {
     return childPos;
+  }
+
+  public MatchArea getMatchArea() {
+    return area;
+  }
+
+  public void setMatchArea(MatchArea anArea) {
+    area=anArea;
   }
 
   public void debug( java.io.PrintWriter pw, int indent ) {

@@ -1,4 +1,4 @@
-// $Id: Matching.java,v 1.5 2001/04/26 17:27:16 ctl Exp $
+// $Id: Matching.java,v 1.6 2001/04/27 16:59:10 ctl Exp $
 
 import java.util.Vector;
 import java.util.Iterator;
@@ -31,8 +31,16 @@ public class Matching {
     setMatchTypes(base);
   }
 
+  public BaseNode getBaseRoot() {
+    return baseRoot;
+  }
+
+  public BranchNode getBranchRoot() {
+    return branchRoot;
+  }
+
   static int fccount=0;
-  private void match( BaseNode base, BranchNode branch ) {
+  protected void match( BaseNode base, BranchNode branch ) {
 //    System.out.println("Finding cand for " +branch.getContent().toString());
     Vector candidates = findCandidates( base, branch ); // Find candidates for node branch in base
     // Find best trees
@@ -46,7 +54,7 @@ public class Matching {
 //     int initCount = candidate.candidate.parent != null && branch.parent != null
 //          && ((BranchNode) branch.parent).getBaseMatch() == candidate.candidate.parent ? 1 : 0;
       int initCount = 0;
-      int thisCount = dfsMatch( candidate.candidate, branch, initCount, null );
+      int thisCount = dfsMatch( candidate.candidate, branch, initCount );
       if( thisCount == bestCount )
         bestCandidates.add( candidate );
       else if( thisCount > bestCount ) {
@@ -55,6 +63,25 @@ public class Matching {
         bestCandidates.add( candidate );
       }
     }
+    // Add matchings and find nodes below matching subtree
+    best = getBestCandidate(base,branch,bestCandidates,bestCount);
+    Vector stopNodes = new Vector();
+    if( best != null )
+      dfsMatch( best.candidate, branch, 0, stopNodes, new MatchArea() );
+    else {
+      // Unmatched
+      for( int i=0;i<branch.getChildCount();i++)
+        stopNodes.add(branch.getChild(i));
+    }
+    // Recurse
+    //System.out.println("---Recurse");
+    for( Iterator i=stopNodes.iterator();i.hasNext();)
+      match(base,(BranchNode) i.next());
+  }
+
+  protected CandidateEntry getBestCandidate( BaseNode base, BranchNode branch, Vector bestCandidates,
+    int bestCount ) {
+    CandidateEntry best=null;
     //System.out.println("Resolving amb");
     // Resolve ambiguities if any exist...
     if( bestCandidates.size() > 1 ) {
@@ -85,19 +112,7 @@ public class Matching {
       (Math.min(best.leftRightDown,best.distance) > 0.1 ||
         best.candidate.content.getInfoSize() < COPY_THRESHOLD )))
       best=null; //System.out.println("No candidate was very good, leaving unmatched" );
-    // Add matchings and find nodes below matching subtree
-    Vector stopNodes = new Vector();
-    if( best != null )
-      dfsMatch( best.candidate, branch, 0, stopNodes );
-    else {
-      // Unmatched
-      for( int i=0;i<branch.getChildCount();i++)
-        stopNodes.add(branch.getChild(i));
-    }
-    // Recurse
-    //System.out.println("---Recurse");
-    for( Iterator i=stopNodes.iterator();i.hasNext();)
-      match(base,(BranchNode) i.next());
+    return best;
   }
 
   private void matchSamePosUnmatched( BaseNode base, BranchNode branch) {
@@ -206,42 +221,25 @@ public class Matching {
     return true;
   }
 
-  static final int COPY_THRESHOLD = 32;
+  static final int COPY_THRESHOLD = 0;
   static final int EDGE_BYTES = 8;
 
   private void removeSmallCopies( BranchNode root ) {
     BaseNode base = root.getBaseMatch();
     if( base != null && base.getLeft().getMatches().size() > 1 ) {
-      int info = findCopyTree(root,base,false);
-      if(  info < COPY_THRESHOLD ) {
-        findCopyTree(root,base,true); // Too small a copy, remove matchings for it
-//        System.out.println("XXX Removed small copy rooted at " + root.toString() );
+      // Itreate over the matches, and discard any that too small
+      for( Iterator i = base.getLeft().getMatches().iterator();i.hasNext();) {
+        BranchNode copy = (BranchNode) i.next();
+        if( copy.getMatchArea().getInfoBytes() < COPY_THRESHOLD )
+          delMatching(copy,base);
       }
     }
     for(int i=0;i<root.getChildCount();i++)
       removeSmallCopies(root.getChild(i));
   }
 
-  // return = 0 => a not copied
-  private int findCopyTree( BranchNode a, BaseNode base, boolean remove ) {
-    int info = 0;
-    if( a.getBaseMatch() == base && base.getLeft().getMatches().size() > 1 ) {
-      if( remove )
-        delMatching(a,base);
-      else
-       info +=base.getContent().getInfoSize();  // a is a n:th copy of base
-      if( a.getChildCount() == base.getChildCount() ) {
-        for( int i=0;i<a.getChildCount();i++) {
-          info += findCopyTree(a.getChild(i),base.getChild(i),remove);
-          info += EDGE_BYTES; // 8 bytes for each edge
-        }
-      }
-    }
-    return info;
-  }
 
-
-  private Vector findCandidates( BaseNode tree, BranchNode key ) {
+  protected Vector findCandidates( BaseNode tree, BranchNode key ) {
     // Find candidates for key
     //System.out.println("Fcand = " + (++fccount));
     Vector candidates = new Vector();
@@ -253,21 +251,25 @@ public class Matching {
 
   final static double DFS_MATCH_THRESHOLD = 0.2;
 
-  private int dfsMatch( BaseNode a, BranchNode b, int count, Vector stopNodes ) {
+  protected int dfsMatch( BaseNode a, BranchNode b, int count ) {
+    return dfsMatch(a,b,count,null,null);
+  }
+
+  protected int dfsMatch( BaseNode a, BranchNode b, int count, Vector stopNodes, MatchArea ma ) {
     if( stopNodes != null ) {
       // Also means matchings should be added
       addMatching( b, a );
+      ma.addInfoBytes( a.getContent().getInfoSize() );
+      b.setMatchArea( ma);
     }
     boolean childrenMatch = true;
     if( a.getChildCount() == b.getChildCount() ) {
       // Only match children, if there are equally many
       for( int i=0; childrenMatch && i<a.getChildCount(); i ++ ) {
         childrenMatch = a.getChild(i).getContent().contentEquals(b.getChild(i).getContent());
-        if( !childrenMatch ) {
-          // Try fuzzy mathcing
-          double distance = measure.getDistance( a.getChild(i), b.getChild(i) );
-          childrenMatch =  distance < DFS_MATCH_THRESHOLD;
-        }
+        if( !childrenMatch )
+          // Try fuzzy matching
+          childrenMatch = dfsTryFuzzyMatch( a.getChild(i), b.getChild(i) );
       }
     } else
       childrenMatch = false;
@@ -278,13 +280,36 @@ public class Matching {
         stopNodes.add( b.getChild(i) );
     } else {
       // All children match
+      if( ma != null )
+        ma.addInfoBytes( a.getChildCount() * EDGE_BYTES );
       for( int i=0; i<a.getChildCount(); i ++ )
-        count += dfsMatch( a.getChild(i), b.getChild(i), 0, stopNodes );
+        count += dfsMatch( a.getChild(i), b.getChild(i), 0, stopNodes, ma );
     }
     return count + 1;
   }
 
-  private void findExactMatches( BaseNode tree, BranchNode key, Vector candidates ) {
+  public void getAreaStopNodes( Vector stopNodes, BranchNode n ) {
+    boolean childrenInSameArea = true;
+    MatchArea parentArea = n.getMatchArea();
+    if( parentArea == null )
+      throw new RuntimeException("ASSERT FAILED");
+    for( int i=0;i<n.getChildCount() && childrenInSameArea;i++)
+      childrenInSameArea&= n.getChild(i).getMatchArea() == parentArea;
+    if( !childrenInSameArea ) {
+      stopNodes.add(n);
+      return;
+    } else {
+      for( int i=0;i<n.getChildCount();i++)
+        getAreaStopNodes(stopNodes,n.getChild(i));
+    }
+  }
+
+  protected boolean dfsTryFuzzyMatch( Node a, Node b) {
+    double distance = measure.getDistance(a,b );
+    return  distance < DFS_MATCH_THRESHOLD;
+  }
+
+  protected void findExactMatches( BaseNode tree, BranchNode key, Vector candidates ) {
     for( Iterator i = new DFSTreeIterator(tree);i.hasNext();) {
       BaseNode cand = (BaseNode) i.next();
       //System.out.println("Cand=" + cand.getContent().toString());
@@ -296,7 +321,7 @@ public class Matching {
   static final double MAX_FUZZY_MATCH = 0.2;
   static final double PARENT_DISCOUNT = 0.5;
 
-  private void findFuzzyMatches( BaseNode tree, BranchNode key, Vector candidates ) {
+  protected void findFuzzyMatches( BaseNode tree, BranchNode key, Vector candidates ) {
     SortedSet cset = new TreeSet(candComp);
     double cutoff = 2*MAX_FUZZY_MATCH;
     for( Iterator i = new DFSTreeIterator(tree);i.hasNext();) {

@@ -13,8 +13,8 @@ public class BranchNode extends Node {
   private int matchType = 0;
 
 
-  public BranchNode( Node aParent, int achildPos, XMLNode aContent ) {
-    super( aParent,achildPos);
+  public BranchNode(/* Node aParent, int achildPos,*/ XMLNode aContent ) {
+    super();// aParent,achildPos);
     content = aContent;
   }
 
@@ -54,8 +54,13 @@ public class BranchNode extends Node {
     baseMatch = null;
     matchType = 0;
   }
+
   public int getBaseMatchType() {
     return matchType;
+  }
+
+  public boolean hasBaseMatch() {
+    return baseMatch != null;
   }
 
   public BaseNode getBaseMatch() {

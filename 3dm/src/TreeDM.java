@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.18 2001/04/26 17:27:16 ctl Exp $
+//$Id: TreeDM.java,v 1.19 2001/04/27 16:59:12 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -30,9 +30,9 @@ public class TreeDM {
 
   public static void main(String[] args) throws Exception {
     // NOTE: When running mergecases, check that the parameters are set as follows:
-    // COPY_TRESHOLD = 0 (otherwise cases with copies won't work) (normal valule = 18)
+    // COPY_TRESHOLD = 0 (otherwise cases with copies won't work) (normal value = 18)
     //
-    (new TreeDM()).runHarness( args );
+    (new TreeDM()).runDiff( args );
   }
 
   public void runHarness( String[] args ) {
@@ -62,10 +62,17 @@ public class TreeDM {
   }
 
   private NodeFactory baseNodeFactory =  new NodeFactory() {
-            public Node makeNode( Node parent, int childPos, XMLNode content ) {
-              return new BaseNode( parent, childPos, content  );
+            public Node makeNode(  XMLNode content ) {
+              return new BaseNode( content  );
             }
         };
+
+  private NodeFactory branchNodeFactory =  new NodeFactory() {
+            public Node makeNode(  XMLNode content ) {
+              return new BranchNode(  content  );
+            }
+        };
+
 
   private void runCase( File dir ) {
     final boolean SHOWDIFF = true;
@@ -92,19 +99,9 @@ public class TreeDM {
 //      System.out.println("Parsing " + base.getCanonicalPath() );
       docBase = (BaseNode) p.parse( base.getCanonicalPath(),baseNodeFactory);
 //      System.out.println("Parsing " + base.getCanonicalPath() );
-      docA = (BranchNode) p.parse( b1.getCanonicalPath(),
-        new NodeFactory() {
-          public Node makeNode( Node parent, int childPos, XMLNode content ) {
-            return new BranchNode( parent, childPos, content  );
-          }
-        });
+      docA = (BranchNode) p.parse( b1.getCanonicalPath(), branchNodeFactory);
 //      System.out.println("Parsing " + base.getCanonicalPath() );
-      docB = (BranchNode) p.parse( b2.getCanonicalPath(),
-        new NodeFactory() {
-          public Node makeNode( Node parent, int childPos, XMLNode content ) {
-            return new BranchNode( parent, childPos, content  );
-          }
-      } );
+      docB = (BranchNode) p.parse( b2.getCanonicalPath(),branchNodeFactory);
 
     } catch ( Exception e ) {
       System.out.println("PARSE ERROR IN CASE, giving up." );
@@ -221,19 +218,9 @@ public class TreeDM {
    try {
       XMLParser p = new XMLParser();
       System.out.println("Parsing " + args [0]);
-      docBase = (BaseNode) p.parse(args[0] + PSEP + "b.xml",
-        new NodeFactory() {
-          public Node makeNode( Node parent, int childPos, XMLNode content ) {
-            return new BaseNode( parent, childPos, content  );
-          }
-        });
+      docBase = (BaseNode) p.parse(args[0] + PSEP + "b.xml",baseNodeFactory);
       System.out.println("Parsing " + OTHER + ".xml");
-      docA =  (BranchNode) p.parse(args[0] + PSEP+ OTHER+".xml",
-        new NodeFactory() {
-          public Node makeNode( Node parent, int childPos, XMLNode content ) {
-            return new BranchNode( parent, childPos, content  );
-          }
-        });
+      docA =  (BranchNode) p.parse(args[0] + PSEP+ OTHER+".xml",branchNodeFactory);
       System.out.println("OK.");
    } catch ( Exception e ) {
     e.printStackTrace();
@@ -257,6 +244,74 @@ public class TreeDM {
    treeView.setVisible(true);
   }
 
+  // Run diff
+  public void runDiff( String[] args ) {
+   BranchNode docA=null,docDiff=null;
+   BaseNode docBase=null;
+   final String OTHER = "2";
+    if( args.length < 2 ) {
+      System.out.println("Usage: TreeDM base.xml deriv.xml");
+      System.exit(0);
+   }
+   try {
+      XMLParser p = new XMLParser();
+      System.out.println("Parsing " + args [0]);
+      docBase = (BaseNode) p.parse(args[0] + PSEP + "b.xml",baseNodeFactory);
+      System.out.println("Parsing " + OTHER + ".xml");
+      docA =  (BranchNode) p.parse(args[0] + PSEP+ OTHER+".xml",branchNodeFactory);
+      System.out.println("OK.");
+   } catch ( Exception e ) {
+    e.printStackTrace();
+    System.exit(0);
+   }
+//   System.exit(0);
+  System.out.println("Building matching...");
+   Matching m1 = new DiffMatching( docBase, docA );
+  System.out.println("done.");
+
+  System.out.println("Diffing...");
+  Diff diff = new Diff( m1 );
+
+  PrintWriter pw = null;
+  try {
+     pw = new PrintWriter( new FileOutputStream( "diff.xml" ) );
+  } catch (java.io.FileNotFoundException e ) {
+    System.out.println("Error opening output diff file...");
+    System.exit(0);
+  }
+
+  MergePrinter mp = new MergePrinter(pw) ;
+  mp.startDocument();
+  try {
+    diff.diff( mp );
+   } catch ( SAXException e ) {
+    e.printStackTrace();
+    System.exit(0);
+   }
+
+  mp.endDocument();
+  pw.flush();
+// Re-read diff & apply
+   try {
+      XMLParser p = new XMLParser();
+      System.out.println("Parsing diff " + args [0]);
+      docDiff = (BranchNode) p.parse("diff.xml",branchNodeFactory);
+      System.out.println("OK.");
+   } catch ( Exception e ) {
+    e.printStackTrace();
+    System.exit(0);
+   }
+   Patch patch = new Patch();
+   BranchNode patchDoc = null;
+    try {
+      patchDoc = patch.patch(docBase,docDiff);
+    } catch (ParseException e ) {
+      System.out.println("DIFF PARSE FAILURE");
+    System.exit(0);
+    }
+  if( treesIdentical(docA,patchDoc,true) )
+    System.out.println("DIFF/PATCH worked!");
+  }
 
 
 
