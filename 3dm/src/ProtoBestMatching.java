@@ -1,4 +1,4 @@
-// $Id: ProtoBestMatching.java,v 1.5 2001/03/28 07:01:38 ctl Exp $
+// $Id: ProtoBestMatching.java,v 1.6 2001/03/28 08:58:14 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 //import TreeMatching;
@@ -58,7 +58,7 @@ public class ProtoBestMatching  {
         target.matchType = mtype;
       }
     } catch ( Exception e ) {
-      System.out.println("read from file excepted");
+      System.out.println("Read matching from file excepted");
     }
 
   }

@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.5 2001/03/28 07:01:39 ctl Exp $
+//$Id: TreeDM.java,v 1.6 2001/03/28 08:58:14 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -43,7 +43,8 @@ public class TreeDM {
    if( caseDirs == null ) {
      System.out.println("No cases found in " + topDir.getName());
      System.exit(0);
-   }
+   } else
+     Arrays.sort(caseDirs);
    int casesRun=0;
    for(int ifile=0;ifile<caseDirs.length;ifile++) {
     if( caseDirs[ifile].isDirectory() && Character.isDigit( caseDirs[ifile].getName().charAt(1) ) ) {
@@ -62,8 +63,19 @@ public class TreeDM {
     File b1 = new File( dir, "1.xml");
     File b2 = new File( dir, "2.xml");
     File merged = new File( dir, "m.xml");
+    File notes = new File( dir,"notes" );
     ElementNode docA=null, docB=null, docBase=null;
     System.out.println("Running case " + dir.getName() );
+    if( notes.exists() ) {
+      try {
+        BufferedReader in = new BufferedReader( new InputStreamReader( new FileInputStream( notes ) ) );
+        String s="";
+        while((s=in.readLine())!=null)
+          System.out.println("NOTES: "+s);
+      } catch (Exception e ) {
+          System.out.println("NOTES: READ EXCEPTED ");
+      }
+    }
     try {
       Parser p = new Parser();
 //      System.out.println("Parsing " + base.getCanonicalPath() );
