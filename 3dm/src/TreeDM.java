@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.11 2001/04/01 14:28:48 ctl Exp $
+//$Id: TreeDM.java,v 1.12 2001/04/02 07:37:55 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -59,6 +59,7 @@ public class TreeDM {
   }
 
   private void runCase( File dir ) {
+    final boolean SHOWDIFF = true;
     File base = new File( dir, "b.xml");
     File b1 = new File( dir, "1.xml");
     File b2 = new File( dir, "2.xml");
@@ -139,8 +140,8 @@ public class TreeDM {
       //e.printStackTrace();
       return;
     }
-    boolean symmetry = treesIdentical(mr1,mr2),
-            likefacit = treesIdentical(facit,mr1);
+    boolean symmetry = treesIdentical(mr1,mr2,SHOWDIFF),
+            likefacit = treesIdentical(facit,mr1,SHOWDIFF);
     if( !symmetry )
       System.out.print("SYMMETRY failed ");
     if( ((ElementNode) facit.getChild(0)).name.equalsIgnoreCase("conflict") ) {
@@ -148,7 +149,7 @@ public class TreeDM {
       return;
     }
     if( !likefacit )
-      System.out.print("FACIT failed " + ( symmetry || (!symmetry && !treesIdentical(facit,mr2)) ?
+      System.out.print("FACIT failed " + ( symmetry || (!symmetry && !treesIdentical(facit,mr2,false)) ?
         "(on both)" : "(on one only)" ) );
     if( likefacit && symmetry )
       System.out.println("Ok ");
@@ -169,27 +170,30 @@ public class TreeDM {
     return;
   }
 
-  private boolean treesIdentical( ONode a, ONode b ) {
+  private boolean treesIdentical( ONode a, ONode b, boolean searchAll ) {
+    boolean result = true;
     if( !a.contentEquals(b) ) {
-      System.out.println("IDENTITY Failed");
-      System.out.println(a.toString());
-      System.out.println(b.toString());
-     return false;
+      if(searchAll) {
+        System.out.println("IDENTITY Failed");
+        System.out.println(a.toString());
+        System.out.println(b.toString());
+      }
+     result = false;
     }
     if( a.getChildCount() != b.getChildCount() ) {
-      System.out.println("IDENTITY failed: childcount failed");
-       return false;
-    }
-    for( int i=0;i<a.getChildCount();i++)
-      if( !treesIdentical( a.getChild(i), b.getChild(i) ) )
-        return false;
-    return true;
+      if(searchAll) System.out.println("IDENTITY failed: childcount failed below "+ a.toString());
+       result = false;
+    } else if( result || searchAll )
+      for( int i=0;i<a.getChildCount();i++)
+        if( !treesIdentical( a.getChild(i), b.getChild(i), searchAll ) )
+          result = false;
+    return result;
   }
 
   // Run Best Matcher
   public void runBM( String[] args ) {
    ElementNode docA=null, docBase=null;
-   final String OTHER = "1";
+   final String OTHER = "2";
     if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
       System.exit(0);
@@ -305,6 +309,21 @@ public class TreeDM {
     private ElementNode currentNode = null;
     private Stack treestack = new Stack();
 
+
+   public InputSource resolveEntity (String publicId, String systemId)
+   {
+     System.out.println("!!!!!!!!!!!!!!!!!!!!!!!Never gets here!");
+     if (systemId.equals("http://www.myhost.com/today")) {
+              // return a special input source
+       //MyReader reader = new MyReader();
+       //return new InputSource(reader);
+        return null;
+     } else {
+              // use the default behaviour
+       return null;
+     }
+   }
+
     public ElementNode parse( String file ) throws Exception {
       XMLReader xr = (XMLReader)Class.forName(DEFAULT_PARSER_NAME).newInstance();
       xr.setContentHandler(this);
@@ -312,9 +331,14 @@ public class TreeDM {
       try {
        xr.setFeature("http://xml.org/sax/features/namespaces",false);
        xr.setFeature("http://xml.org/sax/features/validation",false);
+//       xr.setFeature("http://xml.org/sax/features/external-general-entities",false);
+//       xr.setFeature("http://xml.org/sax/features/external-parameter-entities",false);
+       xr.setFeature("http://apache.org/xml/features/continue-after-fatal-error",true);
+
       } catch (SAXException e) {
        System.out.println("Error setting features:" + e.getMessage());
       }
+//      xr.setEntityResolver(this);
 
       FileReader r = new FileReader(file);
       xr.parse(new InputSource(r));
@@ -343,6 +367,8 @@ public class TreeDM {
      public void startElement (String uri, String name,
                                String qName, Attributes atts)
      {
+         if( currentText != null )
+           currentText.text = currentText.text.trim();
          ElementNode n = new ElementNode( uri, qName, atts );
          currentNode.addChild( n );
          treestack.push( currentNode );
@@ -354,6 +380,8 @@ public class TreeDM {
 
      public void endElement (String uri, String name, String qName)
      {
+         if( currentText != null )
+           currentText.text = currentText.text.trim();
          currentText = null;
          currentNode = (ElementNode) treestack.pop();
 //         System.out.println("End element:   {" + uri + "}" + name);
@@ -362,8 +390,22 @@ public class TreeDM {
 
      public void characters (char ch[], int start, int length)
      {
-        String chars = new String( ch, start, length ).trim();
-        if( chars.length() == 0 )
+        boolean lastIsWS = currentText == null || currentText.text.endsWith(" ");
+        StringBuffer sb = new StringBuffer();
+        for( int i=start;i<start+length;i++) {
+          if( Character.isWhitespace(ch[i]) ){
+            if( lastIsWS )
+              continue;
+            sb.append(" ");
+            lastIsWS = true;
+          } else {
+            sb.append(ch[i]);
+            lastIsWS = false;
+          }
+        }
+        String chars = sb.toString(); //.trim();
+//        String chars = new String( ch, start, length ).trim();
+        if( chars.trim().length() == 0 )
           return;
         if( currentText != null )
           currentText.text += chars;

@@ -1,4 +1,4 @@
-// $Id: TreeView.java,v 1.3 2001/03/29 14:51:48 ctl Exp $
+// $Id: TreeView.java,v 1.4 2001/04/02 07:37:55 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 import java.awt.*;
@@ -95,7 +95,7 @@ public class TreeView extends Frame  {
     }
 
     // Draw control vars
-    int depthDelta = 64;
+    int depthDelta = 32;
     boolean mirror = false;
 
     protected void makePoint( Object n, int x, int y ) {
@@ -314,7 +314,7 @@ public class TreeView extends Frame  {
       drawTree( rootA ,0,g);
       leafno=3;
       mirror = true;
-      drawTree( rootB ,16, g);
+      drawTree( rootB ,32, g);
       for( Iterator i = visibleMappings.iterator();i.hasNext();)
         ((VisibleMapping) i.next()).draw(g);
 

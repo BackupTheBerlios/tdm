@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.12 2001/04/01 14:28:48 ctl Exp $
+// $Id: Merge.java,v 1.13 2001/04/02 07:37:54 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -67,7 +67,7 @@ public class Merge {
       _count1++;
       HangonEntry me = (HangonEntry) i.next();
       BranchNode n = me.getNode();
-//      BranchNode nPartner = n.getFirstPartner( BranchNode.MATCH_CONTENT );
+//      BranchNode nPartner = n.getFirstPartner( BranchNode.MATCH_FULL );
       // Merge contents of node and partner (but only if there's a partner)
 //-------------------
 // Table
@@ -79,10 +79,12 @@ public class Merge {
 // str   str    FORCED content merge
 // str   full   n1 cont
 // full  full   merge(n1,n2)
+
     BranchNode nPartner = null;
     if( me instanceof MergeEntry )
         nPartner = ((MergeEntry) me).getMergePartner();
-
+    else
+        nPartner = n.getFirstPartner(BranchNode.MATCH_FULL);
 /*    if( n.getContent().toString().indexOf("778l8") != -1 ) {
       debug = 2;
       System.out.println("???: " + n.getContent().toString() );

@@ -1,4 +1,4 @@
-// $Id: ProtoBestMatching.java,v 1.12 2001/04/01 14:28:48 ctl Exp $
+// $Id: ProtoBestMatching.java,v 1.13 2001/04/02 07:37:55 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 //import TreeMatching;
@@ -80,11 +80,17 @@ public class ProtoBestMatching  {
     makeMap( atRoot );
     matchSamePosUnmatched( derived, base.getChild(0));
     //
+    removeSmallCopies(derived);
     setMatchTypes(base);
   }
 
   private void setMatchTypes( ONode base ) {
 //    System.out.println("SMT: " + base.toString());
+//!!!! Postorder traversal, because we use the child mappings to orient us
+// therefore, this better change child mappings first!
+    for(int i=0;i<base.getChildCount();i++)
+      setMatchTypes(base.getChild(i));
+
     getFirstMapping(base);
     if( getNextMapping() != null ) {
       // The node is copied, we must resolve main copies as well as child/structmatches
@@ -96,7 +102,7 @@ public class ProtoBestMatching  {
       while( copy != null && search) {
 //        System.out.println("Loop1");
         double clmatch = childListDist(copy,base);
-        if( matches(copy,base) && clmatch<1e-09 ) {
+        if( matches(copy,base) && exactChildListMatch(copy,base) ) {
           master = copy;
           search = false; // Fund a suitable master
         } else if( clmatch<clmin ) {
@@ -111,7 +117,7 @@ public class ProtoBestMatching  {
       while( copy != null ) {
 //        System.out.println("Loop2");
         if( copy != master ) {
-          boolean structMatch = exactChildListMatch(master,copy);
+          boolean structMatch = exactChildListMatch(copy,base); //master,copy);
           boolean contMatch =  matches( master, copy );
           if( !structMatch && !contMatch)
             removed.add(copy);
@@ -129,8 +135,6 @@ public class ProtoBestMatching  {
       }
 
     } // if copy
-    for(int i=0;i<base.getChildCount();i++)
-      setMatchTypes(base.getChild(i));
   }
 
   private void makeMap( AreaNode n ) {
@@ -139,7 +143,7 @@ public class ProtoBestMatching  {
     else if( n.getCandidateCount() < 2)
       dfsExactMatch( n.getNode(), n.getCandidate(0), true, 0, null,null );
     else {
-      System.out.println("makeMap: leaving ambiguity...:" + n.getNode().toString() );
+      System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% makeMap: leaving ambiguity...:" + n.getNode().toString() );
       for(int i=0;i<n.getCandidateCount();i++)
         dfsExactMatch( n.getNode(), n.getCandidate(i), true, 0, null,null );
     }
@@ -234,6 +238,9 @@ public class ProtoBestMatching  {
     ElementNode srcParent ) {
     System.out.println("$$$Solving ambiguity " + runStart  +
         "-" + runStop+ ": " +areaTree.getChild(runStart).toString());
+    if( areaTree.getChild(runStart).getNode().getChildCount() > 0 )
+      System.out.println(areaTree.getChild(runStart).getNode().getChild(0).toString() );
+
     ONode left=null, right=null;
     if( runStart == startPos )
       left = START;
@@ -405,7 +412,9 @@ public class ProtoBestMatching  {
       double minmc = fuzzyFindCandidates( candidates, dstTreeNode, baseDoc, 1e+99 ); // candidates in baseDoc
 // FUZZY CAND SEARCH -- currently disabled...
 //      System.out.println("!!!!: No exact candidate (minmc =" +minmc+")for " + dstTreeNode.toString());
-     if( minmc > 0.1 )
+//DBG    if( dstTreeNode instanceof ElementNode && ((ElementNode) dstTreeNode).name.equals("svg") )
+//DBG      System.out.println("CVG mc=" + minmc );
+     if( minmc > 0.2 )
 // ||
 // (dstTreeNode instanceof ElementNode && ((ElementNode) dstTreeNode).name.equalsIgnoreCase("path") ) )
         candidates.clear(); // All candidates bad
@@ -473,7 +482,7 @@ public class ProtoBestMatching  {
         stopNodes = ((ElementNode) dstTreeNode).children;
     }
     if( stopNodes != null ) {
-      //System.out.println("stopNodes are:" +stopNodes.toString() );
+  //    System.out.println("stopNodes are:" +stopNodes.toString() );
       for( int i=0;i<stopNodes.size();i++) {
         AreaNode atChild = new AreaNode((ONode) stopNodes.elementAt(i));
         atNode.addChild( atChild );
@@ -567,7 +576,7 @@ public class ProtoBestMatching  {
     mc.correlate(key,treeRoot);
     double cval =  mc.getValue();
 */
-    if( mc.nums[0] < 0.1 ) { // 1.0 Magic correlation for candidates
+    if( mc.nums[0] < 0.3 ) { // 1.0 Magic correlation for candidates
       Candidate c = new Candidate();
       c.mc=mc.nums[0];
       c.node=treeRoot;
@@ -722,6 +731,55 @@ public class ProtoBestMatching  {
     return a.contentEquals(b);
   }
 
+
+  void removeSmallCopies( ONode root ) {
+    ONode base = getFirstMapping(root);
+    if( base != null && getFirstMapping(base)!=null && getNextMapping() != null ) {
+      int info = findCopyTree(root,base,false);
+      if(  info < 18 ) {
+        findCopyTree(root,base,true); // Too small a copy, remove matchings for it
+        System.out.println("XXX Removed small copy rooted at " + root.toString() );
+      }
+    }
+    for(int i=0;i<root.getChildCount();i++)
+      removeSmallCopies(root.getChild(i));
+  }
+
+  // return = 0 => a not copied
+  int findCopyTree( ONode a, ONode base, boolean remove ) {
+      int info = 0;
+      if( getFirstMapping(a)==base && getFirstMapping(base)!= null && getNextMapping()!=null) {
+        if( remove ) {
+          delMatching(a,base);
+          delMatching(base,a);
+        } else
+         info += getInfoAmount(a); // a is a n:th copy of base
+        if( a.getChildCount() == base.getChildCount() ) {
+          for( int i=0;i<a.getChildCount();i++) {
+            info += findCopyTree(a.getChild(i),base.getChild(i),remove);
+            info += 8; // 8 bytes for each edge
+          }
+        }
+      }
+      return info;
+  }
+
+  int getInfoAmount( ONode a ) {
+      if( a instanceof TextNode ) {
+        return ((TextNode) a).text.length();
+      } else {
+        ElementNode ea = (ElementNode) a;
+        int total = 1; // 1 for the tag
+        if( ea.attributes != null ) {
+          for( Iterator i=ea.attributes.keySet().iterator();i.hasNext();) {
+            int len= ((String) ea.attributes.get(i.next())).length();
+            total += len < 6 ? 1 : len -4;
+          }
+        }
+        return total;
+      }
+  }
+
   class MisCorrelation {
     int mismatched=0;
     int total=0;
@@ -732,12 +790,12 @@ public class ProtoBestMatching  {
       if( ( a instanceof TextNode && b instanceof ElementNode ) ||
           ( b instanceof TextNode && a instanceof ElementNode ) ) {
           total=1;
-          mismatched=1; // Totallly different
+          mismatched=1; // Totally different
           return this;
       }
       if( a instanceof TextNode ) {
         TextNode ta = (TextNode) a,tb=(TextNode) b;
-        total+=Math.max( ta.text.length(), tb.text.length() );
+        total+=Math.max(Math.max( ta.text.length(), tb.text.length() ),1);
         mismatched += stringDistance( ta.text, tb.text );
       } else {
         // Assume elementNode
@@ -797,6 +855,7 @@ public class ProtoBestMatching  {
   //
 
   private int stringDistance( String s1,String s2) {
+    final int BLOCK=4;
     if( s1 == s2 )
       return 0;
     if( s1 == null || s1.length() == 0)
@@ -805,13 +864,27 @@ public class ProtoBestMatching  {
       return s1.length();
     if( s2.equals(s1) )
       return 0;
+// Dewhitespacify
+/*    StringBuffer sb1 = new StringBuffer(), sb2 = new StringBuffer();
+    for(int i=0;i<s1.length();i++) {
+      if( Character.isWhitespace(s1.charAt(i)))
+        continue;
+      sb1.append(s1.charAt(i));
+    }
+    for(int i=0;i<s2.length();i++) {
+      if( Character.isWhitespace(s2.charAt(i)))
+        continue;
+      sb2.append(s2.charAt(i));
+    }
+    s1=sb1.toString();s2=sb2.toString();*/
+//end dewhitespacify
     if( s1.length() > s2.length() ) {
       String t= s1; s1=s2;s2=t;
     }
     int distance = 0;
     int s1len =s1.length();
-    for(int i=0;i<s1len;i+=4) {
-     String chunk = s1.substring(i,((i+4) > s1len ? s1len : i+4) );
+    for(int i=0;i<s1len;i+=BLOCK) {
+     String chunk = s1.substring(i,((i+BLOCK) > s1len ? s1len : i+BLOCK) );
       if( s2.indexOf(chunk) == -1 )
         distance +=chunk.length();
     }
@@ -820,11 +893,11 @@ public class ProtoBestMatching  {
     return distance + s2.length()-s1.length();
   }
 
-  private boolean exactChildListMatch( ONode a, ONode b) {
-    if( a.getChildCount() != b.getChildCount() )
+  private boolean exactChildListMatch( ONode a, ONode base) {
+    if( a.getChildCount() != base.getChildCount() )
       return false;
     for(int i=0;i<a.getChildCount();i++) {
-      if( !matches(a,b) )
+      if( base.getChild(i) != getFirstMapping(a.getChild(i)) )
         return false;
     }
     return true;
@@ -854,7 +927,7 @@ public class ProtoBestMatching  {
     if( as.length()==0)
       return 1.0;
     else if( as.length()==1)
-      matches = bs.indexOf(as) == -1 ? 0 : 1;
+      return bs.indexOf(as) == -1 ? 1.0 : 0.4;
     else for( int i=0;i<as.length()-1;i++) {
       if( bs.indexOf(as.substring(0,i+2)) != -1 )
         matches++;
