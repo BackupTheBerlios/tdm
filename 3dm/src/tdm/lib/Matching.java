@@ -1,4 +1,4 @@
-// $Id: Matching.java,v 1.18 2001/07/29 17:12:09 ctl Exp $
+// $Id: Matching.java,v 1.19 2001/09/05 13:21:26 ctl Exp $ D
 
 import java.util.Vector;
 import java.util.Iterator;
@@ -9,15 +9,25 @@ import java.util.Set;
 import java.util.Comparator;
 import java.util.Collections;
 
+/** Builds a matching between two trees. The actual matchings are stored in
+ *  the nodes of the trees (the BaseNode and BranchNode objects).
+ *  Note: make sure there are no matched nodes in the trees before
+ *  constructing a matching.
+ */
+
 public class Matching {
 
   protected BaseNode baseRoot = null;
   private BranchNode branchRoot = null;
 
   protected Matching() {
-    // Only called from TriMatching constructor
+    // Does nothing, only called from TriMatching constructor
   }
 
+  /** Build matching between two trees.
+   *  @param abase  Root of the base tree
+   *  @param abranch Root of the branch tree
+   */
   public Matching(BaseNode abase, BranchNode abranch ) {
     baseRoot = abase;
     branchRoot = abranch;
@@ -25,15 +35,13 @@ public class Matching {
   }
 
   protected void buildMatching( BaseNode base, BranchNode branch ) {
-//    checkMa(branch);
     matchSubtrees( base, branch );
     removeSmallCopies(branch);
     matchSimilarUnmatched( base, branch );
     setMatchTypes(base);
-    // Artificial roots always match (otherwise BranchNode.isLeft may fail!)
+    // Artificial roots always matched (otherwise BranchNode.isLeft() may fail!)
     branch.setBaseMatch(base,BranchNode.MATCH_FULL);
   }
-
 
   public BaseNode getBaseRoot() {
     return baseRoot;
@@ -43,20 +51,18 @@ public class Matching {
     return branchRoot;
   }
 
-  static int fccount=0;
   protected void matchSubtrees( BaseNode base, BranchNode branch ) {
-//    System.out.println("Finding cand for " +branch.getContent().toString());
-    Vector candidates = findCandidates( base, branch ); // Find candidates for node branch in base
-    // Find best trees
-    //System.out.println("Finding best match");
+    // Find candidates for node branch in base
+    Vector candidates = findCandidates( base, branch );
+    // Find best matching trees
     int bestCount = 0;
     CandidateEntry best = null;
     Vector bestCandidates = new Vector();
     for( Iterator i = candidates.iterator(); i.hasNext(); ) {
       CandidateEntry candidate = (CandidateEntry) i.next();
-      // Bounus count of 1 for all candidates whose parents match the parent of the current node
-//     int initCount = candidate.candidate.parent != null && branch.parent != null
-//          && ((BranchNode) branch.parent).getBaseMatch() == candidate.candidate.parent ? 1 : 0;
+///      // Bounus count of 1 for all candidates whose parents match the parent of the current node
+///     int initCount = candidate.candidate.parent != null && branch.parent != null
+///          && ((BranchNode) branch.parent).getBaseMatch() == candidate.candidate.parent ? 1 : 0;
       int initCount = 0;
       int thisCount = dfsMatch( candidate.candidate, branch, initCount );
       if( thisCount == bestCount )
@@ -68,7 +74,7 @@ public class Matching {
       }
     }
     // Add matchings and find nodes below matching subtree
-    best = getBestCandidate(base,branch,bestCandidates,bestCount);
+    best = getBestCandidate(branch,bestCandidates,bestCount);
     Vector stopNodes = new Vector();
     if( best != null )
       dfsMatch( best.candidate, branch, 0, stopNodes, new MatchArea(branch) );
@@ -78,15 +84,20 @@ public class Matching {
         stopNodes.add(branch.getChild(i));
     }
     // Recurse
-    //System.out.println("---Recurse");
+///    System.out.println("---Recurse");
     for( Iterator i=stopNodes.iterator();i.hasNext();)
       matchSubtrees(base,(BranchNode) i.next());
   }
 
-  protected CandidateEntry getBestCandidate( BaseNode base, BranchNode branch, Vector bestCandidates,
-    int bestCount ) {
+  /*** Select the best matching candidate from a set of candidate subtrees.
+   * @param branch  The node we're trying to match
+   * @param bestCandiates vector of potential candidate in the base tree. The
+   *                      vector consists of <code>CandidateEntry</code>:s
+   * @param bestCount size (in nodes) of largest candidate subtree. */
+  protected CandidateEntry getBestCandidate( BranchNode branch,
+                                    Vector bestCandidates, int bestCount ) {
     CandidateEntry best=null;
-    //System.out.println("Resolving amb");
+/// System.out.println("Resolving amb");
     // Resolve ambiguities if any exist...
     if( bestCandidates.size() > 1 ) {
       // Check if left neighbor of candidate is matched to left of base,
@@ -105,10 +116,9 @@ public class Matching {
       for( Iterator i = bestCandidates.iterator(); i.hasNext(); ) {
         CandidateEntry candidate = (CandidateEntry) i.next();
         if( candidate.leftRightDown < 0.0 ) {
-/*          System.out.println("left="+getDistanceOfLeft(candidate.candidate,branch));
-          System.out.println("right="+getDistanceOfRight(candidate.candidate,branch));
-          System.out.println("clist="+measure.childListDistance(candidate.candidate,branch));
-*/
+///          System.out.println("left="+getDistanceOfLeft(candidate.candidate,branch));
+///          System.out.println("right="+getDistanceOfRight(candidate.candidate,branch));
+///          System.out.println("clist="+measure.childListDistance(candidate.candidate,branch));
           candidate.leftRightDown = Math.min(
             measure.childListDistance(candidate.candidate,branch),
             Math.min( getDistanceOfRight(candidate.candidate,branch),
@@ -116,22 +126,26 @@ public class Matching {
         }
       }
       Collections.sort(bestCandidates,candlrdComp);
-      /*System.out.println("Best cands for " + branch.getContent().toString());
-      for( Iterator i = bestCandidates.iterator(); i.hasNext(); ) {
-        CandidateEntry ce = (CandidateEntry) i.next();
-        System.out.println( ce.distance + "," + ce.leftRightDown + ": " + ce.candidate.getContent().toString());
-      }*/
+///      /*System.out.println("Best cands for " + branch.getContent().toString());
+///      for( Iterator i = bestCandidates.iterator(); i.hasNext(); ) {
+///        CandidateEntry ce = (CandidateEntry) i.next();
+///        System.out.println( ce.distance + "," + ce.leftRightDown + ": " + ce.candidate.getContent().toString());
+///      }*/
     }
-    best = bestCandidates.isEmpty() ? null : (CandidateEntry) bestCandidates.elementAt(0);
+    best = bestCandidates.isEmpty() ? null :
+          (CandidateEntry) bestCandidates.elementAt(0);
     if( best!=null && (bestCount == 1 &&
-      (Math.min(best.leftRightDown,best.distance) > 0.1 /*||
-        best.candidate.content.getInfoSize() < COPY_THRESHOLD */)))
-      best=null; //System.out.println("No candidate was very good, leaving unmatched" );
+      (Math.min(best.leftRightDown,best.distance) > 0.1 )))
+///       /*||
+///        best.candidate.content.getInfoSize() < COPY_THRESHOLD */)))
+        best=null;
+///        //System.out.println("No candidate was very good, leaving unmatched" );
     return best;
   }
 
   private void matchSimilarUnmatched( BaseNode base, BranchNode branch) {
-    // Traverse in preorder -- to avoid building trees, just fixing levels where parents are matched
+    // Traverse in preorder -- to avoid building trees, just fixing levels where
+    // parents are matched
     for( int i=0;i<branch.getChildCount();i++)
       matchSimilarUnmatched(base,branch.getChild(i));
 
@@ -153,21 +167,24 @@ public class Matching {
           continue;
         }
         if( i > 0 ) {
-          // See if node preceding n is matched, and its right neighbour unmatched
+          // See if node preceding n is matched,and its right neighbor unmatched
           // Base    xy     p=n's predecessor, x matches p and y unmatched
           // Branch  pn        => match y and n
           BaseNode x = branch.getChild(i-1).getBaseMatch();
-          if( x != null && x.hasRightSibling() && !isMatched((BaseNode) x.getRightSibling())) {
+          if( x != null && x.hasRightSibling() && !isMatched((BaseNode)
+                                                        x.getRightSibling())) {
             addMatchingIfSameType(n,(BaseNode) x.getRightSibling() );
             continue;
           }
         }
         if( i < branch.getChildCount()-1 ) {
-          // See if node succeeding n is matched, and its right neighbour unmatched
+          // See if node succeeding n is matched, and its right neighbor
+          // unmatched
           // Base    yx     p=n's succecessor, x matches p and y unmatched
           // Branch  np        => match y and n
           BaseNode x = branch.getChild(i+1).getBaseMatch();
-          if( x != null && x.hasLeftSibling() && !isMatched((BaseNode) x.getLeftSibling())) {
+          if( x != null && x.hasLeftSibling() && !isMatched((BaseNode)
+                                                          x.getLeftSibling())) {
             addMatchingIfSameType(n,(BaseNode) x.getLeftSibling() );
             continue;
           }
@@ -191,12 +208,14 @@ public class Matching {
       BranchNode master = null;
       for( Iterator i=base.getLeft().getMatches().iterator();i.hasNext();) {
         BranchNode cand = (BranchNode) i.next();
-        int dist = exactChildListMatch(base,cand) ? 0 : measure.matchedChildListDistance( base, cand );
+        int dist = exactChildListMatch(base,cand) ? 0 :
+                    measure.matchedChildListDistance( base, cand );
         if( dist < minDist ) {
           minDist = dist;
           master = cand;
         } else if( dist == minDist ) {
-          minContentDist = measure.getDistance( base, master ); // May not have been calced already...
+          // minContentDist not neccessarily calced already, do it now.
+          minContentDist = measure.getDistance( base, master );
           double cDist = measure.getDistance( base, cand );
           if( cDist < minContentDist ) {
             minContentDist = cDist;
@@ -210,8 +229,8 @@ public class Matching {
         BranchNode cand = (BranchNode) i.next();
         if( cand == master )
           continue;
-        boolean structMatch = exactChildListMatch(base,cand); // && false; //XXXXXXXXX
-        boolean contMatch = cand.getContent().contentEquals(base.getContent()); // || true; //XXXXXXXXX
+        boolean structMatch = exactChildListMatch(base,cand);
+        boolean contMatch = cand.getContent().contentEquals(base.getContent());
         if( !structMatch && !contMatch )
           removedMatchings.add( cand );
         else
@@ -224,9 +243,9 @@ public class Matching {
         delMatching( cand, cand.getBaseMatch() );
       }
     } // If node copied
-
   }
 
+  /** Check if the child lists of two nodes are matched exactly. */
   private boolean exactChildListMatch( BaseNode base, BranchNode a) {
     if( a.getChildCount() != base.getChildCount() )
       return false;
@@ -237,8 +256,15 @@ public class Matching {
     return true;
   }
 
+  // Threshold for considering a subtree to be copied
   public static int COPY_THRESHOLD = 128;
-  static final int EDGE_BYTES = 4;
+  // Info bytes per edge in a matched tree
+  private static final int EDGE_BYTES = 4;
+  // Maximum content dissimilarity when fuzzmatching nodes in dfs search
+  private final static double DFS_MATCH_THRESHOLD = 0.2;
+  // Maximum content dissimilarity when searching for potential matching
+  // subtree roots.
+  private static final double MAX_FUZZY_MATCH = 0.2;
 
   private void removeSmallCopies( BranchNode root ) {
     BaseNode base = root.getBaseMatch();
@@ -252,8 +278,8 @@ public class Matching {
         }
       }
       if( base.getLeft().getMatches().size() == deletia.size() ) {
-        // We're deleting all matches... check if some match is the "original" instance
-        // and if it's found, don't delete it!
+        // We're deleting all matches... check if some match is the "original"
+        // instance and if it's found, don't delete it!
         int maxcopybytes = 0, mincopybytes = Integer.MAX_VALUE;
         BranchNode origInstance = null;
         for( Iterator i = base.getLeft().getMatches().iterator();i.hasNext();) {
@@ -270,8 +296,7 @@ public class Matching {
           // Scan right
           copyRoot = copy.getMatchArea().getRoot();
           copyBase = ((BranchNode) copyRoot).getBaseMatch();
-          while(
-                  (copyRoot = (BranchNode) copyRoot.getRightSibling()) != null &&
+          while( (copyRoot = (BranchNode) copyRoot.getRightSibling()) != null &&
                   (copyBase = (BaseNode) copyBase.getRightSibling()) != null &&
                   ((BranchNode) copyRoot).getBaseMatch() == copyBase &&
                   copybytes < COPY_THRESHOLD)
@@ -284,9 +309,11 @@ public class Matching {
             mincopybytes = copybytes;
         }
         if( maxcopybytes > mincopybytes ) {
-          // Mark if there is one copy that is "better" (more copybytes)
+          // Keep matching if there is a copy that is "better" (more copybytes)
           deletia.remove(origInstance);
-          origInstance.getMatchArea().addInfoBytes(COPY_THRESHOLD+1); // Now this is marked as the orig inst.
+          // Mark match as original instance by ensuring its subtree ha more
+          // info than COPY_THRESHOLD (=> won't be unamtched anymore)
+          origInstance.getMatchArea().addInfoBytes(COPY_THRESHOLD+1);
         }
       }
       if( !deletia.isEmpty() ) {
@@ -299,9 +326,8 @@ public class Matching {
   }
 
 
+  /** Find matching candidates for a node. */
   protected Vector findCandidates( BaseNode tree, BranchNode key ) {
-    // Find candidates for key
-    //System.out.println("Fcand = " + (++fccount));
     Vector candidates = new Vector();
     findExactMatches( tree, key, candidates );
     if( candidates.isEmpty() )
@@ -309,30 +335,43 @@ public class Matching {
     return candidates;
   }
 
-  final static double DFS_MATCH_THRESHOLD = 0.2;
-
   protected int dfsMatch( BaseNode a, BranchNode b, int count ) {
     return dfsMatch(a,b,count,null,null);
   }
 
-  protected int dfsMatch( BaseNode a, BranchNode b, int count, Vector stopNodes, MatchArea ma ) {
+  /** Match truncated subtrees. Matches two subtrees using dfs. If stopNodes is
+   *  null, it only calculates how many nodes would be matched if the function
+   *  was run "for real".
+   *  @param a Root of the base truncated matching subtree
+   *  @param b Root of the branch truncated matching subtree
+   *  @param stopNodes Vector to store the children of the leaf nodes of the
+   *                   truncated matching subtree. Filled in by the procedure.
+   *                   If set to <b>null</b> no matches between nodes are added,
+   *                   only the node count is calculated.
+   *  @param ma used to tag the matched nodes. The infobytes of <code>ma</code>
+   *  are updated to the size of the matching subtree by the function.
+   *  @return number of nodes in the matching subtree.
+   */
+  protected int dfsMatch( BaseNode a, BranchNode b, int count, Vector stopNodes,
+                          MatchArea ma ) {
     if( stopNodes != null ) {
       // Also means matchings should be added
       addMatching( b, a );
       ma.addInfoBytes( a.getContent().getInfoSize() );
-/*      if( ma==null)
-        System.err.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXDIEDIEDIE!!!!");
-*/
+/// /*      if( ma==null)
+///        System.err.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXDIEDIEDIE!!!!");
+/// */
       b.setMatchArea( ma );
     }
     boolean childrenMatch = true;
     if( a.getChildCount() == b.getChildCount() ) {
       // Only match children, if there are equally many
       for( int i=0; childrenMatch && i<a.getChildCount(); i ++ ) {
-        childrenMatch = a.getChild(i).getContent().contentEquals(b.getChild(i).getContent());
-/*        if( !childrenMatch )
-          // Try fuzzy matching
-          childrenMatch = dfsTryFuzzyMatch( a.getChild(i), b.getChild(i) );*/
+        childrenMatch = a.getChild(i).getContent().contentEquals(
+          b.getChild(i).getContent());
+/// /*        if( !childrenMatch )
+///           // Try fuzzy matching
+///           childrenMatch = dfsTryFuzzyMatch( a.getChild(i), b.getChild(i) );*/
       }
     } else
       childrenMatch = false;
@@ -351,6 +390,8 @@ public class Matching {
     return count + 1;
   }
 
+  /** Get the children the leaf nodes of a matching subtree. Uses the
+   *  subtree tag of the nodes (MatchArea class) */
   public void getAreaStopNodes( Vector stopNodes, BranchNode n ) {
     boolean childrenInSameArea = true;
     MatchArea parentArea = n.getMatchArea();
@@ -372,26 +413,31 @@ public class Matching {
     return  distance < DFS_MATCH_THRESHOLD;
   }
 
-  protected void findExactMatches( BaseNode tree, BranchNode key, Vector candidates ) {
+  protected void findExactMatches( BaseNode tree, BranchNode key,
+                                    Vector candidates ) {
     for( Iterator i = new DFSTreeIterator(tree);i.hasNext();) {
       BaseNode cand = (BaseNode) i.next();
-      //System.out.println("Cand=" + cand.getContent().toString());
+///      //System.out.println("Cand=" + cand.getContent().toString());
       if( cand.getContent().contentEquals(key.getContent()) )
-        candidates.add( new CandidateEntry( cand, 0.0, -1.0 )); // -1.0 => lr not present
+        candidates.add( new CandidateEntry( cand, 0.0,
+          -1.0 )); // -1.0 => lr value not present
     }
   }
 
-  static final double MAX_FUZZY_MATCH = 0.2;
-  static final double PARENT_DISCOUNT = 0.5;
+///  private static final double PARENT_DISCOUNT = 0.5;
 
-  protected void findFuzzyMatches( BaseNode tree, BranchNode key, Vector candidates ) {
+  /** Find fuzzy matches for a node. The fuzzy matches found are candidate
+   *  roots for matching subtrees.
+   */
+  protected void findFuzzyMatches( BaseNode tree, BranchNode key,
+                                      Vector candidates ) {
     SortedSet cset = new TreeSet(candComp);
     double cutoff = 2*MAX_FUZZY_MATCH;
     for( Iterator i = new DFSTreeIterator(tree);i.hasNext();) {
       BaseNode cand = (BaseNode) i.next();
-      /* XPERboolean parentMatch = cand.parent != null && key.parent != null &&
-        ((BranchNode) key.parent).getBaseMatch() == cand.parent;
-      double discount = parentMatch ? PARENT_DISCOUNT : 1.0;*/
+///      /* XPERboolean parentMatch = cand.parent != null && key.parent != null &&
+///        ((BranchNode) key.parent).getBaseMatch() == cand.parent;
+///      double discount = parentMatch ? PARENT_DISCOUNT : 1.0;*/
       double discount = 1.0;
       double lrdDist = discount*Math.min(
         Math.min(getDistanceOfLeft(key,cand),getDistanceOfRight(key,cand)),
@@ -402,7 +448,7 @@ public class Matching {
         cutoff = cutoff < 2*minDist ? cutoff : 2*minDist;
       }
     }
-//    System.out.println("Fuzz set size=" + cset.size());
+///    System.out.println("Fuzz set size=" + cset.size());
     for( Iterator i = cset.iterator();i.hasNext();) {
       CandidateEntry en = (CandidateEntry) i.next();
       if( en.distance > cutoff )
@@ -410,17 +456,17 @@ public class Matching {
       else
         candidates.add(en);
     }
-    //System.out.println("Fuzz set size=" + candidates.size());
-
+///    //System.out.println("Fuzz set size=" + candidates.size());
   }
 
-  private void measureMatching( BaseNode base, BranchNode br) {
+  // Distance value used by getDistanceOfleft/Right if both  nodes are at the
+  // end of the child list where no such node exists; e.g. getLeft and both
+  // nodes are at position 0.
+  private static final double END_MATCH = Measure.MAX_DIST;
 
-  }
+  private static Measure measure = new Measure();
 
-  static final double END_MATCH = Measure.MAX_DIST;
-  static Measure measure = new Measure();
-
+  /** Get content distance of left siblings. */
   protected double getDistanceOfLeft( Node a, Node b ) {
     if( a.parent == null || b.parent == null )
       return Measure.MAX_DIST;
@@ -430,24 +476,29 @@ public class Matching {
       return END_MATCH;
   }
 
+  /** Get content distance of right siblings. */
   protected double getDistanceOfRight( Node a, Node b ) {
     if( a.parent == null || b.parent == null )
       return Measure.MAX_DIST;
-    if( a.getChildPos() < a.parent.getChildCount() -1 && b.getChildPos() < b.parent.getChildCount() -1 ) {
-      //DEBUG!
-/*      double x = measure.getDistance(a.getRightSibling(), b.getRightSibling() );
-      if( Double.isNaN(x) )
-        measure.getDistance(a.getRightSibling(), b.getRightSibling() );*/
-      //ENDDEBUG
+    if( a.getChildPos() < a.parent.getChildCount() -1 &&
+                b.getChildPos() < b.parent.getChildCount() -1 ) {
+///       //DEBUG!
+/// /*      double x = measure.getDistance(a.getRightSibling(), b.getRightSibling() );
+///       if( Double.isNaN(x) )
+///         measure.getDistance(a.getRightSibling(), b.getRightSibling() );*/
+///       //ENDDEBUG
       return measure.getDistance(a.getRightSibling(), b.getRightSibling() );
     } else
       return END_MATCH;
   }
 
-  // Only adds the matching if types match (i.e. both text or element)
+  /** Add Matching. Only adds the matching if types match (i.e. both text or
+    element) */
   protected void addMatchingIfSameType( BranchNode a, BaseNode b ) {
-    if( (a.getContent() instanceof XMLTextNode && b.getContent() instanceof XMLTextNode) ||
-        (a.getContent() instanceof XMLElementNode && b.getContent() instanceof XMLElementNode)) {
+    if( (a.getContent() instanceof XMLTextNode &&
+          b.getContent() instanceof XMLTextNode) ||
+        (a.getContent() instanceof XMLElementNode &&
+          b.getContent() instanceof XMLElementNode)) {
       addMatching(a,b);
     }
   }
@@ -463,10 +514,13 @@ public class Matching {
   }
 
   protected void delMatchArea(MatchArea m) {
-//    if( 1==1) return;
+///    if( 1==1) return;
     delMatchArea(m.getRoot(),m);
   }
 
+  /** Remove subtree tag from a matched subtree.
+   *  @param n root of removal
+   *  @param m subtree tag (=tag of root) */
   private void delMatchArea(BranchNode n,MatchArea m) {
     if( n.getMatchArea() == m ) {
       n.setMatchArea(null);
@@ -480,14 +534,8 @@ public class Matching {
     return n.getLeft().getMatchCount() > 0;
   }
 
-/*
-  private void checkMa( BranchNode n) {
-    if( n.hasBaseMatch() || n.getMatchArea() != null )
-      System.err.println("!!!!!!!!!!!!!!!!!!!!!MATCHED, but NULL MA!");
-    for(int i=0;i<n.getChildCount();i++)
-      checkMa(n.getChild(i));
-  }
-*/
+  /** Class for match candidates. Stores some distance measures in addition to
+  the node itself. */
   class CandidateEntry {
     BaseNode candidate=null;
     double leftRightDown = 0.0;
@@ -499,6 +547,7 @@ public class Matching {
     }
   }
 
+  // Used when sorting matches. Sorts by distance
   private Comparator candComp = new Comparator() {
     public int compare(Object o1, Object o2) {
       double diff = ((CandidateEntry) o1).distance-((CandidateEntry) o2).distance;
@@ -506,6 +555,7 @@ public class Matching {
     }
   };
 
+  // Used when sorting matches. Sorts by leftRightDown distances
   private Comparator candlrdComp = new Comparator() {
     public int compare(Object o1, Object o2) {
       double diff = ((CandidateEntry) o1).leftRightDown-((CandidateEntry) o2).leftRightDown;
@@ -513,7 +563,7 @@ public class Matching {
     }
   };
 
-
+  // Iterator for iterating over a tree in DFS order.
   class DFSTreeIterator implements Iterator {
     Node currentNode = null;
     int currentChild = 0;
@@ -531,7 +581,7 @@ public class Matching {
       if( currentNode.getChildCount() > 0 )
         currentNode = currentNode.getChildAsNode(0);
       else  {
-      // back up until unvisited child found
+       // back up until unvisited child found
         while( currentNode != null &&
           ( currentNode.parent == null || currentNode.childPos == currentNode.parent.getChildCount()-1 ) )
           currentNode = currentNode.parent;

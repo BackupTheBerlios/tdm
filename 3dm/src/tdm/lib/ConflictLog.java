@@ -1,4 +1,4 @@
-// $Id: ConflictLog.java,v 1.5 2001/06/12 15:33:57 ctl Exp $
+// $Id: ConflictLog.java,v 1.6 2001/09/05 13:21:25 ctl Exp $ D
 
 import java.util.List;
 import java.util.LinkedList;
@@ -8,17 +8,21 @@ import org.xml.sax.helpers.AttributesImpl;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
+/** Class for logging conflicts and conflict warnings.
+ */
 public class ConflictLog {
 
-  static final int UPDATE = 1;
-  static final int DELETE = 2;
-  static final int INSERT = 3;
-  static final int MOVE = 4;
+  // Types of conflicts (used in add... functions)
+  public static final int UPDATE = 1;
+  public static final int DELETE = 2;
+  public static final int INSERT = 3;
+  public static final int MOVE = 4;
 
-  final String[] TYPETAGS = {null,"update","delete","insert","move"};
+  private final String[] TYPETAGS = {null,"update","delete","insert","move"};
   private LinkedList conflicts = new LinkedList();
   private LinkedList warnings = new LinkedList();
   private PathTracker pt = null;
+
   public ConflictLog(PathTracker apt) {
     pt=apt;
   }
@@ -35,19 +39,23 @@ public class ConflictLog {
     add( true, false, type,text,b,ba,bb);
   }
 
-  public void addListWarning( int type, String text, BaseNode b, BranchNode ba, BranchNode bb ) {
+  public void addListWarning( int type, String text, BaseNode b, BranchNode ba,
+                              BranchNode bb ) {
     add( true, true, type,text,b,ba,bb);
   }
 
-  public void addNodeConflict( int type, String text, BaseNode b, BranchNode ba, BranchNode bb ) {
+  public void addNodeConflict( int type, String text, BaseNode b, BranchNode ba,
+                               BranchNode bb ) {
     add( false, false,type, text,b,ba,bb);
   }
 
-  public void addNodeWarning( int type, String text, BaseNode b, BranchNode ba, BranchNode bb ) {
+  public void addNodeWarning( int type, String text, BaseNode b, BranchNode ba,
+                              BranchNode bb ) {
     add( false, true, type,text,b,ba,bb);
   }
 
-  protected void add( boolean list, boolean warning, int type, String text, BaseNode b, BranchNode ba, BranchNode bb ) {
+  protected void add( boolean list, boolean warning, int type, String text,
+                      BaseNode b, BranchNode ba, BranchNode bb ) {
     ConflictEntry ce = new ConflictEntry();
     ce.text = text;
     ce.type = type;
@@ -74,6 +82,9 @@ public class ConflictLog {
       conflicts.addLast(ce);
   }
 
+  /** Output conflict list as XML.
+   * @param ch Content handler to output the conflict to.
+   */
   public void writeConflicts( ContentHandler ch ) throws SAXException {
     AttributesImpl atts = new AttributesImpl();
     ch.startDocument();
@@ -96,11 +107,12 @@ public class ConflictLog {
     if( !conflicts.isEmpty() )
       System.out.println( "MERGE FAILED: " + conflicts.size() + " conflicts.");
     if( !warnings.isEmpty() )
-      System.out.println( "Warning: " + warnings.size() + " conflict warnings.");
+      System.out.println( "Warning: " + warnings.size() +" conflict warnings.");
     ch.endDocument();
   }
 
-  protected void outputConflict( ConflictEntry ce, ContentHandler ch ) throws SAXException {
+  protected void outputConflict( ConflictEntry ce, ContentHandler ch )
+    throws SAXException {
     AttributesImpl atts = new AttributesImpl();
     ch.startElement("","",TYPETAGS[ce.type],atts);
     ch.characters(ce.text.toCharArray(),0,ce.text.length());
@@ -133,5 +145,4 @@ public class ConflictLog {
     }
     ch.endElement("","",TYPETAGS[ce.type]);
   }
-
 }

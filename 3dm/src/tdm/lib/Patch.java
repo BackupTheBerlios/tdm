@@ -1,4 +1,4 @@
-// $Id: Patch.java,v 1.3 2001/06/12 15:33:57 ctl Exp $
+// $Id: Patch.java,v 1.4 2001/09/05 13:21:26 ctl Exp $
 
 import java.util.Map;
 import java.util.HashMap;
@@ -20,7 +20,7 @@ public class Patch {
       RESERVED.add(DIFF_NS+"insert");
       RESERVED.add(DIFF_NS+"esc");
   }
-///////ENDCOMMON
+//ENDCOMMON
 
   public Patch() {
   }

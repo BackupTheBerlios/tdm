@@ -1,9 +1,16 @@
-// $Id
+// $Id: BranchNode.java,v 1.10 2001/09/05 13:21:25 ctl Exp $ D
 
 import java.util.Iterator;
 
+/**
+ *  Node in a branch tree. In addition to the
+ *  functionality provided by the node class, BranchNode adds matchings to a
+ *  node in the base tree.
+ */
+
 public class BranchNode extends Node {
 
+  // Match types
   public static final int MATCH_FULL = 3;
   public static final int MATCH_CONTENT = 1;
   public static final int MATCH_CHILDREN = 2;
@@ -12,12 +19,10 @@ public class BranchNode extends Node {
   private BaseNode baseMatch = null;
   private int matchType = 0;
 
-
-  public BranchNode(/* Node aParent, int achildPos,*/ XMLNode aContent ) {
-    super();// aParent,achildPos);
+  public BranchNode( XMLNode aContent ) {
+    super();
     content = aContent;
   }
-
 
   public BranchNode getChild( int ix ) {
     return (BranchNode) children.elementAt(ix);
@@ -27,7 +32,6 @@ public class BranchNode extends Node {
     return (BranchNode) parent;
   }
 
-  // Possibly not needed in final version!
   public void setPartners(MatchedNodes p) {
     partners = p;
   }
@@ -36,7 +40,6 @@ public class BranchNode extends Node {
     return partners;
   }
 
-  // Possibly not needed in final version! (move to constructor?)
   public void setBaseMatch(BaseNode p, int amatchType) {
     if( amatchType < MATCH_CONTENT || amatchType > MATCH_FULL )
       throw new IllegalArgumentException();
@@ -67,29 +70,27 @@ public class BranchNode extends Node {
     return baseMatch;
   }
 
-  // Tells if this node is in the left tree.
-  // notice the recursive structure, enabling us to tell this even if the node is
-  // unmatched. Assumes that at least the root is matched.
+  /** Tells if this node is in the left tree. */
   public boolean isLeftTree() {
+    //  Assumes that at least the root is matched.
     if( baseMatch != null )
       return baseMatch.getLeft().getMatches().contains(this);
-    else {
-      //System.err.println("Recurse:"+getContent().toString());
-      //System.err.flush();
+    else
       return getParent().isLeftTree();
-    }
   }
 
   public boolean isMatch( int type) {
     return ((matchType & type) != 0);
   }
 
-  // Remeber to check both steps! The canidate's match type is only from base
-  // if A should match B structurally we need
-  // A---------Base---------B
-  //    struct      struct
+
+  /** Find a node partner of given type. */
 
   public BranchNode getFirstPartner( int typeFlags ) {
+    // Remeber to check both steps! The canidate's match type is only from base
+    // if A should match B structurally we need
+    // A---------Base---------B
+    //    struct      struct
     if( ( matchType & typeFlags) == 0 )
       return null;
     MatchedNodes m= getPartners();
@@ -102,14 +103,15 @@ public class BranchNode extends Node {
     }
     return null;
   }
+//$CUT
   public void debug( java.io.PrintWriter pw, int indent ) {
     super.debug(pw, indent);
-    String ind = "                                                   ".substring(0,indent+1);
+    String ind = "                                                           ".substring(0,indent+1);
     pw.println(ind+(partners != null ? "Partners are:" : "(no partners)"));
     if(partners != null ) {
       partners.debug(pw,indent+1);
       pw.println(ind+"---");
     }
   }
-
+//$CUT
 }

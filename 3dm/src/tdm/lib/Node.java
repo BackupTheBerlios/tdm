@@ -1,6 +1,12 @@
-// $Id: Node.java,v 1.8 2001/06/06 21:44:18 ctl Exp $
+// $Id: Node.java,v 1.9 2001/09/05 13:21:26 ctl Exp $ D
 
 import java.util.Vector;
+
+/** Node in the parse tree. Each node in the parse trees has 0-n children,
+ * content and a tag to identify nodes in the same matching subtrees (the
+ * <code>matchArea</code> field). In addition, all nodes except the root
+ * have a parent.
+ */
 
 public abstract class Node {
 
@@ -10,9 +16,9 @@ public abstract class Node {
   protected int childPos=-1; // zero-based, i.e. first child = 0
   protected MatchArea area = null;
 
-  public Node( /*Node aParent, int achildPos */) {
-    parent = null; //aParent;
-    childPos = -1; //achildPos;
+  public Node() {
+    parent = null;
+    childPos = -1;
   }
 
   public void addChild( Node n) {
@@ -41,7 +47,6 @@ public abstract class Node {
     return parent != null && childPos < parent.children.size()-1;
   }
 
-
   public Node getLeftSibling() {
     if( parent == null || childPos == 0 )
       return null;
@@ -56,16 +61,9 @@ public abstract class Node {
       return parent.getChildAsNode(childPos+1);
   }
 
-
-/* Hopefully not needed
-  public void setContent( XMLNode n ) {
-    content = n;
-  }
-*/
   public XMLNode getContent( ) {
     return content;
   }
-
 
   public int getChildPos() {
     return childPos;
@@ -78,6 +76,7 @@ public abstract class Node {
   public void setMatchArea(MatchArea anArea) {
     area=anArea;
   }
+//$CUT
 
   public void debug( java.io.PrintWriter pw, int indent ) {
     String ind = "                                                   ".substring(0,indent+1);
@@ -89,4 +88,5 @@ public abstract class Node {
     for( int i=0;i<getChildCount();i++)
       ((Node) children.elementAt(i)).debugTree(pw,indent+1);
   }
+//$CUT
 }

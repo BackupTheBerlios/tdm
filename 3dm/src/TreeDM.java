@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.33 2001/08/05 21:09:25 ctl Exp $
+//$Id: TreeDM.java,v 1.34 2001/09/05 13:21:26 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -292,8 +292,14 @@ public class TreeDM {
     e.printStackTrace();
     System.exit(0);
    }
-   java.awt.Frame tree = new TreePainter( docBase, true, System.out );
-   tree.setVisible(true);
+   try {
+     FileOutputStream out = new FileOutputStream(args[1]);
+     java.awt.Frame tree = new TreePainter( docBase.getChild(0), true, out );
+     tree.setVisible(true);
+   } catch ( Exception e ) {
+    e.printStackTrace();
+    System.exit(0);
+   }
   }
 
 

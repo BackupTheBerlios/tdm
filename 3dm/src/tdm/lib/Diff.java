@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.3 2001/07/29 17:12:09 ctl Exp $
+// $Id: Diff.java,v 1.4 2001/09/05 13:21:25 ctl Exp $ D
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.helpers.AttributesImpl;
@@ -12,12 +12,17 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Iterator;
 
+/** Produces the diff between two naturally matched trees.
+ *  Collapsing multiple copy-ops using the run attribute is not implemented in
+ *  this version.
+ */
+
 public class Diff {
 
-  Matching m = null;
+  private Matching m = null;
   private static final Attributes EMPTY_ATTS = new AttributesImpl();
   private static final Set RESERVED;
-  static final String DIFF_NS ="diff:";
+  private static final String DIFF_NS ="diff:";
   static {
       RESERVED = new HashSet();
       RESERVED.add(DIFF_NS+"copy");
@@ -25,11 +30,17 @@ public class Diff {
       RESERVED.add(DIFF_NS+"esc");
   }
 
+  /** Construct a diff operating on the matched trees passed to the constructor.
+   *  Note that the matching contains pointers to the base and new trees.
+   *  @param am Matching between trees to diff
+   */
   public Diff(Matching am) {
     m=am;
   }
 
-
+  /** Encode the diff between the trees passed to the constructor.
+   *  @param ch Output encoder for the diff
+   */
   public void diff( ContentHandler ch ) throws SAXException {
     enumerateNodes(m.getBaseRoot(),nodeNumbers);
     ch.startDocument();
@@ -39,8 +50,8 @@ public class Diff {
     ch.endDocument();
   }
 
-  // branch has basenode
-  protected void copy( BaseNode b, BranchNode branch, ContentHandler ch ) throws SAXException {
+  protected void copy( BaseNode b, BranchNode branch, ContentHandler ch )
+                        throws SAXException {
     // Find stopnodes
     Vector stopNodes = new Vector();
     m.getAreaStopNodes( stopNodes, branch );
@@ -69,8 +80,8 @@ public class Diff {
     }
   }
 
-  // branch has no basenode
-  protected void insert( BranchNode branch, ContentHandler ch ) throws SAXException {
+  protected void insert( BranchNode branch, ContentHandler ch )
+                          throws SAXException {
     XMLNode content = branch.getContent();
     if( content instanceof XMLTextNode ) {
       XMLTextNode ct = (XMLTextNode) content;
@@ -85,9 +96,9 @@ public class Diff {
       for( int i=0;i<branch.getChildCount();i++) {
         BranchNode child = branch.getChild(i);
         if( child.hasBaseMatch() ) {
-          // !!! added for t3
           AttributesImpl copyAtts = new AttributesImpl();
-          copyAtts.addAttribute("","","src","CDATA",getId(child.getBaseMatch()));
+          copyAtts.addAttribute("","","src","CDATA",
+            getId(child.getBaseMatch()));
           ch.startElement("","",DIFF_NS+"copy",copyAtts);
           copy( child.getBaseMatch(), child, ch );
           ch.endElement("","",DIFF_NS+"copy");
@@ -102,12 +113,13 @@ public class Diff {
 
   protected Map nodeNumbers = new HashMap();
 
+  // Get BFS number of node
   protected String getId( Node n ) {
     return ((Integer) nodeNumbers.get(n)).toString();
   }
 
-  // BFS Enumeration of nodes. Useful beacuse adjacent nodes have subsequent ids =>
-  // diff can use the "run" attribute more often
+  // BFS Enumeration of nodes. Useful beacuse adjacent nodes have subsequent ids
+  // => diff can use the "run" attribute more often
   protected void enumerateNodes( Node start, Map map ) {
     int id = 0;
     LinkedList queue = new LinkedList();
