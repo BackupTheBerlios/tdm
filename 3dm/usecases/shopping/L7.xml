@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="iso-8859-1"?>
+<!-- Mom has reviewed the computer suggestion list, and adds a cake and lettuce, remove the salmon
+     and decides on 8 apples.This is the final list pulled to Lisa's PDA when she requests the
+     shopping list. -->
+<!-- $Id: L7.xml,v 1.1 2001/03/07 17:08:53 ctl Exp $ -->
+<shoppinglist>
+	<item>
+		<name>Emmentaler Cheese</name>
+		<quantity>500g</quantity>
+		<price>3.12</price>
+		<shop>LMart</shop>
+	</item>
+	<item>
+		<name>Wheat toast</name>
+		<quantity>2 packes</quantity>
+		<price>1.32</price>
+		<shop>LMart</shop>
+	</item>	
+	<item>
+		<name>Apples</name>
+		<quantity>8</quantity>
+		<price>2.44</price>
+		<shop></shop>
+	</item>
+	<item>
+		<name>Kalvin & Hobbes Comic (for Kalle's Xmas party!)</name>
+		<quantity>1</quantity>
+		<price>4.99</price>
+		<shop></shop>
+	</item>
+	<item>
+		<name>Orange juice</name>
+		<quantity>2l</quantity>
+		<price>1.97</price>
+		<shop>LMart</shop>
+	</item>
+	<item>
+		<name>Toilet paper</name>
+		<quantity>1 packet</quantity>
+		<price>3.80</price>
+		<shop>LMart</shop>
+	</item>
+	<item>
+		<name>Priness Cake</name>
+		<quantity>1</quantity>
+		<price></price>
+		<shop></shop>
+	</item>
+	<item>
+		<name>Lettuce</name>
+		<quantity>1 head</quantity>
+		<price></price>
+		<shop></shop>
+	</item>
+</shoppinglist>
