@@ -1,4 +1,4 @@
-// $Id: Editgen.java,v 1.6 2002/10/30 10:11:48 ctl Exp $
+// $Id: Editgen.java,v 1.7 2002/10/30 15:16:16 ctl Exp $
 package editgen;
 
 import XMLNode;
@@ -14,11 +14,22 @@ import XMLNode;
 import XMLPrinter;
 import EditLog;
 import java.util.Iterator;
-import gnu.getopt.*;
 
 public class Editgen {
 
-  static java.util.Random rnd = new java.util.Random( 31415926L ); // repeatable runs!
+  public static final String EDIT_PREFIX = "edits-";
+  public static final String ALLOWED_OPS = "diumc";
+
+  private String editLogPrefix = null;
+  private double probability = 0.01; // Defaultprob
+  private int editCount = -1;
+  private boolean useEditCount = false;
+  private char[] operations = {'d','i','u','m','c'};
+
+  private boolean printStats = true;
+  private int delCount =0, insCount = 0, updCount = 0, moveCount =0, copyCount =0;
+
+  java.util.Random rnd = new java.util.Random( 31415926L ); // repeatable runs!
   static int idCounter = 1000000;
 
   public static void main(String[] args) {
@@ -31,10 +42,11 @@ public class Editgen {
     // Parse infile
    MarkableBaseNode docBase=null;
    BranchNode docMerged=null;
+   System.err.println("Parsing "+inFile+"...");
    try {
      XMLParser p = new XMLParser();
      docBase = (MarkableBaseNode) p.parse( inFile,baseNodeFactory);
-     countSubtreeSizes(docBase,0); // We ned subtree counts to alloc a random node
+     countSubtreeSizes(docBase); // We need subtree counts to alloc a random node
    } catch ( Exception e ) {
      System.err.println("XML Parse error in " + inFile +
                         ". Detailed exception info is:" );
@@ -51,19 +63,26 @@ public class Editgen {
      System.err.println("Making "+outfiles[iFile]+"...");
      EditLog branchLog = new EditLog();
      BranchNode outRoot = clonedAndMatchedTree( docBase, false, true );
-     ((MarkableBaseNode) docBase.getChild(0)).mark(); // Never edit root elem
-     transform( (MarkableBaseNode) docBase.getChild(0),
+     ((MarkableBaseNode) docBase).mark(MarkableBaseNode.MARK_STRUCTURE | MarkableBaseNode.MARK_CONTENT);
+     ((MarkableBaseNode) docBase.getChild(0)).mark(MarkableBaseNode.MARK_STRUCTURE); // Never edit root elem
+     int edits = editCount == -1 ?
+                 (int) (((MarkableBaseNode) docBase).getSubteeSize()*
+                 (probability/outfiles.length)) :
+                 editCount;
+     transform( edits, (MarkableBaseNode) docBase.getChild(0),
                 (MarkableBaseNode) docBase.getChild(0), mergeLog, branchLog);
      try {
        printTree( outRoot, new XMLPrinter( new java.io.FileOutputStream( outfiles[iFile] )));
      } catch (java.io.IOException x ) {
        System.err.println("Unable to write outfile "+outfiles[iFile] );
      }
-     String editLogFile = "edits-"+outfiles[iFile];
-     try {
-       branchLog.writeEdits(new XMLPrinter( new java.io.FileOutputStream( editLogFile )));
-     } catch (Exception x ) {
-       System.err.println("Unable to write edit log "+editLogFile );
+     if( editLogPrefix != null ) {
+       String editLogFile = editLogPrefix+outfiles[iFile];
+       try {
+         branchLog.writeEdits(new XMLPrinter( new java.io.FileOutputStream( editLogFile )));
+       } catch (Exception x ) {
+         System.err.println("Unable to write edit log "+editLogFile );
+       }
      }
    }
    // Write merge facit
@@ -73,117 +92,166 @@ public class Editgen {
      System.err.println("Unable to write outfile "+mergeFile );
    }
    // Write combined log
-   String mergeLogFile = "edits-"+mergeFile;
-   try {
-     mergeLog.writeEdits(new XMLPrinter( new java.io.FileOutputStream( mergeLogFile )));
-   } catch (Exception x ) {
-     System.err.println("Unable to write edit log "+mergeLogFile );
+   if( editLogPrefix != null ) {
+     String mergeLogFile = editLogPrefix+mergeFile;
+     try {
+       mergeLog.writeEdits(new XMLPrinter( new java.io.FileOutputStream( mergeLogFile )));
+     } catch (Exception x ) {
+       System.err.println("Unable to write edit log "+mergeLogFile );
+     }
+   }
+   if( printStats ) {
+     System.err.println("Base tree nodes: "+((MarkableBaseNode) docBase.getChild(0)).getSubteeSize());
+     System.err.println("        Inserts: "+insCount);
+     System.err.println("        Deletes: "+delCount);
+     System.err.println("        Updates: "+updCount);
+     System.err.println("          Moves: "+moveCount);
+     System.err.println("         Copies: "+copyCount);
+     System.err.println("    Total edits: "+(insCount+delCount+updCount+moveCount+copyCount));
    }
   }
 
   int _visitCount = 0;
 
-  public void transform( MarkableBaseNode base,MarkableBaseNode baseRoot,
+  public void transform( int edits, MarkableBaseNode base,MarkableBaseNode baseRoot,
                          EditLog mergeLog, EditLog branchLog ) {
-    boolean editNode = false;
-    // Decide if node should be edited
-    if( ! base.isMarked() ) {
-      _visitCount++;
-      editNode = rnd.nextDouble() > 0.5;
+
+    for( int i=0;i<edits;) {
+      char op = operations[(int) (rnd.nextDouble()*operations.length)];
+      MarkableBaseNode n = getRandomNode(baseRoot,
+          op=='u' ? MarkableBaseNode.MARK_CONTENT : MarkableBaseNode.MARK_STRUCTURE
+          ,null);
+      if( n == null ) {
+        System.err.println("Ran out of free nodes to edit");
+        return;
+      }
+      if( editNode(op,n,baseRoot,mergeLog,branchLog) )
+        i++;
     }
+  }
+
+  public boolean editNode( char op, MarkableBaseNode base,MarkableBaseNode baseRoot,
+                         EditLog mergeLog, EditLog branchLog ) {
     BranchNode n = null; // used by edit ops
     boolean after = false;
     MarkableBaseNode dest = null;
-    if( editNode ) {
-      int op = 0; //(int) (rnd.nextDouble() *5.0);
-//      if( op==1) op = 4;
-//      if( op==0) op = 3;
-      switch(op) {
-        case 0: // Delete node
-          System.err.println("DEL");
-          dest = getLargestDelTree(base);
-          if( dest == null ) {
-            System.err.println("-- Nothing suitable to del found");
-            break;
-          }
-          _checkNotMarked(dest);
-          dest.lock();
-          dest.lockSubtree();
-          editTrees(dest,null,null,false,false,mergeLog,branchLog);
-          break;
-        case 1: // Insert node
-          System.err.println("INS");
-          org.xml.sax.helpers.AttributesImpl atts = new org.xml.sax.helpers.AttributesImpl();
-          atts.addAttribute("","","id","CDATA",
-             ""+(idCounter++) ); //  rnd.nextLong()+"@"+ System.currentTimeMillis());
-          XMLElementNode content = new XMLElementNode("editgen:insert",atts);
-          after = rnd.nextDouble() > 0.5;
-          base.lock(!after,after);
-          editTrees(null,base,new BranchNode( content),after,false,mergeLog,branchLog);
-          break;
-        case 2: // Update node
-          System.err.println("UPD");
-          break; // N/A for now...
-        case 3: // Move subtree
-          System.err.println("MOV");
-          // Delete from base (src of move) (=delete code block)
-          base.lock();
-          dest = getRandomNode( baseRoot, true, base ); // NOTE! Dest must be fetched AFTER src is locked!
-          after = rnd.nextDouble() > 0.5;
-          dest.lock(!after,after);
-          // Text node move check
-          n = dest.getLeft().getFullMatch();
-          Node n2 = after ? n.getRightSibling() : n.getLeftSibling();
-          if( base.getContent() instanceof XMLTextNode &&
-              ( (n.getContent() instanceof XMLTextNode) ||
-               ( n2 != null && n2.getContent() instanceof XMLTextNode ))) {
-            // NOTE: Unfortunately we have locked the dst and src, so they are no
-            // longer eligable for other ops after the abort :( (unlocking is not trivial)
-            System.err.println("-- Abort: copying text node adjacent to other text node not possible");
-            break;
-          }
+    switch(op) {
+      case 'd': // Delete node
+        // System.err.println("DEL");
+        dest = getLargestDelTree(base);
+        if( dest == null ) {
+          //System.err.println("-- Nothing suitable to del found");
+          return false;
+        }
+        _checkNotMarked(dest);
+        dest.lock(MarkableBaseNode.MARK_CONTENT | MarkableBaseNode.MARK_STRUCTURE);
+        dest.lockSubtree(MarkableBaseNode.MARK_CONTENT | MarkableBaseNode.MARK_STRUCTURE);
+        delCount++;
+        editTrees(dest,null,null,false,false,mergeLog,branchLog);
+        break;
+      case 'i': // Insert node
+        insCount++; // System.err.println("INS");
+        org.xml.sax.helpers.AttributesImpl atts = new org.xml.sax.helpers.AttributesImpl();
+        atts.addAttribute("","","id","CDATA",
+                          ""+(idCounter++) ); //  rnd.nextLong()+"@"+ System.currentTimeMillis());
+        XMLElementNode content = new XMLElementNode("editgen:insert",atts);
+        after = rnd.nextDouble() > 0.5;
+        base.lock(!after,after,MarkableBaseNode.MARK_STRUCTURE);
+        editTrees(null,base,new BranchNode( content),after,false,mergeLog,branchLog);
+        break;
+      case 'u': // Update node
+        updateNode(base,mergeLog,branchLog);
+        updCount++; //System.err.println("UPD");
+        base.mark(MarkableBaseNode.MARK_CONTENT);
+        break; // N/A for now...
+      case 'm': // Move subtree
+        //System.err.println("MOV");
+        // Delete from base (src of move) (=delete code block)
+        base.lock( MarkableBaseNode.MARK_STRUCTURE);
+        dest = getRandomNode( baseRoot, MarkableBaseNode.MARK_STRUCTURE, base ); // NOTE! Dest must be fetched AFTER src is locked!
+        if( dest == null )
+          return false; // No possible dest
+        after = rnd.nextDouble() > 0.5;
+        dest.lock(!after,after,MarkableBaseNode.MARK_STRUCTURE);
+        // Text node move check
+        n = dest.getLeft().getFullMatch();
+        Node n2 = after ? n.getRightSibling() : n.getLeftSibling();
+        if( base.getContent() instanceof XMLTextNode &&
+            ( (n.getContent() instanceof XMLTextNode) ||
+            ( n2 != null && n2.getContent() instanceof XMLTextNode ))) {
+          // NOTE: Unfortunately we have locked the dst and src, so they are no
+          // longer eligable for other ops after the abort :( (unlocking is not trivial)
+//          System.err.println("-- Abort: copying text node adjacent to other text node not possible");
+          return false;
+        }
+        moveCount++;
+        editTrees(base,dest,null,after,true,mergeLog,branchLog);
+        break;
+      case 'c': // Copy subtree
+        // NOTE: Will currently never copy as child of a node,
+        // if the node does not already have children (always inserts in childlist)
+        //System.err.println("CPY");
+        // Lock src of copy
+        base.lock(MarkableBaseNode.MARK_STRUCTURE);
+        // Insert at dest (=insert code block)
+        dest = getRandomNode( baseRoot, MarkableBaseNode.MARK_STRUCTURE, base ); // NOTE! Dest must be fetched AFTER src is locked!
+        if( dest == null )
+          return false; // No possible dest
+        after = rnd.nextDouble() > 0.5;
+        dest.lock(!after,after,MarkableBaseNode.MARK_STRUCTURE);
+        n = dest.getLeft().getFullMatch();
+        n2 = after ? n.getRightSibling() : n.getLeftSibling();
+        if( base.getContent() instanceof XMLTextNode &&
+            ( (n.getContent() instanceof XMLTextNode) ||
+            ( n2 != null && n2.getContent() instanceof XMLTextNode ))) {
+          // NOTE: Unfortunately we have locked the dst and src, so they are no
+          // longer eligable for other ops after the abort :( (unlocking is not trivial)
+          System.err.println("-- Abort: copying text node adjacent to other text node not possible");
+          return false;
+        }
+        copyCount++;
+        editTrees(null,dest,base,after,true,mergeLog,branchLog);
+        break;
+    }
+    return true;
+  }
 
-          editTrees(base,dest,null,after,true,mergeLog,branchLog);
-          break;
-        case 4: // Copy subtree
-          // NOTE: Will currently never copy as child of a node,
-          // if the node does not already have children (always inserts in childlist)
-          System.err.println("CPY");
-          // Lock src of copy
-          base.lock();
-          // Insert at dest (=insert code block)
-          dest = getRandomNode( baseRoot, true, base ); // NOTE! Dest must be fetched AFTER src is locked!
-          after = rnd.nextDouble() > 0.5;
-          dest.lock(!after,after);
-          n = dest.getLeft().getFullMatch();
-          n2 = after ? n.getRightSibling() : n.getLeftSibling();
-          if( base.getContent() instanceof XMLTextNode &&
-              ( (n.getContent() instanceof XMLTextNode) ||
-               ( n2 != null && n2.getContent() instanceof XMLTextNode ))) {
-            // NOTE: Unfortunately we have locked the dst and src, so they are no
-            // longer eligable for other ops after the abort :( (unlocking is not trivial)
-            System.err.println("-- Abort: copying text node adjacent to other text node not possible");
-            break;
-          }
-          editTrees(null,dest,base,after,true,mergeLog,branchLog);
-          break;
+  protected void updateNode( MarkableBaseNode n, EditLog mergeLog,
+                            EditLog branchLog  ) {
+    String newId = newId();
+    doUpdateNode(n,mergeLog , true, newId );
+    doUpdateNode(n,branchLog , false, newId );
+  }
+
+  protected void doUpdateNode( MarkableBaseNode b, EditLog log,
+                             boolean left, String newId ) {
+    MatchedNodes m = left ? b.getLeft() : b.getRight();
+    for( Iterator i = m.getMatches().iterator();i.hasNext();) {
+      BranchNode n = (BranchNode) i.next();
+      XMLNode c = n.getContent();
+      if( c instanceof XMLTextNode ) {
+        XMLTextNode ct = (XMLTextNode) c;
+        ct.setText((ct.toString()+newId).toCharArray());
+      } else {
+        XMLElementNode ce = (XMLElementNode) c;
+        ce.setQName( ce.getQName() + newId );
       }
-    } // if edit node
-    // recurse
-    for( int i=0;i<base.getChildCount();i++)
-      transform((MarkableBaseNode) base.getChild(i),baseRoot,mergeLog,branchLog);
+    log.update(n);
+    }
   }
 
   /** Return a random node from a tree. If isUnmarked is set, only returns unmarked
    * nodes. Never returns nodes inside forbiddenTree.
    */
 
-  public MarkableBaseNode getRandomNode( MarkableBaseNode root, boolean isUnmarked,
+  public MarkableBaseNode getRandomNode( MarkableBaseNode root, int markMask,
      MarkableBaseNode forbiddenTree ) {
-    int pos = (int) (rnd.nextDouble() * (root.getSubteeSize() - forbiddenTree.getSubteeSize() ));
-    MarkableBaseNode found = doGetRandomNode( pos, root, isUnmarked, forbiddenTree );
-    if( found == null && isUnmarked )
-      found=doGetRandomNode(SCAN_UNMARKED,root,isUnmarked, forbiddenTree ); // Unmarked scann reached end of tree, start from top
+    int pos = (int) (rnd.nextDouble() * (root.getSubteeSize() -
+        (forbiddenTree == null ? 0 : forbiddenTree.getSubteeSize()) ))+1;
+//    System.err.println("Pos="+pos);
+    MarkableBaseNode found = doGetRandomNode( pos, root, markMask, forbiddenTree );
+    if( found == null && markMask > 0 )
+      found=doGetRandomNode(SCAN_UNMARKED,root,markMask, forbiddenTree ); // Unmarked scann reached end of tree, start from top
 // Forbiddentreecheck
     MarkableBaseNode _n = found;
     while( _n != null ) {
@@ -196,34 +264,40 @@ public class Editgen {
   }
 
   protected static final int SCAN_UNMARKED = Integer.MIN_VALUE;
-  protected MarkableBaseNode doGetRandomNode( int pos, MarkableBaseNode n, boolean isUnmarked,
+  protected MarkableBaseNode doGetRandomNode( int pos, MarkableBaseNode n,int markMask,
      MarkableBaseNode forbiddenTree ) {
-    if( n == forbiddenTree )
-      return null;
+    if( n == null || n == forbiddenTree )
+      throw new IllegalArgumentException("n==null or recursed into forbidden tree");
     if( pos == SCAN_UNMARKED ) {
-      if( !n.isMarked() )
+      if( (n.getMark() & markMask) == 0 )
         return n;
       else {
         MarkableBaseNode found = null;
-        for( int i=0;i<n.getChildCount() && found == null;i++)
-          found = doGetRandomNode(pos,(MarkableBaseNode) n.getChild(i),isUnmarked,forbiddenTree);
+        for( int i=0;i<n.getChildCount() && found == null;i++) {
+          MarkableBaseNode child = (MarkableBaseNode) n.getChild(i);
+          if( child != forbiddenTree )
+            found = doGetRandomNode(pos,child,markMask,forbiddenTree);
+        }
         return found;
       }
     }
+    pos--;
     if( pos == 0 ) {
-      if( isUnmarked && n.isMarked() )
-        return doGetRandomNode(SCAN_UNMARKED,n,isUnmarked, forbiddenTree);
+      if( (n.getMark() & markMask) != 0 )
+        return doGetRandomNode(SCAN_UNMARKED,n,markMask, forbiddenTree);
       else
         return n;
     }
     int stSize = 0;
     MarkableBaseNode child= null;
-    for( int i=0;i<n.getChildCount() && pos>=0;i++) {
+    for( int i=0;i<n.getChildCount() && pos>0;i++) {
       child = ((MarkableBaseNode) n.getChild(i));
       stSize = child == forbiddenTree ? 0 : child.getSubteeSize();
       pos-= stSize;
     }
-    return doGetRandomNode( pos + stSize, child, isUnmarked, forbiddenTree );
+    if( child == null )
+      System.err.println("ARGH! pos="+(pos+stSize));
+    return doGetRandomNode( pos + stSize, child, markMask, forbiddenTree );
   }
 
   // Get root of largest unmarked subtree of n
@@ -324,7 +398,7 @@ public class Editgen {
 
   protected BranchNode clonedAndMatchedTree( Node n, boolean left, boolean resetMatches ) {
     BaseNode b = n instanceof BaseNode ? (BaseNode) n : ((BranchNode) n).getBaseMatch();
-    BranchNode nc = new BranchNode( n.getContent() );
+    BranchNode nc = new BranchNode( (XMLNode) n.getContent().clone() );
     if( b != null ) { // Set matches for non-inserted nodes
       nc.setBaseMatch(b,BranchNode.MATCH_FULL);
       MatchedNodes mn = left ? b.getLeft() : b.getRight();
@@ -357,27 +431,64 @@ public class Editgen {
     }
   }
 
-  public int countSubtreeSizes( MarkableBaseNode n, int count ) {
+  public int countSubtreeSizes( MarkableBaseNode n) {
     int stSize = 0;
     for( int i=0;i<n.getChildCount();i++)
-      stSize = countSubtreeSizes((MarkableBaseNode)n.getChild(i),stSize);
-    n.setSubtreeSize(stSize+1);
+      stSize += countSubtreeSizes((MarkableBaseNode)n.getChild(i));
+    stSize++;
+    n.setSubtreeSize(stSize);
     return stSize;
   }
 
+/*
   protected void markSubtree( MarkableBaseNode b )  {
     b.mark();
     for(int i=0;i<b.getChildCount();i++)
       markSubtree((MarkableBaseNode) b.getChild(i));
   }
 
-  protected void unmarkSubtree( MarkableBaseNode b )  {
+ protected void unmarkSubtree( MarkableBaseNode b )  {
     b.unmark();
     for(int i=0;i<b.getChildCount();i++)
       unmarkSubtree((MarkableBaseNode) b.getChild(i));
   }
+*/
 
-    // Factory for BaseNode:s
+  public void setEditCount( int aCount ) {
+    if( aCount < 0  )
+      throw new IllegalArgumentException("Illegal edit count");
+    useEditCount = true;
+    editCount = aCount;
+  }
+
+  public void setProbability(double p) throws IllegalArgumentException {
+    if( p < 0.0 || p>1.0 )
+      throw new IllegalArgumentException("Illegal probability");
+    useEditCount = false;
+    probability = p;
+  }
+
+  // null means no log
+  public void setEditLogPrefix( String aLog ) {
+    editLogPrefix = aLog;
+  }
+
+  public void setOperations( String ops ) throws IllegalArgumentException {
+    if( ops.length() == 0 ) {
+      throw new IllegalArgumentException("Empty operations string");
+    }
+    char[] newOps = new char[ops.length()];
+    for(int i=0;i<ops.length();i++) {
+      char ch = ops.charAt(i);
+      if( ALLOWED_OPS.indexOf(ch) == -1 )
+        throw new IllegalArgumentException("Invalid char in operations string: "+ch);
+      newOps[i]=ch;
+    }
+    operations=newOps;
+  }
+
+
+  // Factory for BaseNode:s
   private static NodeFactory baseNodeFactory =  new NodeFactory() {
             public Node makeNode(  XMLNode content ) {
               return new MarkableBaseNode( content  );
@@ -389,6 +500,10 @@ public class Editgen {
               return new BranchNode(  content  );
             }
         };
+
+  protected String newId() {
+    return ""+idCounter++;
+  }
 
   private void _getByIds( Node n, String id, java.util.Set nodes ) {
     if( id.equals(_getId(n)) )
