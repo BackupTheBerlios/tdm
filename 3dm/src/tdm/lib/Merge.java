@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.14 2001/04/18 09:30:05 ctl Exp $
+// $Id: Merge.java,v 1.15 2001/04/19 13:59:03 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -20,7 +20,7 @@ public class Merge {
 
   public void merge( ContentHandler ch ) throws SAXException {
     ch.startDocument();
-    mergeNode( m.leftRoot, m.rightRoot, ch );
+    mergeNode( m.getLeftRoot(), m.getRightRoot(), ch );
     ch.endDocument();
   }
 
@@ -117,8 +117,8 @@ public class Merge {
     }
 //    XMLNode mergedNode = nPartner != null ? mergeNodeContent( n, nPartner ) : n.getContent();
       if( mergedNode instanceof XMLTextNode ) {
-        String text = ((XMLTextNode) mergedNode).getText();
-        ch.characters(text.toCharArray(),0,text.length());
+        XMLTextNode text = (XMLTextNode) mergedNode;
+        ch.characters(text.getText(),0,text.getText().length);
       } else {
         // It's an element node
         XMLElementNode mergedElement = (XMLElementNode) mergedNode;

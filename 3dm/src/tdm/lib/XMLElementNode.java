@@ -1,4 +1,4 @@
-// $Id: XMLElementNode.java,v 1.3 2001/03/15 13:09:14 ctl Exp $
+// $Id: XMLElementNode.java,v 1.4 2001/04/19 13:59:04 ctl Exp $
 
 import org.xml.sax.Attributes;
 import java.util.Vector;
@@ -6,14 +6,17 @@ import java.util.Hashtable;
 import java.util.Map;
 import org.xml.sax.helpers.AttributesImpl;
 import org.xml.sax.Attributes;
+import java.security.MessageDigest;
 //import java.io.PrintWriter;
 
 public class XMLElementNode extends XMLNode {
 
 //Probably not needed  public String nameSpace = null;
-  public String name = null;
-//  public Map attributes = null;
-  public AttributesImpl attributes = null;
+  private String name = null;
+  private AttributesImpl attributes = null;
+  private int nHashCode = -1;
+  private byte[] attrHash = null;
+
 //PROTO CODE
   public XMLElementNode( String aname,  Map attr ) {
     name = aname;
@@ -28,19 +31,19 @@ public class XMLElementNode extends XMLNode {
   }
 //PROTO CODE ENDS
   public XMLElementNode( String aname, Attributes attr ) {
-//    System.out.println("EN " +ename +"; "+ (attr == null ? "(null)" : attr.toString() ));
-
-//    nameSpace = ns;
     name = aname;
     attributes = new AttributesImpl( attr );
-/*
-    if( attr != null ) {
-      attributes = new java.util.Hashtable();
-      for( int i=0;i<attr.getLength();i++) {
-        attributes.put(attr.getQName(i) /*.getLocalName(i),attr.getValue(i));
-      }
+    makeHash();
+  }
+
+  private void makeHash() {
+    nHashCode = name.hashCode();
+    MessageDigest md = getMD();
+    for( int i=0;i<attributes.getLength();i++) {
+      md.update( calculateHash( attributes.getQName(i) ) );
+      md.update( calculateHash( attributes.getValue(i) ) );
     }
-*/
+    attrHash = md.digest();
   }
 
   //DUMMY!
@@ -106,38 +109,4 @@ public class XMLElementNode extends XMLNode {
     return true;
   }
 
-/*
-  public void printXML1( PrintWriter pw, int level, boolean assumeNoChildren ) {
-    StringBuffer tagopen = new StringBuffer();
-    tagopen.append('<');
-    tagopen.append( name );
-    if( attributes != null && !attributes.isEmpty() ) {
-      java.util.Iterator iter = attributes.keySet().iterator();
-      while( iter.hasNext() ) {
-        tagopen.append(' ');
-        Object key = iter.next();
-        tagopen.append(key.toString());
-        tagopen.append('=');
-        tagopen.append('"');
-        tagopen.append(attributes.get(key).toString());
-        tagopen.append('"');
-      }
-    }
-    if( assumeNoChildren )
-      tagopen.append("/>");
-    else
-      tagopen.append('>');
-    pw.println("                                               ".substring(0,2*level) + tagopen.toString());
-  }
-
-  public void printXML2( PrintWriter pw, int level ) {
-    pw.println("                                               ".substring(0,2*level) + "</"+name+">");
-  }
-
-
-  public void printTree(int level) {
-    super.printTree(level);
-    for(int i=0;i<children.size();i++)
-      ((Node) children.elementAt(i)).printTree(level+1);
-  } */
 }

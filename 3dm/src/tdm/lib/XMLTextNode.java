@@ -1,26 +1,38 @@
-// $Id: XMLTextNode.java,v 1.2 2001/03/15 13:09:14 ctl Exp $
+// $Id: XMLTextNode.java,v 1.3 2001/04/19 13:59:04 ctl Exp $
+
+import java.security.MessageDigest;
 
 public class XMLTextNode extends XMLNode {
 
-// NOTE!! Consider buffering char[] instead
-  public String text=null;
+  private char[] text=null;
+  private byte[] cHash = null;
 
-  public XMLTextNode(String value) {
-    text = value;
+  XMLTextNode( String srctext ) {
+    this( srctext.toCharArray() );
+  }
+
+  XMLTextNode( char[] srctext ) {
+    this( srctext,0,srctext.length);
+  }
+
+  XMLTextNode( char[] srctext, int first, int length ) {
+    text = new char[length];
+    System.arraycopy(srctext,first,text,0,length);
+    cHash = calculateHash(text);
   }
 
   public boolean contentEquals( Object a ) {
     if( a instanceof XMLTextNode )
-      return ((XMLTextNode) a).text.equals(text);
+      return MessageDigest.isEqual(cHash,((XMLTextNode) a).cHash);
     else
       return false;
   }
 
-  public String getText() {
+  public char[] getText() {
     return text;
   }
 
   public String toString() {
-    return text;
+    return new String(text);
   }
 }

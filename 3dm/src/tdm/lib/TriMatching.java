@@ -1,10 +1,9 @@
-// $Id: TriMatching.java,v 1.6 2001/03/28 08:58:14 ctl Exp $
+// $Id: TriMatching.java,v 1.7 2001/04/19 13:59:04 ctl Exp $
 
-public class TriMatching {
+public class TriMatching extends Matching {
 
-  protected BranchNode leftRoot = null;
-  protected BaseNode baseRoot = null;
-  protected BranchNode rightRoot = null;
+  private BranchNode leftRoot = null;
+  private BranchNode rightRoot = null;
 
   // PROTOYPE CONSTRUCTOR!!!!!
 
@@ -78,7 +77,7 @@ public class TriMatching {
     if( n instanceof ElementNode ) {
       content = new XMLElementNode(((ElementNode) n).name,((ElementNode) n).attributes );
     } else {
-      content = new XMLTextNode(((TextNode) n).text );
+      content = new XMLTextNode(((TextNode) n).text.toCharArray() );
     }
     Node root = f.makeNode(parent,childno,content);
     XMLn2n.put(root,n);
@@ -89,5 +88,14 @@ public class TriMatching {
     return root;
   }
   // END PROTO CODE
+
+  public BranchNode getLeftRoot() {
+    return leftRoot;
+  }
+
+  public BranchNode getRightRoot() {
+    return rightRoot;
+  }
+
 
 }
