@@ -1,4 +1,4 @@
-// $Id: TreeView.java,v 1.5 2001/04/19 20:45:50 ctl Exp $
+// $Id: TreeView.java,v 1.6 2001/08/05 21:09:25 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 import java.awt.*;
@@ -6,6 +6,13 @@ import java.awt.event.*;
 import java.awt.print.*;
 
 import java.util.*;
+import java.io.*;
+
+// BATIK
+import org.apache.batik.svggen.SVGGraphics2D;
+import org.apache.batik.dom.GenericDOMImplementation;
+import org.w3c.dom.Document;
+import org.w3c.dom.DOMImplementation;
 
 /**
  * Title:        Tree Diff and Merge quick proto 1
@@ -35,9 +42,13 @@ public class TreeView extends Frame  {
 */
     tc.setSize(1000,5000);
     sp.add(tc);
+    Panel p = new Panel();
     Button btnPrint = new Button("Print");
+    Button btnSVG = new Button("SVG");
     add( sp, BorderLayout.CENTER );
-    add( btnPrint, BorderLayout.SOUTH );
+    add( p, BorderLayout.SOUTH );
+    p.add(btnPrint);
+    p.add(btnSVG);
     addWindowListener( new WindowAdapter() {
         public void windowClosing( WindowEvent e ) {
           dispose();
@@ -63,6 +74,32 @@ public class TreeView extends Frame  {
       }
     }
     );
+
+    btnSVG.addActionListener( new ActionListener() {
+      public void actionPerformed( ActionEvent e ) {
+        // Get a DOMImplementation
+        DOMImplementation domImpl =
+            GenericDOMImplementation.getDOMImplementation();
+
+        // Create an instance of org.w3c.dom.Document
+        Document document = domImpl.createDocument(null, "svg", null);
+
+        // Create an instance of the SVG Generator
+        SVGGraphics2D svgGenerator = new SVGGraphics2D(document);
+
+        // Ask the test to render into the SVG Graphics2D implementation
+        tc.paint(svgGenerator);
+
+        // Finally, stream out SVG to the standard output using UTF-8
+        // character to byte encoding
+        boolean useCSS = false; // we want to use CSS style attribute
+        try {
+          Writer out = new OutputStreamWriter(System.out, "UTF-8");
+          svgGenerator.stream(out, useCSS);
+        } catch (Exception x) {
+        }
+      }
+    });
   }
 
 
@@ -151,6 +188,7 @@ public class TreeView extends Frame  {
         }
         // then myself
   //      int x = depth * 64, y= midleaf * 12 + 6;
+        g.setColor( Color.black );
         g.drawRect(x-4,y-4,8,8);
         makePoint( m, x, y);
         g.setColor( tagColor );

@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.32 2001/07/29 17:12:09 ctl Exp $
+//$Id: TreeDM.java,v 1.33 2001/08/05 21:09:25 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -37,8 +37,9 @@ public class TreeDM {
     String[] argset = {"../../usecases/review/gmergeb123.xml","../../usecases/review/edit.log"};
 //    String[] argset = {"rm.xml","edit.log"};
 //    (new TreeDM()).runOOMarkup( argset );
-    (new TreeDM()).runBM( args );
+//    (new TreeDM()).runBM( args );
 //    (new TreeDM()).runHarness( args );
+      (new TreeDM()).runDrawTree( args );
   }
 
   public void runHarness( String[] args ) {
@@ -278,6 +279,23 @@ public class TreeDM {
 
    treeView.setVisible(true);
   }
+
+  // Run Best Matcher
+  public void runDrawTree( String[] args ) {
+   BaseNode docBase=null;
+   try {
+      XMLParser p = new XMLParser();
+      System.out.println("Parsing " + args [0]);
+      docBase = (BaseNode) p.parse(args[0] ,baseNodeFactory);
+      System.out.println("OK.");
+   } catch ( Exception e ) {
+    e.printStackTrace();
+    System.exit(0);
+   }
+   java.awt.Frame tree = new TreePainter( docBase, true, System.out );
+   tree.setVisible(true);
+  }
+
 
   // Run diff
   public void runDiff( String[] args ) {
