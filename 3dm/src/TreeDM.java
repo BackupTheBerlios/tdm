@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.3 2001/03/15 13:09:14 ctl Exp $
+//$Id: TreeDM.java,v 1.4 2001/03/26 14:44:45 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -12,6 +12,7 @@
 
 import java.io.FileReader;
 import java.util.*;
+import java.io.*;
 
 import org.xml.sax.XMLReader;
 import org.xml.sax.Attributes;
@@ -28,7 +29,131 @@ public class TreeDM {
   }
 
   public static void main(String[] args) throws Exception {
-    (new TreeDM()).run( args );
+    (new TreeDM()).runHarness( args );
+  }
+
+  public void runHarness( String[] args ) {
+   if( args.length < 1 ) {
+      System.out.println("Usage: TreeDM case_dir");
+      System.exit(0);
+   }
+   System.out.println("3DM test harness..Starting test");
+   File topDir = new File(args[0]);
+   File[] caseDirs = topDir.listFiles();
+   if( caseDirs == null ) {
+     System.out.println("No cases found in " + topDir.getName());
+     System.exit(0);
+   }
+   int casesRun=0;
+   for(int ifile=0;ifile<caseDirs.length;ifile++) {
+    if( caseDirs[ifile].isDirectory() && Character.isDigit( caseDirs[ifile].getName().charAt(1) ) ) {
+      runCase(caseDirs[ifile] );
+      casesRun++;
+    }
+   }
+   if( casesRun == 0) {
+     runCase( topDir );
+   } else
+     System.out.println(casesRun + " cases run.");
+  }
+
+  private void runCase( File dir ) {
+    File base = new File( dir, "b.xml");
+    File b1 = new File( dir, "1.xml");
+    File b2 = new File( dir, "2.xml");
+    File merged = new File( dir, "m.xml");
+    ElementNode docA=null, docB=null, docBase=null;
+    System.out.println("Running case " + dir.getName() );
+    try {
+      Parser p = new Parser();
+//      System.out.println("Parsing " + base.getCanonicalPath() );
+      docBase = p.parse( base.getCanonicalPath() );
+//      System.out.println("Parsing " + base.getCanonicalPath() );
+      docA = p.parse( b1.getCanonicalPath() );
+//      System.out.println("Parsing " + base.getCanonicalPath() );
+      docB = p.parse( b2.getCanonicalPath() );
+
+/*      System.out.println("Parsing " + args [0]+"\\1.xml");
+      docA = p.parse(args[0]+PSEP+"1.xml");
+      System.out.println("Parsing " + args [0]+"\\2.xml");
+      docB = p.parse(args[0]+PSEP+"2.xml");
+      System.out.println("OK.");
+*/
+    } catch ( Exception e ) {
+      System.out.println("PARSE ERROR IN CASE, giving up." );
+      //e.printStackTrace();
+      return;
+    }
+    ProtoBestMatching m1 = new ProtoBestMatching( docBase, docA, "docA" );
+    ProtoBestMatching m2 = new ProtoBestMatching( docBase, docB, "docB" );
+    Merge merge1 = new Merge( new TriMatching( docA, m1, docBase, m2, docB ) );
+    Merge merge2 = new Merge( new TriMatching( docB, m2, docBase, m1, docA ) );
+    PrintWriter p1 = null, p2=null;
+    try {
+      p1 = new PrintWriter( new FileOutputStream( "m1.xml" ) );
+      p2 = new PrintWriter( new FileOutputStream( "m2.xml" ) );
+    } catch (java.io.FileNotFoundException e ) {
+      System.out.println("ERROR: Can't write merged files");
+      return;
+    }
+    try {
+      merge1.merge( new MergePrinter(p1) );
+      merge2.merge( new MergePrinter(p2) );
+    } catch ( org.xml.sax.SAXException e ) {
+      System.out.println("SAXException while merging.. and it was yoyr lousy content handler that threw it");
+    }
+    p1.close();p2.close();
+    System.out.print("Checking merges... " );
+    ElementNode facit=null,mr1=null,mr2=null;
+    try {
+      Parser p = new Parser();
+      facit = p.parse( merged.getCanonicalPath() );
+      mr1 = p.parse( "m1.xml" );
+      mr2 = p.parse( "m2.xml" );
+    } catch ( Exception e ) {
+      System.out.println("PARSE ERROR IN CASE when parsing merged files. Giving up." );
+      //e.printStackTrace();
+      return;
+    }
+    boolean symmetry = treesIdentical(mr1,mr2),
+            likefacit = treesIdentical(facit,mr1);
+    if( !symmetry )
+      System.out.print("SYMMETRY failed ");
+    if( ((ElementNode) facit.getChild(0)).name.equalsIgnoreCase("conflict") ) {
+      System.out.println("Facit says this was a CONFLICT" );
+      return;
+    }
+    if( !likefacit )
+      System.out.print("FACIT failed " + ( symmtery || (!symmetry && !treesIdentical(facit,mr2)) ?
+        "(on both)" : "(on one only)" ) );
+    if( likefacit && symmetry )
+      System.out.println("Ok ");
+    else {
+      PrintWriter pw = new PrintWriter( System.out );
+      pw.println( !symmetry ? "\nMerge 1: " : "\nMerge" );
+      try {
+        merge1.merge( new MergePrinter(pw) );
+        if( !symmetry ) {
+          pw.println( "Merge 2:"  );
+          merge2.merge( new MergePrinter(pw) );
+        }
+      } catch ( Exception e ) {
+        System.out.println("PARSE ERROR..." );
+      }
+      pw.flush();
+    }
+    return;
+  }
+
+  private boolean treesIdentical( ONode a, ONode b ) {
+    if( !a.contentEquals(b) )
+      return false;
+    if( a.getChildCount() != b.getChildCount() )
+      return false;
+    for( int i=0;i<a.getChildCount();i++)
+      if( !treesIdentical( a.getChild(i), b.getChild(i) ) )
+        return false;
+    return true;
   }
 
   // Run Best Matcher
@@ -43,7 +168,7 @@ public class TreeDM {
       System.out.println("Parsing " + args [0]);
       docBase = p.parse(args[0] + PSEP + "b.xml");
       System.out.println("Parsing " + args [1]);
-      docA = p.parse(args[0] + PSEP+ "2.xml");
+      docA = p.parse(args[0] + PSEP+ "1.xml");
       System.out.println("OK.");
    } catch ( Exception e ) {
     e.printStackTrace();
@@ -90,6 +215,8 @@ public class TreeDM {
   //m1.merge2( docA, docB, m2 );
    System.out.println("Should look like this:");
    Merge merge = new Merge( new TriMatching( docA, m1, docBase, m2, docB ) );
+   Merge merge2 = new Merge( new TriMatching( docB, m2, docBase, m1, docA ) );
+
    java.io.ByteArrayOutputStream result = new java.io.ByteArrayOutputStream();
    java.io.PrintWriter pw = new java.io.PrintWriter( result );
     try {
@@ -98,6 +225,13 @@ public class TreeDM {
      System.out.println("SAXException while merging.. and it was yoyr lousy content handler that threw it");
     }
   pw.flush();
+    try {
+   merge2.merge( new MergePrinter(pw) );
+    } catch ( org.xml.sax.SAXException e ) {
+     System.out.println("SAXException while merging.. and it was yoyr lousy content handler that threw it");
+    }
+  pw.flush();
+
   try {result.close(); } catch (Exception e ) {}
   System.out.println("Merged XML:");
   System.out.print(result.toString());

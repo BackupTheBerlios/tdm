@@ -1,4 +1,4 @@
-// $Id: ProtoBestMatching.java,v 1.2 2001/03/14 14:03:43 ctl Exp $
+// $Id: ProtoBestMatching.java,v 1.3 2001/03/26 14:44:44 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 //import TreeMatching;
@@ -17,7 +17,7 @@ public class ProtoBestMatching  {
   public AreaNode atRoot = null;
 
   public ProtoBestMatching( ONode docA, ONode docB, String aName ) {
-    System.out.println("Finding corresponing nodes in the trees...");
+//    System.out.println("Finding corresponing nodes in the trees...");
     match( docA, docB );
     name = aName;
 
@@ -83,8 +83,7 @@ public class ProtoBestMatching  {
 
   private void resolveAmbiguitiesCommonRoot( AreaNode areaTree, ONode baseDoc, ONode destDoc,
     int startPos, int stopPos ) {
-    System.out.println("Solving ambiguities under " + areaTree.getNode().toString() +
-    " pos " + startPos + "-" + stopPos );
+//    System.out.println("Solving ambiguities under " + areaTree.getNode().toString() + " pos " + startPos + "-" + stopPos );
     // Scan for runs of ambigious children, having at least one candidate with
     // areaTree.getNode() as root
     ONode srcParent =  getFirstMapping(null, areaTree.getChild(startPos).getNode().parent );

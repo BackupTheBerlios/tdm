@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.6 2001/03/26 08:48:49 ctl Exp $
+// $Id: Merge.java,v 1.7 2001/03/26 14:44:44 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -98,8 +98,8 @@ public class Merge {
         // CONFLICTCODE here
         // if XMLElementNode try merging attributes if XMLTextnode give up
         System.out.println("CONFLICT; Node updated in both branches, picking first one:");
-        System.out.println(a.toString());
-        System.out.println(b.toString());
+        System.out.println(a.getContent().toString());
+        System.out.println(b.getContent().toString());
         return a.getContent();
       }
     } else if ( bUpdated )
@@ -198,10 +198,10 @@ public class Merge {
           // add CONFLICTCODE here
           // for now, chain A and B hangons
           System.out.println("CONFLICTW; both nodes have hangons; sequencing them"); // as updated(or A if no update)-Other");
-          System.out.println("First list:");
+/*          System.out.println("First list:");
           mlistA.print();
           System.out.println("Second list:");
-          mlistB.print();
+          mlistB.print();*/
         }
         for( int i=0;i<eb.inserts.size();i++)
           ea.inserts.add( eb.inserts.elementAt(i) );
@@ -225,9 +225,12 @@ public class Merge {
         nextA = mlistA.findPartner(mlistB.getEntry(nextB)); ///getPartnerPos( mlistB.getEntry(nextB), mlistA, docA, this );
       else if (nextB != mlistB.findPartner(mlistA.getEntry(nextA))) { //           getPartnerPos( mlistA.getEntry(nextA), mlistB, docB, docBMatching ) ) {
         // add CONFLICTCODE here
+        // This part is especially troublesome, as just using the sequencing of A may get us into
+        // and infinite loop! (m5 rev 1.1!)
         // for now, follow sequencing of mlist A
         System.out.println("CONFLICT: Sequencing conflict, using only one list's sequencing");
-        nextB = mlistB.findPartner(mlistA.getEntry(nextA)); ///getPartnerPos( mlistA.getEntry(nextA), mlistB, docB, docBMatching);
+        //nextB = mlistB.findPartner(mlistA.getEntry(nextA)); ///getPartnerPos( mlistA.getEntry(nextA), mlistB, docB, docBMatching);
+        return mlistA;
       }
       posA = nextA;
       posB = nextB;
@@ -319,13 +322,6 @@ public class Merge {
         System.out.println("CONFLICT: Node moved and deleted - moving on by deleting the node + hangons!. ");
         mlistA.removeEntryAt(mlistA.matchInList(bn));
       } else if( op1 == MOVE_F && op2 == MOVE_F ) {
-        // Check if they are moved under matching parents. If so, that is good, because
-        // the list merge will handle possible conflicts. If they are not moved under
-        // matching parents we have a conflict. (which unresolved results in two copies)
-
-        // Specifically the condition is that the parent of each BranchNode bn is moved to
-        // (structurally or content) must structurally match another BranchNode that has bn
-        // as a child.
         if( isMovefMovefConflict( bn ) ) {
           // CONFLICTCODE here
           System.out.println("CONFLICT: Node is far-moved to two different locations. " +
@@ -371,7 +367,15 @@ public class Merge {
           _isMovefMovefConflict( n, n.getLeft().getMatches(), n.getRight().getMatches() );
   }
 
-  // This code is really horribly slow --- O(n^3)?!
+  // Check if base node n is moved under matching parents. If so, that is good, because
+  // the list merge will handle possible conflicts. If they are not moved under
+  // matching parents we have a conflict. (which unresolved results in two copies)
+
+  // Specifically the condition is that the parent of each BranchNode bn is moved to
+  // (structurally or content) must structurally match another BranchNode that has bn
+  // as a child.
+
+  // Although called rarely, this code is really horribly slow --- O(n^3)?!
   // Should maybe be trimmed to avoid having a really lousy boundary on the algorithm
   private boolean _isMovefMovefConflict( BaseNode n, Set matchesA, Set matchesB ) {
     for( Iterator i = matchesB.iterator(); i.hasNext(); ) {
