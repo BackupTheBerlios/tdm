@@ -1,4 +1,4 @@
-// $Id: Editgen.java,v 1.13 2003/01/16 15:02:03 ctl Exp $
+// $Id: Editgen.java,v 1.14 2003/01/17 13:56:53 ctl Exp $
 package tdm.editgen;
 
 import tdm.lib.XMLNode;
@@ -16,6 +16,7 @@ import tdm.lib.EditLog;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.HashSet;
+import org.xml.sax.helpers.AttributesImpl;
 
 public class Editgen {
 
@@ -27,6 +28,10 @@ public class Editgen {
   private int editCount = -1;
   private boolean useEditCount = false;
   private char[] operations = {'d','i','u','m','c'};
+  private String idPrefix = "";
+  private boolean useIdAttribute = false;
+  private boolean updateModifiesId = false;
+  private boolean copyModifiesId = false;
 
   private boolean printStats = true;
   private int delCount =0, insCount = 0, updCount = 0, moveCount =0, copyCount =0;
@@ -58,13 +63,13 @@ public class Editgen {
    }
    // Make merge clone
    // total merge is left tree, current working tree is right
-   docMerged = clonedAndMatchedTree( docBase, true, true, null );
+   docMerged = clonedAndMatchedTree( docBase, true, true, false, null );
    EditLog mergeLog = new EditLog();
    // Make variants
    for( int iFile = 0; iFile < outfiles.length; iFile++ ) {
      System.err.println("Making "+outfiles[iFile]+"...");
      EditLog branchLog = new EditLog();
-     BranchNode outRoot = clonedAndMatchedTree( docBase, false, true, null );
+     BranchNode outRoot = clonedAndMatchedTree( docBase, false, true, false, null );
      ((MarkableBaseNode) docBase).mark(MarkableBaseNode.MARK_STRUCTURE | MarkableBaseNode.MARK_CONTENT);
      ((MarkableBaseNode) docBase.getChild(0)).mark(MarkableBaseNode.MARK_STRUCTURE); // Never edit root elem
      int edits = editCount == -1 ?
@@ -119,16 +124,9 @@ public class Editgen {
                          EditLog mergeLog, EditLog branchLog ) {
     final int TRIES = 10;
     MarkableBaseNode n = null;
-    //DBG= Run in two phases - dium and c
-    //DBGint copies = 0;
     for( int i=0;i<edits;i++) {
       char op = /*operations[i % operations.length];*/
           operations[(int) (rnd.nextDouble()*operations.length)];
-      /* DBG
-      if( op == 'Q' ) {
-        copies ++;
-        continue;
-      }*/
       int tries = TRIES;
       do {
         n = getRandomNode(baseRoot,
@@ -142,24 +140,6 @@ public class Editgen {
       if( tries == 0)
           System.err.println("Warning: Unable to perform operation "+op);
     }
-    /*
-    // Copy
-    for( int i=0;i<copies;i++) {
-      char op = 'c';
-      int tries = TRIES;
-      do {
-        n = getRandomNode(baseRoot,
-                          MarkableBaseNode.MARK_STRUCTURE, null);
-        if (n == null) {
-          System.err.println("Ran out of free nodes to copy");
-          return;
-        }
-      }
-      while (!editNode(op, n, baseRoot, mergeLog, branchLog) && --tries > 0);
-      if (tries == 0)
-        System.err.println("Warning: Unable to perform operation " + op);
-    }
-    */
 
   }
 
@@ -277,6 +257,10 @@ public class Editgen {
       } else {
         XMLElementNode ce = (XMLElementNode) c;
         ce.setQName( ce.getQName() + newId );
+        if( useIdAttribute && updateModifiesId ) {
+          int idIx = ce.getAttributes().getIndex("id");
+          ( (AttributesImpl) ce.getAttributes()).setValue(idIx,newId());
+        }
       }
     log.update(n);
     }
@@ -469,7 +453,9 @@ public class Editgen {
           BranchNode insRoot = clonedAndMatchedTree(
           insTree instanceof BaseNode ? (left ? ((BaseNode) insTree).getLeft().getFullMatch() :
           ((BaseNode) insTree).getRight().getFullMatch() ) : insTree
-          ,left,false,dest);
+              ,left,false,
+              src != null && useIdAttribute && copyModifiesId,
+              dest);
           match.getParent().addChild(ix,insRoot);
           if( src == null ) {
             if( insTree instanceof BaseNode )
@@ -484,12 +470,17 @@ public class Editgen {
   }
 
   protected BranchNode clonedAndMatchedTree( Node n, boolean left, boolean resetMatches,
-                                            BaseNode _forbidden   ) { //DBG
+                                            boolean allocNewIds, BaseNode _forbidden   ) { //DBG
     BaseNode b = n instanceof BaseNode ? (BaseNode) n : ((BranchNode) n).getBaseMatch();
 //DBG        _treeHasNoCopyOf(b,_forbidden,left);
         if( b== _forbidden ) //DBG
           throw new RuntimeException("TOUCHING FORBIDDEN NODE"); // DBG
     BranchNode nc = new BranchNode( (XMLNode) n.getContent().clone() );
+    if( allocNewIds && nc.getContent() instanceof XMLElementNode ) {
+      AttributesImpl atts = (AttributesImpl)
+          ((XMLElementNode) nc.getContent()).getAttributes();
+      atts.setValue(atts.getIndex("id"),newId());
+    }
     if( b != null ) { // Set matches for non-inserted nodes
       nc.setBaseMatch(b,BranchNode.MATCH_FULL);
       MatchedNodes mn = left ? b.getLeft() : b.getRight();
@@ -498,7 +489,8 @@ public class Editgen {
       mn.addMatch(nc);
     }
     for( int i=0;i<n.getChildCount();i++)
-      nc.addChild(clonedAndMatchedTree(n.getChildAsNode(i),left,resetMatches, _forbidden)); //DBG
+      nc.addChild(clonedAndMatchedTree(n.getChildAsNode(i),left,resetMatches,
+                                      allocNewIds, _forbidden)); //DBG
     return nc;
   }
 
@@ -568,6 +560,24 @@ public class Editgen {
     editLogPrefix = aLog;
   }
 
+  // null means don't use id attribs
+  public void setIdPrefix( String aPrefix ) {
+    if( aPrefix == null )
+      useIdAttribute = false;
+    else {
+      useIdAttribute = true;
+      idPrefix = aPrefix;
+    }
+  }
+
+  public void setUpdateModifiesId( boolean modifies ) {
+    updateModifiesId = modifies;
+  }
+
+  public void setCopyModifiesId( boolean modifies ) {
+    copyModifiesId = modifies;
+  }
+
   public void setOperations( String ops ) throws IllegalArgumentException {
     if( ops.length() == 0 ) {
       throw new IllegalArgumentException("Empty operations string");
@@ -597,7 +607,7 @@ public class Editgen {
         };
 
   protected String newId() {
-    return ""+idCounter++;
+    return idPrefix +idCounter++;
   }
 
   private void _getByIds( Node n, String id, java.util.Set nodes ) {

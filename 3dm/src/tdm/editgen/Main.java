@@ -1,4 +1,4 @@
-// $Id: Main.java,v 1.3 2003/01/16 10:50:14 ctl Exp $
+// $Id: Main.java,v 1.4 2003/01/17 13:56:53 ctl Exp $
 package tdm.editgen;
 import gnu.getopt.*;
 
@@ -7,7 +7,7 @@ public class Main {
   private static Editgen gen = new Editgen();
 
   public static void main(String[] args) {
-    System.err.println("Editgen $Revision: 1.3 $" );
+    System.err.println("Editgen $Revision: 1.4 $" );
     // Get command line options
     int firstFileIx = parseOpts( args );
     if( args.length - firstFileIx >= 3 ) {
@@ -27,8 +27,11 @@ public class Main {
       new LongOpt("probability",LongOpt.NO_ARGUMENT,null,'p'),
       new LongOpt("operations",LongOpt.REQUIRED_ARGUMENT,null,'o'),
       new LongOpt("seed",LongOpt.REQUIRED_ARGUMENT,null,'s'),
+      new LongOpt("idprefix",LongOpt.REQUIRED_ARGUMENT,null,'i'),
+      new LongOpt("idoncopy",LongOpt.NO_ARGUMENT,null,'\u0101'),
+      new LongOpt("idonupdate",LongOpt.NO_ARGUMENT,null,'\u0100'),
     };
-    Getopt g = new Getopt("editgen", args, "n:p:o:e::s:", lopts);
+    Getopt g = new Getopt("editgen", args, "n:p:o:e::s:i:", lopts);
     int c;
     String arg;
     while ((c = g.getopt()) != -1) {
@@ -48,6 +51,16 @@ public class Main {
             break;
           case 's':
             gen.setRandomGenerator(new java.util.Random((long) getStringArg(g,"").hashCode() ) );
+            break;
+          case 'i':
+            gen.setIdPrefix(getStringArg(g,""));
+            break;
+            // Longopts
+          case '\u0100':
+            gen.setUpdateModifiesId(true);
+            break;
+          case '\u0101':
+            gen.setCopyModifiesId(true);
             break;
         }
       } catch (IllegalArgumentException x ) {
