@@ -1,21 +1,32 @@
-//$Id: Measure.java,v 1.7 2001/06/20 13:25:58 ctl Exp $
+//$Id: Measure.java,v 1.8 2001/09/05 21:22:28 ctl Exp $ D
 
 import org.xml.sax.Attributes;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Iterator;
 
+/** Node similarity measurement. This class is used to calculate the
+ *  content, child list and matched child list distance between nodes.
+ */
+
 public class Measure {
 
+  // Maximum distance. The distance is normalized between 0 and MAX_DIST
   public static final double MAX_DIST = 1.0;
+  // Distance to return by childListDistance if both nodes have 0 children
   public static final double ZERO_CHILDREN_MATCH = 1.0;
+  // info bytes in an element name ($c_e$ in thesis)
   public static final int ELEMENT_NAME_INFO = 1;
+  // info bytes in the presence of an attribute ($c_a$ in thesis)
   public static final int ATTR_INFO = 2;
+  // attribute values less than this have a info size of 1 ($c_v$ in thesis)
   public static final int ATTR_VALUE_THRESHOLD = 5;
+  // text nodes shorter than this have an info size of 1 ($c_t$ in thesis)
   public static final int TEXT_THRESHOLD = 5;
 
-  public static final int DISTBUF_SIZE = 8192;
-  public final int[] DISTBUF = new int[DISTBUF_SIZE];
+///  public static final int DISTBUF_SIZE = 8192;
+///  public final int[] DISTBUF = new int[DISTBUF_SIZE];
+//$CUT
   // Tester
   public static void main(String[] args) {
     String a = "return stringDist( a, b, a.length()+b.length() );";
@@ -24,40 +35,46 @@ public class Measure {
     System.out.println("b="+b);
     System.out.println("Dist = " + (new Measure()).qDist(a,b));
   }
-
+//$CUT
   public Measure() {
   }
 
+  // State variables. State is used internally to allow the class to be extended
+  // to calculate the distance between the combined contents of several nodes.
+  // Currently, only parwise distance calculation is visible outside the class.
 
-  // Distance measure between nodes
-
+  // Mismatched info bytes
   private int mismatched = 0;
+  // Total info bytes
   private int total = 0;
+  // set to true if total mismatch occurs (e.g. text and element node compared)
   private boolean totalMismatch = false;
+  // penalty term ($c_p in thesis)
+  private static final int C= 20;
 
-  static final int C= 20; // Correlation damping value (default no of mismatched bytes)
-                          // A perfect match of C bytes gets correlation 0.5
-                          // as matches ->perfect, miscorrelation -> 0
+  /** Return content distance between nodes. */
+  public double getDistance(Node a, Node b ) {
+    if( a!=null && b!= null )
+      includeNodes( a, b );
+    double penalty = Math.max(0.0,1.0-((double) total)/((double) C));
+    double distance= penalty+(1.0-penalty)*((double) (mismatched))/
+                      ((double) total);
+    resetDistance();
+    return totalMismatch ? 1.0 : distance;
+  }
 
-  public void resetDistance() {
+  // Currently not used. used to read distance without adding more nodes
+  private double getDistance() {
+    return getDistance(null,null);
+  }
+
+  private void resetDistance() {
     mismatched = 0;
     total = 0;
     totalMismatch = false;
   }
 
-  public double getDistance() {
-    return getDistance(null,null);
-  }
-
-  public double getDistance(Node a, Node b ) {
-    if( a!=null && b!= null )
-      includeNodes( a, b );
-    double penalty = Math.max(0.0,1.0-((double) total)/((double) C));
-    double distance= penalty+(1.0-penalty)*((double) (mismatched))/((double) total);
-    resetDistance();
-    return totalMismatch ? 1.0 : distance;
-  }
-
+  // Add node pair internal to state
   private void includeNodes( Node a, Node b ) {
     if( a== null || b== null || totalMismatch)
       return;
@@ -90,14 +107,15 @@ public class Measure {
       }
     } else if ( ca instanceof XMLTextNode && cb instanceof XMLTextNode ) {
       int info = ca.getInfoSize() + cb.getInfoSize() / 2,
-        amismatch = stringDist( ((XMLTextNode) ca).getText(), ((XMLTextNode) cb).getText(),1.0 ) / 2;
+        amismatch = stringDist( ((XMLTextNode) ca).getText(),
+                                ((XMLTextNode) cb).getText(),1.0 ) / 2;
       mismatched += amismatch > info  ? info : amismatch;
       total+=info;
     } else
       totalMismatch = true;
   }
-
-
+//$CUT
+/*
 
   private  TokenComparator stringComp = new TokenComparator() {
       int getLength( Object o ) {
@@ -135,21 +153,20 @@ public class Measure {
         return ((BaseNode) a).getChild(ia) == ((BranchNode) b).getBaseMatch();
       }
     };
+*/
+//$CUT
 
   public int stringDist( String a, String b,double limit ) {
     return qDist(a,b);
-    //return stringDist( a, b,(int) a.length()+b.length(), stringComp);
   }
 
   public int stringDist( char[] a, char[] b,double limit ) {
-    int d = qDist(a,b);
-/*    System.out.println("A="+new String(a,0,a.length));
-    System.out.println("B="+new String(b,0,b.length));
-    System.out.println("dist="+d);
-    System.out.println("sdist="+stringDist( a, b,(int) a.length+b.length, charArrayComp ));*/
-    return d;
-    //return qDist(a,b);
-    //return stringDist( a, b,(int) a.length+b.length, charArrayComp );
+    return qDist(a,b);
+///    System.out.println("A="+new String(a,0,a.length));
+///    System.out.println("B="+new String(b,0,b.length));
+///    System.out.println("dist="+d);
+///    System.out.println("sdist="+stringDist( a, b,(int) a.length+b.length, charArrayComp ));*/
+///    return d;
   }
 
   public double childListDistance( Node a, Node b ) {
@@ -164,17 +181,18 @@ public class Measure {
         bc[i]=(char) (b.getChildAsNode(i).getContent().getContentHash()&0xffff);
       return ((double) stringDist(ac,bc,1.0))
                        / ((double) a.getChildCount() + b.getChildCount());
-/*      return ((double) stringDist(a,b,a.getChildCount()+b.getChildCount(),nodeChildComp))
-                       / ((double) a.getChildCount() + b.getChildCount());
-
-*/
+/// /*      return ((double) stringDist(a,b,a.getChildCount()+b.getChildCount(),nodeChildComp))
+///                       / ((double) a.getChildCount() + b.getChildCount());
+///
+/// */
     }
   }
 
   public int matchedChildListDistance( BaseNode a, BranchNode b ) {
     char[] ac = new char[a.getChildCount()];
     char[] bc = new char[b.getChildCount()];
-    // NOTE! i+1's as 0=-0! (Which would yield equality for all child lists of length 1)
+    // NOTE! i+1's as 0=-0! (Which would yield equality for all child lists of
+    // length 1). Using i instead of i+1 was a bug that took some time to find
     for( int i=0;i<a.getChildCount();i++)
       ac[i]=(char) (i+1);
     for( int i=0;i<b.getChildCount();i++) {
@@ -185,17 +203,16 @@ public class Measure {
         bc[i] = (char) -(i+1);
     }
     return stringDist(ac,bc,1.0);
-
-//    return stringDist(a,b,a.getChildCount()+b.getChildCount(),matchedNodeChildComp);
   }
 
-  // Directly adapted from [Myers86]
+//$CUT
+/*  // Directly adapted from [Myers86]
 
   private int stringDist( Object a, Object b, int max, TokenComparator tc ) {
 //DBG    if( 1==1 ) return max/2;
 //    if( 1==1) return (int) Math.round( Math.random()*tc.getLength(a)*.4 );
-    /*if( max > 50 )
-      System.out.println("max="+max);*/
+    //if( max > 50 )
+    //  System.out.println("max="+max);
     //max = max > 10 ? 10 : max;
     int arraySize = 2*max+1;
     int v[] = null;
@@ -231,27 +248,35 @@ public class Measure {
     abstract int getLength( Object o );
     abstract boolean equals( Object a, int ia, Object b, int ib );
   }
+*/
+//$CUT
 
-  /// q-Gram Distance [Ukkonen92]
+  // q-Gram Distance [Ukkonen92]
+  // The implementation could use some heavy optimization. It's really a
+  // textbook example of inefficient coding...
 
   class Counter {
     public int count = 1;
   }
 
   private static final int INIT_CAPACITY=2048;
-  private static /*final*/ int Q=4; // Which gram to use
 
+  // Which gram to use. Yes, I know its ugly to have as
+  // a state var, as it changes. But it origibally didn't :)
+  private static int Q=4;
+
+  // Hsh tables used to store q-Grams
   private Map aGrams = new HashMap(INIT_CAPACITY);
   private Map bGrams = new HashMap(INIT_CAPACITY);
 
-  public int qDist( String a , String b ) {
+  protected int qDist( String a , String b ) {
     decideQ(a.length()+b.length());
     buildQGrams(a,aGrams);
     buildQGrams(b,bGrams);
     return calcQDistance();
   }
 
-  public int qDist( char[] a , char[] b ) {
+  protected int qDist( char[] a , char[] b ) {
     decideQ(a.length+b.length);
     buildQGrams(a,aGrams);
     buildQGrams(b,bGrams);
@@ -260,17 +285,16 @@ public class Measure {
 
   protected void buildQGrams(String a, Map grams) {
     grams.clear();
-/*    if( a.length() < Q )
-        grams.put(a,new Counter());
-    else {*/
-      for( int i=0;i<a.length();i++) {
-      String gram = a.substring(i,i+Q > a.length() ? a.length() : i+Q );
-      if( grams.containsKey(gram) )
-        ((Counter) grams.get(gram)).count++;
-      else
-        grams.put(gram,new Counter());
-      }
-    //}
+/// /*    if( a.length() < Q )
+///         grams.put(a,new Counter());
+///     else {*/
+    for( int i=0;i<a.length();i++) {
+    String gram = a.substring(i,i+Q > a.length() ? a.length() : i+Q );
+    if( grams.containsKey(gram) )
+      ((Counter) grams.get(gram)).count++;
+    else
+      grams.put(gram,new Counter());
+    }
   }
 
   protected void buildQGrams(char[] a, Map grams) {
@@ -285,6 +309,7 @@ public class Measure {
     }
   }
 
+  // Decide with q-gram to use, based on the length of the content
   protected int decideQ( int total ) {
    int q = 1;
    if( total > 150 )
@@ -304,7 +329,7 @@ public class Measure {
       if( bGrams.containsKey(gramA) )
         countB = ((Counter) bGrams.get(gramA)).count;
       else
-//        System.out.println("Not in B: " +gramA.toString());
+///        System.out.println("Not in B: " +gramA.toString());
       dist += Math.abs(countA-countB);
     }
     // And add any grams present in b but not in a
@@ -312,10 +337,9 @@ public class Measure {
       Object gramB = i.next();
       if( !aGrams.containsKey(gramB) ) {
         dist += ((Counter) bGrams.get(gramB)).count;
-//        System.out.println("Not in A: " +gramB.toString());
+///        System.out.println("Not in A: " +gramB.toString());
       }
     }
     return dist;
   }
-
 }

@@ -1,7 +1,8 @@
-// $Id: XMLTextNode.java,v 1.7 2001/06/15 13:54:17 ctl Exp $
+// $Id: XMLTextNode.java,v 1.8 2001/09/05 21:22:30 ctl Exp $
 
 import java.security.MessageDigest;
 
+/** Stores XML element nodes. */
 public class XMLTextNode extends XMLNode {
 
   private char[] text=null;
@@ -18,9 +19,10 @@ public class XMLTextNode extends XMLNode {
   XMLTextNode( char[] srctext, int first, int length ) {
     text = new char[length];
     System.arraycopy(srctext,first,text,0,length);
-//    System.out.println("NEW TN:"+new String(text));
+///    System.out.println("NEW TN:"+new String(text));
     cHash = calculateHash(text);
-    infoSize = text.length > Measure.TEXT_THRESHOLD ? text.length - Measure.TEXT_THRESHOLD : 1;
+    infoSize = text.length > Measure.TEXT_THRESHOLD ? text.length -
+                Measure.TEXT_THRESHOLD : 1;
   }
 
   public boolean contentEquals( Object a ) {

@@ -1,10 +1,12 @@
-// $Id: TriMatching.java,v 1.10 2001/06/20 13:25:59 ctl Exp $
+// $Id: TriMatching.java,v 1.11 2001/09/05 21:22:30 ctl Exp $ D
 
+/** Matching between a base and two branch trees. */
 public class TriMatching extends Matching {
 
   private BranchNode leftRoot = null;
   private BranchNode rightRoot = null;
 
+  /** Create matching */
   public TriMatching( BranchNode left, BaseNode base, BranchNode right ) {
     super( base, right );
     leftRoot =left;
@@ -16,13 +18,17 @@ public class TriMatching extends Matching {
   }
 
 
-  private void swapLeftRight( BaseNode base ) {
+  // Swap left and right matching fields in base nodes. The superclass
+  // always fills in left matchings, so we need to call this when making
+  // the right (no pun intended) matchings
+  protected void swapLeftRight( BaseNode base ) {
     base.swapLeftRightMatchings();
     for( int i=0;i<base.getChildCount();i++)
       swapLeftRight(base.getChild(i));
   }
 
-  private void setPartners( BranchNode n, boolean partnerInLeft ) {
+  // Set partner fields of branch nodes
+  protected void setPartners( BranchNode n, boolean partnerInLeft ) {
     BaseNode baseMatch = n.getBaseMatch();
     if( baseMatch != null ) {
       if( partnerInLeft )
@@ -35,7 +41,6 @@ public class TriMatching extends Matching {
       setPartners(n.getChild(i),partnerInLeft);
   }
 
-
   public BranchNode getLeftRoot() {
     return leftRoot;
   }
@@ -43,6 +48,4 @@ public class TriMatching extends Matching {
   public BranchNode getRightRoot() {
     return rightRoot;
   }
-
-
 }

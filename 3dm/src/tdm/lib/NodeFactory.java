@@ -1,5 +1,8 @@
-// $Id: NodeFactory.java,v 1.5 2001/04/27 16:59:10 ctl Exp $
+// $Id: NodeFactory.java,v 1.6 2001/09/05 21:22:29 ctl Exp $ D
 
+/** Node factory. Used to build trees, whose node type is not known at
+ *  compile time.
+ */
 public abstract class NodeFactory {
 
   public NodeFactory() {

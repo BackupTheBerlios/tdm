@@ -1,8 +1,10 @@
-// $Id: PathTracker.java,v 1.1 2001/06/08 08:40:38 ctl Exp $
+// $Id: PathTracker.java,v 1.2 2001/09/05 21:22:29 ctl Exp $ D
 
 import java.util.LinkedList;
 import java.util.Iterator;
 import java.util.Collections;
+
+/** Tracks current position in a tree. */
 
 public class PathTracker {
 
@@ -11,50 +13,64 @@ public class PathTracker {
   private LinkedList path = null;
   private int childPos = -1;
 
+  /** Create new tracker. The location is initialized to the root, or "/" */
   public PathTracker() {
     resetContext();
   }
 
+  /** The location is initialized to the root, or "/" */
   public void resetContext() {
     path = new LinkedList();
     childPos = 0;
   }
 
+  /** Move to next child. Must be in a subtree, created by enterSubtree() */
   public void nextChild() {
     childPos++;
   }
 
+  /** Start new subtree */
   public void enterSubtree() {
     path.addLast(new Integer(childPos));
     childPos = 0;
   }
 
+  /** End subtree. */
   public void exitSubtree() {
     Integer oldpos = (Integer) path.removeLast();
     childPos = oldpos.intValue();
   }
 
+  /** Get string describing current location, excluding current child position */
   public String getPathString() {
     return getPathString(path,-1,false);
   }
 
+  /** Get string describing current location, including current child position */
   public String getFullPathString() {
     return getPathString(path,childPos,true);
   }
 
+  /** Get string describing current location, including current child position */
   public String getPathString(int achildPos) {
     return getPathString(path,achildPos,true);
   }
 
+  /** Get string describing current location of a node in a tree. Exclude the
+   *  child position of the node (path ends in "/"). */
   public static String getPathString(Node n ) {
     return getPathString(makePath(n),-1,false);
   }
 
+  /** Get string describing current location of a node in a tree. Include the
+   *  child position of the node (path ends in a number). */
   public static String getPathString(Node n,int achildPos) {
     return getPathString(makePath(n),achildPos,true);
   }
 
-  private static String getPathString( LinkedList path, int childPos, boolean useChildPos ) {
+  // Create path string from linked list of nodes.
+  private static String getPathString( LinkedList path, int childPos,
+    boolean useChildPos ) {
     StringBuffer p = new StringBuffer();
     Iterator i=path.iterator(); // Skip artificial root node
     i.next();
@@ -69,14 +85,14 @@ public class PathTracker {
     return p.toString();
   }
 
+  // Create linked list of nodes to the root from a node in a tree.
   private static LinkedList makePath( Node n ) {
     LinkedList path = new LinkedList();
     do {
       path.addLast(new Integer(n.getChildPos()));
     } while( (n = n.getParentAsNode()) != null);
-//    path.removeLast(); // We don't want the artificial root node in the path
+///    path.removeLast(); // We don't want the artificial root node in the path
     Collections.reverse(path);
     return path;
   }
-
 }

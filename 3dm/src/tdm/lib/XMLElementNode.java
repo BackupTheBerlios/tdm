@@ -1,4 +1,4 @@
-// $Id: XMLElementNode.java,v 1.7 2001/06/14 15:24:04 ctl Exp $
+// $Id: XMLElementNode.java,v 1.8 2001/09/05 21:22:30 ctl Exp $ D
 
 import org.xml.sax.Attributes;
 import java.util.Vector;
@@ -7,18 +7,18 @@ import java.util.Map;
 import org.xml.sax.helpers.AttributesImpl;
 import org.xml.sax.Attributes;
 import java.security.MessageDigest;
-//import java.io.PrintWriter;
 
+/** Stores XML element nodes. */
 public class XMLElementNode extends XMLNode {
 
-//Probably not needed  public String nameSpace = null;
+/// //Probably not needed  public String nameSpace = null;
   private String name = null;
   private AttributesImpl attributes = null;
   private int nHashCode = -1;
   private byte[] attrHash = null;
-
+//$CUT
 //PROTO CODE
-  public XMLElementNode( String aname,  Map attr ) {
+/*  public XMLElementNode( String aname,  Map attr ) {
     name = aname;
     attributes = new AttributesImpl();
     if( attr ==null )
@@ -30,7 +30,10 @@ public class XMLElementNode extends XMLNode {
     }
     makeHash();
   }
+*/
 //PROTO CODE ENDS
+//$CUT
+
   public XMLElementNode( String aname, Attributes attr ) {
     name = aname;
     attributes = new AttributesImpl( attr );
@@ -51,13 +54,12 @@ public class XMLElementNode extends XMLNode {
     attrHash = md.digest();
   }
 
-
-  //DUMMY!
+  /** DUMMY! Always returns "" */
   public String getNamespaceURI() {
     return "";
   }
 
-  //DUMMY!
+  /** DUMMY! Always returns "" */
   public String getLocalName() {
     return "";
   }
@@ -99,7 +101,9 @@ public class XMLElementNode extends XMLNode {
       return false;
   }
 
+//$CUT
 //POSSIBLY NOT NEEDED---
+/*
   public boolean compareAttributes( Attributes a, Attributes b ) {
     if( a==b )
       return true; // Either both are null, or point to same obj
@@ -117,11 +121,11 @@ public class XMLElementNode extends XMLNode {
     }
     return true;
   }
+*/
 //ENDPOSSIBLY
+//$CUT
 
   public int getContentHash() {
-    return (attrHash[0]+attrHash[1]<<8+attrHash[2]<<16+attrHash[3]<<24)^nHashCode;
+  return (attrHash[0]+attrHash[1]<<8+attrHash[2]<<16+attrHash[3]<<24)^nHashCode;
   }
-
-
 }

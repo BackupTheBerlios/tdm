@@ -1,6 +1,9 @@
-// $Id: XMLNode.java,v 1.6 2001/05/16 10:31:41 ctl Exp $
+// $Id: XMLNode.java,v 1.7 2001/09/05 21:22:30 ctl Exp $ D
 
 import java.security.MessageDigest;
+
+/** Class for storing content of XML nodes. Supports fast equality comparison
+ *  using MD5 hash codes, and automatic calculation of node infoSize. */
 
 public abstract class XMLNode {
 
@@ -13,6 +16,10 @@ public abstract class XMLNode {
     return infoSize;
   }
 
+  public abstract boolean contentEquals( Object a );
+  /** Get 32-bit hash code */
+  public abstract int getContentHash();
+
   protected MessageDigest getMD() {
     try{
       return MessageDigest.getInstance("MD5");
@@ -22,8 +29,6 @@ public abstract class XMLNode {
     }
     return null;
   }
-
-  public abstract boolean contentEquals( Object a );
 
   protected byte[] calculateHash(char[] data) {
     MessageDigest contentHash = getMD();
@@ -44,6 +49,4 @@ public abstract class XMLNode {
     }
     return contentHash.digest();
   }
-
-  public abstract int getContentHash();
 }

@@ -1,4 +1,4 @@
-// $Id: TreeDiffMerge.java,v 1.3 2001/06/25 14:53:53 ctl Exp $
+// $Id: TreeDiffMerge.java,v 1.4 2001/09/05 21:22:30 ctl Exp $ D
 import gnu.getopt.*;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -7,10 +7,13 @@ import java.io.PrintStream;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.Attributes;
 
-
+/** Driver class for 3DM. Parses command line and runs the merge/diff/patch
+ *  algorithms.
+ */
 public class TreeDiffMerge {
   public static void main(String[] args) throws java.io.IOException {
-    System.err.println("3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.3 $"  );
+    System.err.println(
+    "3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.4 $" );
     // Get command line options
     int firstFileIx = parseOpts( args );
     if( op == MERGE && (args.length - firstFileIx) == 3 )
@@ -26,26 +29,42 @@ public class TreeDiffMerge {
     else if( op == PATCH && (args.length - firstFileIx) == 3 )
       patch( firstFileIx, args, new FileOutputStream(args[firstFileIx+2]));
     else {
-      System.err.println("Usage: 3dm [options] {-m base branch1 branch2|-d base branch1 |-p base patch} [outfile]" );
-      System.err.println("Use the -m (or --merge) option to merge the files base, branch1 and branch2"  );
-      System.err.println("Use the -d (or --diff) option to diff the files base and branch1"  );
-      System.err.println("Use the -p (or --patch) option to patch the file base with the file patch"  );
+      System.err.println("Usage: 3dm [options] {-m base branch1 branch2|-d "+
+      "base branch1 |-p base patch} [outfile]" );
+      System.err.println("Use the -m (or --merge) option to merge the files "+
+      "base, branch1 and branch2"  );
+      System.err.println("Use the -d (or --diff) option to diff the files "+
+      "base and branch1"  );
+      System.err.println("Use the -p (or --patch) option to patch the file "+
+      "base with the file patch"  );
+      System.err.println("The options are:");
+      System.err.println("-e, --editlog[=logfile]");
+      System.err.println("   Log edit operations to logfile, default edit.log");
+      System.err.println("-c, --copythreshold=bytes");
+      System.err.println("   Threshold for considering a duplicate structure "+
+                          "to be a copy. Default value is " +
+                          Matching.COPY_THRESHOLD + " bytes");
     }
   }
 
+  // Factory for BaseNode:s
   private static NodeFactory baseNodeFactory =  new NodeFactory() {
             public Node makeNode(  XMLNode content ) {
               return new BaseNode( content  );
             }
         };
 
+  // Factory for BranchNode:s
   private static NodeFactory branchNodeFactory =  new NodeFactory() {
             public Node makeNode(  XMLNode content ) {
               return new BranchNode(  content  );
             }
         };
 
-  static void merge( int ix, String[] args, OutputStream out ) {
+  /** Runs merge algorithm.
+   *  @param ix Index in args of first file
+   *  @param out Outputstream for merged tree */
+  protected static void merge( int ix, String[] args, OutputStream out ) {
     BaseNode docBase=null;
     BranchNode docA=null,docB=null;
     String currentFile = "";
@@ -58,19 +77,22 @@ public class TreeDiffMerge {
       currentFile = args[ix+2];
       docB = (BranchNode) p.parse( currentFile,branchNodeFactory);
     } catch ( Exception e ) {
-      System.err.println("XML Parse error in " + currentFile + ". Detailed exception info is:" );
+      System.err.println("XML Parse error in " + currentFile +
+                            ". Detailed exception info is:" );
       System.err.println( e.toString() );
       e.printStackTrace();
       return;
     }
     try {
       Merge merge = new Merge( new TriMatching( docA, docBase, docB ) );
+//$CUT
 /*      PrintWriter pw = new PrintWriter( new FileOutputStream("m.log"));
       dumpMatch(docA,pw);
       pw.println("------docb-----------");
       dumpMatch(docB,pw);
       pw.close();
 */
+//$CUT
       merge.merge( new XMLPrinter( new PrintWriter( out)  ) );
       merge.getConflictLog().writeConflicts(new XMLPrinter(
         new PrintWriter( new FileOutputStream( conflictLogName ))));
@@ -84,8 +106,11 @@ public class TreeDiffMerge {
     }
   }
 
+  /** Runs diff algorithm.
+   *  @param ix Index in args of first file
+   *  @param out Outputstream for merged tree */
 
-  static  void diff( int ix, String[] args, OutputStream out ) {
+  protected static  void diff( int ix, String[] args, OutputStream out ) {
     BaseNode docBase=null;
     BranchNode docA=null;
     String currentFile = "";
@@ -96,7 +121,8 @@ public class TreeDiffMerge {
       currentFile = args[ix+1];
       docA = (BranchNode) p.parse( currentFile, branchNodeFactory);
     } catch ( Exception e ) {
-      System.err.println("XML Parse error in " + currentFile + ". Detailed exception info is:" );
+      System.err.println("XML Parse error in " + currentFile +
+                          ". Detailed exception info is:" );
       System.err.println( e.toString() );
       e.printStackTrace();
       return;
@@ -111,7 +137,9 @@ public class TreeDiffMerge {
       e.printStackTrace();
     }
   }
-
+  /** Runs patch algorithm.
+   *  @param ix Index in args of first file
+   *  @param out Outputstream for merged tree */
   static  void patch( int ix, String[] args, OutputStream out ) {
     BaseNode docBase=null;
     BranchNode docPatch=null;
@@ -123,7 +151,8 @@ public class TreeDiffMerge {
       currentFile = args[ix+1];
       docPatch = (BranchNode) p.parse( currentFile, branchNodeFactory);
     } catch ( Exception e ) {
-      System.err.println("XML Parse error in " + currentFile + ". Detailed exception info is:" );
+      System.err.println("XML Parse error in " + currentFile +
+                        ". Detailed exception info is:" );
       System.err.println( e.toString() );
       e.printStackTrace();
       return;
@@ -138,16 +167,10 @@ public class TreeDiffMerge {
     }
   }
 
-
-/** Options
-  -e, --editlog[=logfile]
-    Log edit operations to logfile, default edit.log
-  -c, --copythreshold=bytes
-    Threshold for considering a duplicate structure to be a copy. Default value is 32 bytes
-*/
-
+  // Default files
   public static final String EDITLOG = "edit.log";
   public static final String CONFLICTLOG = "conflict.log";
+  // operation codes, returned by parseOpts()
   public static final int MERGE = 0;
   public static final int DIFF = 1;
   public static final int PATCH = 2;
@@ -157,6 +180,7 @@ public class TreeDiffMerge {
   protected static String conflictLogName = CONFLICTLOG;
   protected static int op = -1;
 
+  // Parse command line options.
   private static int parseOpts( String args[] ) {
     LongOpt lopts[] = {
       new LongOpt("editlog",LongOpt.OPTIONAL_ARGUMENT,null,'e'),
@@ -166,7 +190,6 @@ public class TreeDiffMerge {
       new LongOpt("patch",LongOpt.NO_ARGUMENT,null,'p'),
     };
     Getopt g = new Getopt("3DM", args, "e::c:mdp", lopts);
-    //
     int c;
     String arg;
     while ((c = g.getopt()) != -1) {
@@ -177,7 +200,7 @@ public class TreeDiffMerge {
             break;
           case 'c':
             Matching.COPY_THRESHOLD = getIntArg(g,Matching.COPY_THRESHOLD);
-            //System.err.println("COPY_THRESHOLD=" + Matching.COPY_THRESHOLD);
+///           //System.err.println("COPY_THRESHOLD=" + Matching.COPY_THRESHOLD);
             break;
           case 'm':
             op = MERGE;
@@ -214,6 +237,7 @@ public class TreeDiffMerge {
     }
   }
 
+//$CUT
   // DEBUg code
   private static void dumpMatch(BranchNode n, PrintWriter pw ) {
     if( n.hasBaseMatch() )
@@ -224,4 +248,5 @@ public class TreeDiffMerge {
     for(int i=0;i<n.getChildCount();i++)
       dumpMatch(n.getChild(i),pw);
   }
+//$CUT
 }
