@@ -1,4 +1,4 @@
-// $Id: Editgen.java,v 1.5 2002/10/29 10:09:33 ctl Exp $
+// $Id: Editgen.java,v 1.6 2002/10/30 10:11:48 ctl Exp $
 package editgen;
 
 import XMLNode;
@@ -12,16 +12,18 @@ import MatchedNodes;
 import XMLParser;
 import XMLNode;
 import XMLPrinter;
+import EditLog;
 import java.util.Iterator;
+import gnu.getopt.*;
 
 public class Editgen {
 
-  static java.util.Random rnd = new java.util.Random( 314159269L ); // repeatable runs!
+  static java.util.Random rnd = new java.util.Random( 31415926L ); // repeatable runs!
   static int idCounter = 1000000;
 
   public static void main(String[] args) {
     Editgen e = new Editgen();
-    e.editGen(/*"/home/ctl/fuego-core/xmlfs/3dm/usecases/shopping/"*/"med.xml", "m.xml",
+    e.editGen(/*"/home/ctl/fuego-core/xmlfs/3dm/usecases/shopping/"*/"L7.xml", "m.xml",
               new String[] {"1.xml","2.xml"});
   }
 
@@ -43,17 +45,25 @@ public class Editgen {
    // Make merge clone
    // total merge is left tree, current working tree is right
    docMerged = clonedAndMatchedTree( docBase, true, true );
+   EditLog mergeLog = new EditLog();
    // Make variants
    for( int iFile = 0; iFile < outfiles.length; iFile++ ) {
      System.err.println("Making "+outfiles[iFile]+"...");
+     EditLog branchLog = new EditLog();
      BranchNode outRoot = clonedAndMatchedTree( docBase, false, true );
      ((MarkableBaseNode) docBase.getChild(0)).mark(); // Never edit root elem
-     transform( (MarkableBaseNode) docBase.getChild(0), outRoot.getChild(0), docMerged.getChild(0),
-                (MarkableBaseNode) docBase.getChild(0));
+     transform( (MarkableBaseNode) docBase.getChild(0),
+                (MarkableBaseNode) docBase.getChild(0), mergeLog, branchLog);
      try {
        printTree( outRoot, new XMLPrinter( new java.io.FileOutputStream( outfiles[iFile] )));
      } catch (java.io.IOException x ) {
        System.err.println("Unable to write outfile "+outfiles[iFile] );
+     }
+     String editLogFile = "edits-"+outfiles[iFile];
+     try {
+       branchLog.writeEdits(new XMLPrinter( new java.io.FileOutputStream( editLogFile )));
+     } catch (Exception x ) {
+       System.err.println("Unable to write edit log "+editLogFile );
      }
    }
    // Write merge facit
@@ -62,13 +72,19 @@ public class Editgen {
    } catch (java.io.IOException x ) {
      System.err.println("Unable to write outfile "+mergeFile );
    }
-
+   // Write combined log
+   String mergeLogFile = "edits-"+mergeFile;
+   try {
+     mergeLog.writeEdits(new XMLPrinter( new java.io.FileOutputStream( mergeLogFile )));
+   } catch (Exception x ) {
+     System.err.println("Unable to write edit log "+mergeLogFile );
+   }
   }
 
   int _visitCount = 0;
 
-  public void transform( MarkableBaseNode base, BranchNode variant, BranchNode total,
-                        MarkableBaseNode baseRoot ) {
+  public void transform( MarkableBaseNode base,MarkableBaseNode baseRoot,
+                         EditLog mergeLog, EditLog branchLog ) {
     boolean editNode = false;
     // Decide if node should be edited
     if( ! base.isMarked() ) {
@@ -79,7 +95,7 @@ public class Editgen {
     boolean after = false;
     MarkableBaseNode dest = null;
     if( editNode ) {
-      int op = (int) (rnd.nextDouble() *5.0);
+      int op = 0; //(int) (rnd.nextDouble() *5.0);
 //      if( op==1) op = 4;
 //      if( op==0) op = 3;
       switch(op) {
@@ -93,13 +109,7 @@ public class Editgen {
           _checkNotMarked(dest);
           dest.lock();
           dest.lockSubtree();
-          editTrees(dest,null,null,false,false);
-          /*
-          n = base.getLeft().getFullMatch();
-          n.getParent().removeChild(n.getChildPos());
-          n = base.getRight().getFullMatch();
-          n.getParent().removeChild(n.getChildPos());
-          */
+          editTrees(dest,null,null,false,false,mergeLog,branchLog);
           break;
         case 1: // Insert node
           System.err.println("INS");
@@ -109,15 +119,7 @@ public class Editgen {
           XMLElementNode content = new XMLElementNode("editgen:insert",atts);
           after = rnd.nextDouble() > 0.5;
           base.lock(!after,after);
-          editTrees(null,base,new BranchNode( content),after,false);
-          /*
-                    base = after ? base : (base.hasLeftSibling() ?
-                                 (MarkableBaseNode) base.getLeftSibling() : base);
-          n = base.getLeft().getFullMatch();
-          n.getParent().addChild(n.getChildPos()+1,new BranchNode( content));
-          n = base.getRight().getFullMatch();
-          n.getParent().addChild(n.getChildPos()+1,new BranchNode( content));
-          */
+          editTrees(null,base,new BranchNode( content),after,false,mergeLog,branchLog);
           break;
         case 2: // Update node
           System.err.println("UPD");
@@ -141,21 +143,7 @@ public class Editgen {
             break;
           }
 
-          editTrees(base,dest,null,after,true);
-
-          /*
-          BranchNode l = base.getLeft().getFullMatch();
-          l.getParent().removeChild(l.getChildPos());
-          BranchNode r = base.getRight().getFullMatch();
-          r.getParent().removeChild(r.getChildPos());
-          // Insert at dest (=insert code block)
-          dest.lock(!after,after);
-          dest = after ? dest : (dest.hasLeftSibling() ?
-                                 (MarkableBaseNode) dest.getLeftSibling() : dest);
-          n = dest.getLeft().getFullMatch();
-          n.getParent().addChild(n.getChildPos()+1,l);
-          n = dest.getRight().getFullMatch();
-          n.getParent().addChild(n.getChildPos()+1,r);*/
+          editTrees(base,dest,null,after,true,mergeLog,branchLog);
           break;
         case 4: // Copy subtree
           // NOTE: Will currently never copy as child of a node,
@@ -177,21 +165,18 @@ public class Editgen {
             System.err.println("-- Abort: copying text node adjacent to other text node not possible");
             break;
           }
-
-          editTrees(null,dest,base,after,true);
-/*
-          n.getParent().addChild(n.getChildPos()+offset,
-                                 clonedAndMatchedTree(base,true,false));
-          n = dest.getRight().getFullMatch();
-          n.getParent().addChild(n.getChildPos()+offset,
-                                 clonedAndMatchedTree(base,false,false));*/
+          editTrees(null,dest,base,after,true,mergeLog,branchLog);
           break;
       }
     } // if edit node
     // recurse
     for( int i=0;i<base.getChildCount();i++)
-      transform((MarkableBaseNode) base.getChild(i),variant,total,baseRoot);
+      transform((MarkableBaseNode) base.getChild(i),baseRoot,mergeLog,branchLog);
   }
+
+  /** Return a random node from a tree. If isUnmarked is set, only returns unmarked
+   * nodes. Never returns nodes inside forbiddenTree.
+   */
 
   public MarkableBaseNode getRandomNode( MarkableBaseNode root, boolean isUnmarked,
      MarkableBaseNode forbiddenTree ) {
@@ -267,32 +252,42 @@ public class Editgen {
       _checkNotMarked((MarkableBaseNode) n.getChild(i));
   }
 
-/*  protected static final Node DELETE_TREE = new BranchNode(null);
-  protected static final Node MOVE_TREE = new BranchNode(null);
-*/
-  // if insTree = DELETE_TREE, the delete subtrees that b matches
-  // != null, add insTree after/before b (after if after is set)
-  // if cloneInsTree is set, a clone of the subtree rooted at insTree is added,
-  // otherwise we just attach insTree.
-  // NOTE: insTree must be BaseNodes if clone, otherwise BranchNodes
+  /** Function for manipulating trees. Use as described below (* means arg not used).
+   * The base tree is never edited (but matches are added/removed). All operations
+   * operate on entire subtrees. This function only works properly when all copied
+   * subtrees are kept identical. (The function itself preserves this property)
+   * DEL: editTrees(nodeToDelete,null,*,*,*);
+   *   All matches for nodeToDelete in left & right are deleted, and matchings to
+   *   the deleted nodes are removed.
+   * INS: editTrees(null,siblingOfInsNode,BranchNode nodeToInsert,after,false);
+   *   nodeToInsert is attached to both branches, either before (after flag false)
+   *   or after (after flag true) siblingOfInsNode. No matchings are added.
+   * MOV: editTrees(nodeToMove,targetNode,null,after,true);
+   *  For both branches, the matches for nodeToMove are moved to before/after
+   *  all matches for targetNode (before/after depending on the after flag)
+   * CPY: editTrees(null,targetNode,BaseNode nodeToCopy,after,true);
+   *  For both branches, a full match for nodeToCopy is copied to before/after
+   *  all matches for targetNode (before/after depending on the after flag)
+  */
+
   protected void editTrees( MarkableBaseNode src, MarkableBaseNode dest, Node insTree,
-                            boolean after, boolean cloneInsTree ) {
-    doEditTrees( src,dest, after, insTree, cloneInsTree, true );
-    doEditTrees( src,dest, after, insTree, cloneInsTree, false );
+                            boolean after, boolean cloneInsTree, EditLog mergeLog,
+                            EditLog branchLog ) {
+    doEditTrees( src,dest, after, insTree, cloneInsTree, true, mergeLog );
+    doEditTrees( src,dest, after, insTree, cloneInsTree, false, branchLog );
   }
 
   private void doEditTrees( MarkableBaseNode src,
    MarkableBaseNode dest, boolean after, Node insTree, boolean cloneInsTree,
-                           boolean left ) {
+                           boolean left, EditLog log ) {
     MatchedNodes m = null;
-    //BranchNode deletedNode = null;
-    if( src != null && "dc12e".equals(  _getId(src) ) && left )
-      System.err.println("!! Size="+src.getLeft().getMatches().size());
     if( src != null ) {
       // We should detach all matches of src
       // NOTE! for move with multiple matches, assumes all matches are identical!
       // (we only keep track of 1 deleted node, and reattach it to every copy)
       m = left ? src.getLeft() : src.getRight();
+      if( dest == null )
+        log.delete(src,m.getFullMatch().getParent());
       for( Iterator i = m.getMatches().iterator();i.hasNext();) {
         BranchNode match = (BranchNode) i.next();
         insTree = match; // DONT USE .getBaseMatch(), as there may be changes in the Branch!
@@ -306,17 +301,22 @@ public class Editgen {
         BranchNode match = (BranchNode) i.next();
         int ix = match.getChildPos() + (after ? 1: 0);
         if (!cloneInsTree) {
-          if( src != null ) {
-            System.err.println("XXXXX going in untested branch");
-            ((BranchNode) insTree).setBaseMatch( src, BranchNode.MATCH_FULL );
-            (left ? src.getLeft() : src.getRight()).addMatch((BranchNode)insTree);
-          }
+          if( src != null )
+            throw new IllegalStateException("Currently unneccessary/unimplemented state");
           match.getParent().addChild(ix,insTree);
         } else {
-          match.getParent().addChild(ix,clonedAndMatchedTree(
+          BranchNode insRoot = clonedAndMatchedTree(
           insTree instanceof BaseNode ? (left ? ((BaseNode) insTree).getLeft().getFullMatch() :
           ((BaseNode) insTree).getRight().getFullMatch() ) : insTree
-          ,left,false));
+          ,left,false);
+          match.getParent().addChild(ix,insRoot);
+          if( src == null ) {
+            if( insTree instanceof BaseNode )
+              log.copy(insRoot);
+            else
+              log.insert(insRoot);
+          } else
+            log.move(insRoot);
         }
       }
     }
@@ -325,8 +325,6 @@ public class Editgen {
   protected BranchNode clonedAndMatchedTree( Node n, boolean left, boolean resetMatches ) {
     BaseNode b = n instanceof BaseNode ? (BaseNode) n : ((BranchNode) n).getBaseMatch();
     BranchNode nc = new BranchNode( n.getContent() );
-    if( left && "dc12e".equals(_getId(n)) )
-      System.err.println("kang");
     if( b != null ) { // Set matches for non-inserted nodes
       nc.setBaseMatch(b,BranchNode.MATCH_FULL);
       MatchedNodes mn = left ? b.getLeft() : b.getRight();

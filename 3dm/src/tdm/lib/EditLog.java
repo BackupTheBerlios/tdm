@@ -1,4 +1,4 @@
-// $Id: EditLog.java,v 1.5 2001/09/26 19:36:44 ctl Exp $ D
+// $Id: EditLog.java,v 1.6 2002/10/30 10:11:48 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -41,29 +41,63 @@ public class EditLog {
   private static final String[] OPTAGS = {"insert","update","copy","move",
                                           "delete"};
 
+  private static class Path {
+
+    String path =null;
+    Node n = null;
+
+    public Path(String aPath) {
+      path = aPath;
+    }
+
+    public Path(Node aNode) {
+      n = aNode;
+    }
+
+    public String toString() {
+      if( path != null )
+        return path;
+      else
+        return PathTracker.getPathString(n);
+    }
+  }
+
   // Class for storing an edit operation in memory.
   private class EditEntry {
     int type = -1;
     BaseNode baseSrc=null;
     BranchNode branchSrc = null;
-    String dstPath = null;
+    Path dstPath = null;
 
     EditEntry( int aType, BaseNode aBaseNode, BranchNode aBranchNode,
                 String aDstPath ) {
       type = aType;
       baseSrc = aBaseNode;
       branchSrc = aBranchNode;
-      dstPath = aDstPath;
+      dstPath = new Path(aDstPath);
     }
+
+    EditEntry( int aType, BaseNode aBaseNode, BranchNode aBranchNode,
+                Node aDstNode ) {
+      type = aType;
+      baseSrc = aBaseNode;
+      branchSrc = aBranchNode;
+      dstPath = new Path(aDstNode);
+    }
+
   }
+
 
   private Stack checkPoints = new Stack();
   // Edits in the log. A list of EditEntries.
   private Vector edits = new Vector();
   private PathTracker pt = null;
 
+  public EditLog() {
+  }
+
   /** Construct edit log. The PathTracker given as argument is queried for the
-   *  current position in the merge treeeach time each time an edit operation is
+   *  current position in the merge tree each time an edit operation is
    *  added.
    *  @param apt PathTracker that tracks the current position in the merged tree
    */
@@ -78,12 +112,20 @@ public class EditLog {
     edits.add( new EditEntry(INSERT,null,n,pt.getPathString(childPos)));
   }
 
+  public void insert( BranchNode n ) {
+    edits.add( new EditEntry(INSERT,null,n,n));
+  }
+
   /** Add move operation.
    *  @param n Node that is moved
    *  @param childPos position in the current child list of the merge tree */
   public void move( BranchNode n, int childPos ) {
     edits.add( new EditEntry(MOVE,n.getBaseMatch(),n,
                                   pt.getPathString(childPos)));
+  }
+
+  public void move( BranchNode n ) {
+    edits.add( new EditEntry(MOVE,n.getBaseMatch(),n,n));
   }
 
   /** Add copy operation.
@@ -94,11 +136,19 @@ public class EditLog {
                                   pt.getPathString(childPos)));
   }
 
+  public void copy( BranchNode n ) {
+    edits.add( new EditEntry(COPY,n.getBaseMatch(),n,n));
+  }
+
   /** Add move operation.
    *  @param n Node that is upated.
    *  @param childPos position in the current child list of the merge tree */
   public void update( BranchNode n ) {
-    edits.add( new EditEntry(UPDATE,n.getBaseMatch(),n,pt.getFullPathString()));
+    if( pt == null )
+      edits.add( new EditEntry(UPDATE,n.getBaseMatch(),n,n));
+    else
+      edits.add( new EditEntry(UPDATE,n.getBaseMatch(),n,
+                             pt.getFullPathString()));
   }
 
   /** Add delete operation.
@@ -106,7 +156,7 @@ public class EditLog {
    *  @param originatingList Node, whose child list originated the delete.
    */
   public void delete( BaseNode n, BranchNode originatingList ) {
-    edits.add( new EditEntry(DELETE,n,originatingList,null));
+    edits.add( new EditEntry(DELETE,n,originatingList,""));
   }
 
   /** Write out the edit log. */
@@ -124,7 +174,7 @@ public class EditLog {
                               throws SAXException {
     AttributesImpl atts = new AttributesImpl();
     if( ee.type != DELETE )
-      atts.addAttribute("","","path","CDATA",ee.dstPath);
+      atts.addAttribute("","","path","CDATA",ee.dstPath.toString());
     if( ee.type != INSERT )
       atts.addAttribute("","","src","CDATA",PathTracker.getPathString(ee.baseSrc));
     atts.addAttribute("","","originTree","CDATA",ee.branchSrc.isLeftTree() ?
