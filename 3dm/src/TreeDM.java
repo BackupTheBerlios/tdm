@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.12 2001/04/02 07:37:55 ctl Exp $
+//$Id: TreeDM.java,v 1.13 2001/04/02 11:08:51 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -140,8 +140,8 @@ public class TreeDM {
       //e.printStackTrace();
       return;
     }
-    boolean symmetry = treesIdentical(mr1,mr2,SHOWDIFF),
-            likefacit = treesIdentical(facit,mr1,SHOWDIFF);
+    boolean symmetry = treesIdentical(mr1,mr2,false),
+            likefacit = treesIdentical(mr1,facit,SHOWDIFF);
     if( !symmetry )
       System.out.print("SYMMETRY failed ");
     if( ((ElementNode) facit.getChild(0)).name.equalsIgnoreCase("conflict") ) {
@@ -181,7 +181,14 @@ public class TreeDM {
      result = false;
     }
     if( a.getChildCount() != b.getChildCount() ) {
-      if(searchAll) System.out.println("IDENTITY failed: childcount failed below "+ a.toString());
+      if(searchAll){
+       System.out.println("IDENTITY failed: childcount failed below :");
+       System.out.println("Merged Tree------------------------------------------");
+      a.printTree(0);
+       System.out.println("Facit Tree-------------------------------------------");
+      b.printTree(0);
+       System.out.println("-----------------------------------------------------");
+      }
        result = false;
     } else if( result || searchAll )
       for( int i=0;i<a.getChildCount();i++)
@@ -193,7 +200,7 @@ public class TreeDM {
   // Run Best Matcher
   public void runBM( String[] args ) {
    ElementNode docA=null, docBase=null;
-   final String OTHER = "2";
+   final String OTHER = "1";
     if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
       System.exit(0);
@@ -331,14 +338,14 @@ public class TreeDM {
       try {
        xr.setFeature("http://xml.org/sax/features/namespaces",false);
        xr.setFeature("http://xml.org/sax/features/validation",false);
-//       xr.setFeature("http://xml.org/sax/features/external-general-entities",false);
-//       xr.setFeature("http://xml.org/sax/features/external-parameter-entities",false);
+       xr.setFeature("http://xml.org/sax/features/external-general-entities",false);
+       xr.setFeature("http://xml.org/sax/features/external-parameter-entities",false);
        xr.setFeature("http://apache.org/xml/features/continue-after-fatal-error",true);
 
       } catch (SAXException e) {
        System.out.println("Error setting features:" + e.getMessage());
       }
-//      xr.setEntityResolver(this);
+      xr.setEntityResolver(this);
 
       FileReader r = new FileReader(file);
       xr.parse(new InputSource(r));
@@ -524,7 +531,25 @@ public class TreeDM {
         if(childcounter!=HAS_CONTENT)
            pw.println(">");
         childcounter = HAS_CONTENT;
-        String chars = new String( ch, startpos, length ).trim();
+        StringBuffer sb = new StringBuffer();
+        for(int i=startpos;i<startpos+length;i++) {
+          switch( ch[i] ) {
+            case '<': sb.append("&lt;");
+                  break;
+            case '>': sb.append(">");
+                  break;
+            case '\'': sb.append("&apos;");
+                  break;
+            case '&': sb.append("&amp;");
+                  break;
+            case '"': sb.append("&quot;");
+                  break;
+            default:
+                sb.append(ch[i]);
+          }
+        }
+        String chars = sb.toString();
+//        String chars = new String( ch, startpos, length ).trim();
         if( chars.length() == 0 )
           return;/*
         int start=0,next=-1;
@@ -537,7 +562,7 @@ public class TreeDM {
             start=next+1;
           }
         } while( next != -1 );*/
-        pw.print(chars);
+        pw.println(chars);
      }
 
 
