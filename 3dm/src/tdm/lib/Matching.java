@@ -1,4 +1,4 @@
-// $Id: Matching.java,v 1.8 2001/05/16 12:46:35 ctl Exp $
+// $Id: Matching.java,v 1.9 2001/05/17 14:47:06 ctl Exp $
 
 import java.util.Vector;
 import java.util.Iterator;
@@ -285,9 +285,9 @@ public class Matching {
       // Only match children, if there are equally many
       for( int i=0; childrenMatch && i<a.getChildCount(); i ++ ) {
         childrenMatch = a.getChild(i).getContent().contentEquals(b.getChild(i).getContent());
-        if( !childrenMatch )
+/*        if( !childrenMatch )
           // Try fuzzy matching
-          childrenMatch = dfsTryFuzzyMatch( a.getChild(i), b.getChild(i) );
+          childrenMatch = dfsTryFuzzyMatch( a.getChild(i), b.getChild(i) );*/
       }
     } else
       childrenMatch = false;
