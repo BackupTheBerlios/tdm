@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.20 2001/05/25 07:01:24 ctl Exp $
+// $Id: Merge.java,v 1.21 2001/05/25 14:52:27 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -151,15 +151,15 @@ public class Merge {
             bUpdated = !matches( b, b.getBaseMatch() );
     if( aUpdated && bUpdated ) {
       if( matches( a, b ) ) {
-        clog.addWarning(ConflictLog.UPDATE,a.isLeftTree() ? b : a,
-          "Node updated in both branches, but updates are equal");
+        clog.addUpdate(ConflictLog.WARNING,"Node updated in both branches, but updates are equal",
+          a.isLeftTree() ? b : a );
         return a.getContent();
       } else {
         //
         // CONFLICTCODE here
         // if XMLElementNode try merging attributes if XMLTextnode give up
-        clog.add(ConflictLog.UPDATE,a.isLeftTree() ? b : a,
-          "Node updated in both branches, using branch 1");
+        clog.addUpdate(ConflictLog.CONFLICT,"Node updated in both branches, using branch 1",
+          a.isLeftTree() ? b : a );
 /*
         System.out.println("CONFLICT; Node updated in both branches, picking first one:");
         System.out.println(a.getContent().toString());
@@ -283,15 +283,27 @@ public class Merge {
     }
   }
 
-  public MergePairList mergeListToPairList( MergeList mlistA) {
+  public MergePairList mergeListToPairList( MergeList mlistA, MergeList mlistB ) {
     MergePairList merged = new MergePairList();
+    int childpos = -1;
     for( int i=0;i<mlistA.getEntryCount()-1;i++) { // -1 due to end symbol
       MergeEntry me = mlistA.getEntry(i);
-      if( i > 0) // Don't append __START__
+      if( i > 0) { // Don't append __START__
         merged.append(me.getNode(),me.getNode().getFirstPartner(BranchNode.MATCH_FULL));
+        childPos = merged.getPairCount() -1;
+      }
       for( int ih=0;ih<me.getHangonCount();ih++) {
         BranchNode hangon=me.getHangon(ih).getNode();
         merged.append(hangon,hangon.getFirstPartner(BranchNode.MATCH_FULL));
+      }
+      if( mlistB != null ) {
+        MergeEntry pair = mlistB.getEntry(mlistB.findPartner(me));
+        if( !checkOtherHangons(me,pair,logchildpos) ) {
+          for(int i=0;i<pair.getHangonCount();i++) {
+            BranchNode hangon = eb.getHangon(i).getNode();
+            merged.append(hangon,hangon.getFirstPartner(BranchNode.MATCH_FULL));
+          }
+        }
       }
     }
     return merged;
@@ -311,7 +323,7 @@ public class Merge {
     if( mlistA.getEntryCount() != mlistB.getEntryCount() )
         throw new RuntimeException("ASSERTION FAILED: MergeList.merge(): lists different lengths!");
 
-    int posA = 0, posB = 0;
+    int posA = 0, posB = 0, logchildpos=-1;
     MergeEntry ea = mlistA.getEntry(posA), eb= mlistB.getEntry(posB);
     while(true) {
       // Dump hangons from ea... (we do this first as __START__ may have hangons)
@@ -321,34 +333,8 @@ public class Merge {
       }
       // And then from eb..
       if( eb.getHangonCount() > 0 ) {
-        boolean hangonsAreEqual = false;
-        if( ea.getHangonCount() > 0 ) {
-          // Check if the hangons match _exactly_ (no inserts, and exactly same sequence of copies)
-          // Then we can include the hangons just once. This resembles the case when content of
-          // two nodes has been updated the same way... not a conflict, but maybe suspicious
-          if( eb.getHangonCount() == ea.getHangonCount() ) {
-            hangonsAreEqual = true;
-            for(int i=0;hangonsAreEqual && i<ea.getHangonCount();i++)
-              hangonsAreEqual = matches( eb.getHangon(i).getNode(),  ea.getHangon(i).getNode() );
-          }
-          // Both have hangons,
-          // add CONFLICTCODE here
-          // for now, chain A and B hangons
-          if( hangonsAreEqual )
-            // Need: add with explicit childpos
-            // How should we encode the inserts, i.e. tell which nodes were inserted
-            clog.addWarning(ConflictLog.INSERT,null,"Equal insertions in both branches at the same position");
-            //System.out.println(); // as updated(or A if no update)-Other");
-          else
-            System.out.println("CONFLICTW; both nodes have hangons; sequencing them"); // as updated(or A if no update)-Other");
-
-/*        System.out.println("First list:");
-          mlistA.print();
-          System.out.println("Second list:");
-          mlistB.print();*/
-        }
         // Append b hangons (unless they were equal to the hangons of ea)
-        if( !hangonsAreEqual ) {
+        if( !checkOtherHangons(ea,eb,logchildpos) ) {
           for(int i=0;i<eb.getHangonCount();i++) {
             BranchNode nb = eb.getHangon(i).getNode();
             merged.append(nb,nb.getFirstPartner(BranchNode.MATCH_FULL));
@@ -371,11 +357,10 @@ public class Merge {
         nextA = mlistA.findPartner(mlistB.getEntry(nextB));
       else if (nextB != mlistB.findPartner(mlistA.getEntry(nextA))) {
         // add CONFLICTCODE here
-        // This part is especially troublesome, as just using the sequencing of A may get us into
-        // and infinite loop! (m5 rev 1.1!)
-        // for now, follow sequencing of mlist A
-        System.out.println("CONFLICT: Sequencing conflict, using only one list's sequencing");
-//        throw new SequencingConflict();
+        clog.addSequencing( ConflictLog.CONFLICT,"Sequencing conflict, using the sequencing of branch 1",
+          mlistA, mlistB, posA, posB );
+        return mergeListToPairList(ea.getNode().isLeftTree() ? mlistA : mlistB,
+          ea.getNode().isLeftTree() ? mlistB : mlistA);
       }
       posA = nextA;
       posB = nextB;
@@ -389,8 +374,40 @@ public class Merge {
       }
       // pos is set up so that ea and eb are merge-partners
       merged.append(ea.getNode(),eb.getNode());
+      logchildpos = merged.getPairCount()-1;
     }
     return merged;
+  }
+
+  private boolean checkOtherHangons(MergeEntry ea, MergeEntry eb, int logchildpos) {
+    if( ea.getHangonCount() > 0 ) {
+      // Check if the hangons match _exactly_ (no inserts, and exactly same sequence of copies)
+      // Then we can include the hangons just once. This resembles the case when content of
+      // two nodes has been updated the same way... not a conflict, but maybe suspicious
+      if( eb.getHangonCount() == ea.getHangonCount() ) {
+        hangonsAreEqual = true;
+        for(int i=0;hangonsAreEqual && i<ea.getHangonCount();i++)
+          hangonsAreEqual = matches( eb.getHangon(i).getNode(),  ea.getHangon(i).getNode() );
+      }
+      // Both have hangons,
+      // add CONFLICTCODE here
+      // for now, chain A and B hangons
+      if( hangonsAreEqual )
+        // Need: add with explicit childpos
+        // How should we encode the inserts, i.e. tell which nodes were inserted
+        clog.addInsert(ConflictLog.WARNING,
+          "Equal insertions in both branches at the same position", ea, eb, logchildpos );
+        //System.out.println(); // as updated(or A if no update)-Other");
+      else
+        clog.addInsert(ConflictLog.WARNING,
+          "Insertions in both branches, sequencing them", ea, eb, logchildpos );
+
+//            System.out.println("CONFLICTW; both nodes have hangons; sequencing them"); // as updated(or A if no update)-Other");
+/*        System.out.println("First list:");
+      mlistA.print();
+      System.out.println("Second list:");
+      mlistB.print();*/
+    }
   }
 
   private static final int NOP = 1;
