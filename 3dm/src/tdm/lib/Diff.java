@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.1 2001/04/27 16:59:09 ctl Exp $
+// $Id: Diff.java,v 1.2 2001/06/12 15:33:57 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.helpers.AttributesImpl;
@@ -32,9 +32,11 @@ public class Diff {
 
   public void diff( ContentHandler ch ) throws SAXException {
     enumerateNodes(m.getBaseRoot(),nodeNumbers);
+    ch.startDocument();
     ch.startElement("","","diff",EMPTY_ATTS);
     copy( m.getBaseRoot(), m.getBranchRoot(), ch );
     ch.endElement("","","diff");
+    ch.endDocument();
   }
 
   // branch has basenode

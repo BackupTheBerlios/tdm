@@ -1,4 +1,4 @@
-// $Id: Matching.java,v 1.10 2001/06/08 08:40:38 ctl Exp $
+// $Id: Matching.java,v 1.11 2001/06/12 15:33:57 ctl Exp $
 
 import java.util.Vector;
 import java.util.Iterator;
@@ -234,7 +234,7 @@ public class Matching {
     return true;
   }
 
-  static final int COPY_THRESHOLD = 0; //32;
+  public static int COPY_THRESHOLD = 32;
   static final int EDGE_BYTES = 8;
 
   private void removeSmallCopies( BranchNode root ) {

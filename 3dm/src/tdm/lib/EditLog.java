@@ -1,39 +1,102 @@
-// $Id: EditLog.java,v 1.1 2001/06/08 08:40:38 ctl Exp $
+// $Id: EditLog.java,v 1.2 2001/06/12 15:33:57 ctl Exp $
+
+import java.util.Vector;
+import java.util.Stack;
+
+import org.xml.sax.SAXException;
+import org.xml.sax.ContentHandler;
+import org.xml.sax.helpers.AttributesImpl;
 
 public class EditLog {
 
+  static final int INSERT = 0;
+  static final int UPDATE = 1;
+  static final int COPY = 2;
+  static final int MOVE = 3;
+  static final int DELETE = 4;
+
+  static final String[] OPTAGS = {"insert","update","copy","move","delete"};
+
+  private class EditEntry {
+    int type = -1;
+    BaseNode baseSrc=null;
+    BranchNode branchSrc = null;
+    String dstPath = null;
+
+    EditEntry( int aType, BaseNode aBaseNode, BranchNode aBranchNode, String aDstPath ) {
+      type = aType;
+      baseSrc = aBaseNode;
+      branchSrc = aBranchNode;
+      dstPath = aDstPath;
+    }
+  }
+
+  private Stack checkPoints = new Stack();
+  private Vector edits = new Vector();
   private PathTracker pt = null;
   public EditLog(PathTracker apt) {
     pt = apt;
   }
 
   public void insert( BranchNode n, int childPos ) {
-    System.out.println("INSERT; " + pt.getPathString(childPos));
-    System.out.println(n.getContent().toString());
+    edits.add( new EditEntry(INSERT,null,n,pt.getPathString(childPos)));
+//    System.out.println("INSERT; " + pt.getPathString(childPos));
+//    System.out.println(n.getContent().toString());
   }
 
-  public void move( BaseNode n, int childPos ) {
-    System.out.println("MOVE: " + PathTracker.getPathString(n)+"->" + pt.getPathString(childPos));
+  public void move( BranchNode n, int childPos ) {
+    edits.add( new EditEntry(MOVE,n.getBaseMatch(),n,pt.getPathString(childPos)));
+//    System.out.println("MOVE: " + PathTracker.getPathString(n)+"->" + pt.getPathString(childPos));
   }
 
-  public void copy( BaseNode n, int childPos ) {
-    System.out.println("COPY: " + PathTracker.getPathString(n)+"->" + pt.getPathString(childPos));
+  public void copy( BranchNode n, int childPos ) {
+    edits.add( new EditEntry(COPY,n.getBaseMatch(),n,pt.getPathString(childPos)));
+//    System.out.println("COPY: " + PathTracker.getPathString(n)+"->" + pt.getPathString(childPos));
   }
 
   public void update( BranchNode n ) {
-    System.out.println("UPDATE: " + pt.getFullPathString());
-    System.out.println(n.getContent().toString());
+    edits.add( new EditEntry(UPDATE,null,n,pt.getPathString()));
+
+//    System.out.println("UPDATE: " + pt.getFullPathString());
+//    System.out.println(n.getContent().toString());
   }
 
-  public void delete( BaseNode n ) {
-    System.out.println("DELETE: " + PathTracker.getPathString(n));
+  public void delete( BaseNode n, BranchNode originatingList ) {
+    edits.add( new EditEntry(DELETE,n,originatingList,null));
+//    System.out.println("DELETE: " + PathTracker.getPathString(n));
+  }
+
+  public void writeEdits( ContentHandler ch ) throws SAXException {
+    ch.startDocument();
+    AttributesImpl atts = new AttributesImpl();
+    ch.startElement("","","edits",atts);
+    for(int i=0;i<edits.size();i++)
+      outputEdit((EditEntry) edits.elementAt(i),ch);
+    ch.endElement("","","edits");
+    ch.endDocument();
+  }
+
+  protected void outputEdit( EditEntry ee, ContentHandler ch ) throws SAXException {
+    AttributesImpl atts = new AttributesImpl();
+    if( ee.type != DELETE )
+      atts.addAttribute("","","path","CDATA",ee.dstPath);
+    if( ee.type == DELETE || ee.type == COPY || ee.type == MOVE )
+      atts.addAttribute("","","src","CDATA",PathTracker.getPathString(ee.baseSrc));
+    atts.addAttribute("","","originTree","CDATA",ee.branchSrc.isLeftTree() ? "branch1" : "branch2");
+    atts.addAttribute("","","originList","CDATA",PathTracker.getPathString(ee.branchSrc));
+    ch.startElement("","",OPTAGS[ee.type],atts);
+    ch.endElement("","",OPTAGS[ee.type]);
   }
 
   public void checkPoint() {
+    checkPoints.push(new  Integer( edits.size() ) );
   }
   public void rewind() {
+    int firstFree = ((Integer) checkPoints.pop()).intValue();
+    edits.setSize(firstFree);
   }
   public void commit() {
+    checkPoints.pop();
   }
 
 }

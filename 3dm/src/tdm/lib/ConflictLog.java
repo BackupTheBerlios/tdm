@@ -1,4 +1,4 @@
-// $Id: ConflictLog.java,v 1.4 2001/06/08 08:40:37 ctl Exp $
+// $Id: ConflictLog.java,v 1.5 2001/06/12 15:33:57 ctl Exp $
 
 import java.util.List;
 import java.util.LinkedList;
@@ -76,6 +76,7 @@ public class ConflictLog {
 
   public void writeConflicts( ContentHandler ch ) throws SAXException {
     AttributesImpl atts = new AttributesImpl();
+    ch.startDocument();
     ch.startElement("","","conflictlist",atts);
     if( !conflicts.isEmpty() ) {
       atts = new AttributesImpl();
@@ -96,6 +97,7 @@ public class ConflictLog {
       System.out.println( "MERGE FAILED: " + conflicts.size() + " conflicts.");
     if( !warnings.isEmpty() )
       System.out.println( "Warning: " + warnings.size() + " conflict warnings.");
+    ch.endDocument();
   }
 
   protected void outputConflict( ConflictEntry ce, ContentHandler ch ) throws SAXException {

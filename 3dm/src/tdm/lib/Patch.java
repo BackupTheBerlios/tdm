@@ -1,4 +1,4 @@
-// $Id: Patch.java,v 1.2 2001/05/04 12:59:22 ctl Exp $
+// $Id: Patch.java,v 1.3 2001/06/12 15:33:57 ctl Exp $
 
 import java.util.Map;
 import java.util.HashMap;
@@ -6,10 +6,12 @@ import java.util.Set;
 import java.util.HashSet;
 import java.util.Vector;
 import java.util.LinkedList;
+import org.xml.sax.SAXException;
+import org.xml.sax.ContentHandler;
 
 public class Patch {
 
-/***COMMON TO DIFF--consider movinG!*/
+/***COMMON TO DIFF--consider moving!*/
   private static final Set RESERVED;
   static final String DIFF_NS ="diff:";
   static {
@@ -21,6 +23,26 @@ public class Patch {
 ///////ENDCOMMON
 
   public Patch() {
+  }
+
+  public void patch( BaseNode base, BranchNode diff, ContentHandler ch ) throws ParseException, SAXException {
+    BranchNode patched = patch( base, diff );
+    ch.startDocument();
+    dumpTree( patched.getChild(0), ch );
+    ch.endDocument();
+  }
+
+  private void dumpTree( BranchNode n, ContentHandler ch ) throws SAXException {
+    if( n.getContent() instanceof XMLTextNode ) {
+      char [] text = ((XMLTextNode) n.getContent()).getText();
+      ch.characters(text,0,text.length);
+    } else {
+      XMLElementNode en = (XMLElementNode) n.getContent();
+      ch.startElement("","",en.getQName(),en.getAttributes());
+      for( int i=0;i<n.getChildCount();i++)
+        dumpTree(n.getChild(i),ch );
+      ch.endElement("","",en.getQName());
+    }
   }
 
   public BranchNode patch( BaseNode base, BranchNode diff ) throws ParseException  {
@@ -41,7 +63,7 @@ public class Patch {
       BranchNode node = new BranchNode( cmdcontent );
       patch.addChild(node);
       for( int i=0;i<diff.getChildCount();i++)
-        insert(node,diff.getChild(i)); // Recurse to nect level
+        insert(node,diff.getChild(i)); // Recurse to next level
     } else {
       // Other ops..
       XMLElementNode ce = (XMLElementNode) cmdcontent;

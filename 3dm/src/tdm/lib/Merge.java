@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.26 2001/06/08 08:40:38 ctl Exp $
+// $Id: Merge.java,v 1.27 2001/06/12 15:33:57 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -23,6 +23,10 @@ public class Merge {
 
   public ConflictLog getConflictLog() {
     return clog;
+  }
+
+  public EditLog getEditLog() {
+    return elog;
   }
 
   public void merge( ContentHandler ch ) throws SAXException {
@@ -328,56 +332,22 @@ public class Merge {
     return merged;
   }
 
-/*  protected int logOperation(BranchNode a, MergeEntry ma, BranchNode b, MergeEntry mb, int childPos) {
-    int opa = a != null ? getStructOperation(a,ma) : -1;
-    int opb = b != null ? getStructOperation(b,mb) : -1;
-    if( opa == INSERT )
-      op_insert(a,childPos);
-    else if ( opb == INSERT )
-      op_insert(b,childPos);
-    else if ( opa == COPY ) // if opa == copy opb will also be copy and vice versa, and they have the same
-                            // base node
-      op_copy(a.getBaseMatch(),childPos);
-    else if ( opa == MOVE || opb == MOVE )
-      op_move(a.getBaseMatch(),childPos);
-    if( opa != INSERT && !matches( a, a.getBaseMatch() ) )
-      op_update( a , childPos );
-    else if( opb != INSERT && !matches( b, b.getBaseMatch() ) )
-      op_update( b , childPos );
-  }
-
-  // m = null means the node is a hangon
-  protected int getStructOperation( BranchNode n, MergeEntry m ) {
-    if( !n.hasBaseMatch() )
-      return INSERT;
-    if( m == null ) {
-      if( n.isLeftTree() && n.getBaseMatch().getLeft().getMatchCount() > 1 )
-        return COPY; // hangon with base match = copy
-      else if (!n.isLeftTree() && n.getBaseMatch().getRight().getMatchCount() > 1 )
-        return COPY;
-      return MOVE;
-    } else if( m.moved )
-      return MOVE;
-    return NOP;
-  }
-
-*/
 
   protected void logHangonStructOps( BranchNode n, int childPos ) {
     if( !n.hasBaseMatch() )
       elog.insert(n,childPos);
     else if( (n.isLeftTree() && n.getBaseMatch().getLeft().getMatchCount() > 1 ) ||
             (!n.isLeftTree() && n.getBaseMatch().getRight().getMatchCount() > 1 ))
-      elog.copy(n.getBaseMatch(),childPos); // hangon with base match = copy
+      elog.copy(n,childPos); // hangon with base match = copy
     else
-      elog.move(n.getBaseMatch(),childPos);
+      elog.move(n,childPos);
   }
 
   protected void logEntryStructOps( MergeEntry m1, MergeEntry m2, int childPos ) {
     if( m1.moved )
-      elog.move(m1.getNode().getBaseMatch(),childPos);
+      elog.move(m1.getNode(),childPos);
     else if( m2.moved )
-      elog.move(m2.getNode().getBaseMatch(),childPos);
+      elog.move(m2.getNode(),childPos);
   }
 
   protected void logUpdateOperation( BranchNode n ) {
@@ -574,7 +544,7 @@ public class Merge {
         }
         int matchIx = mlistA.matchInList(bn);
         if( op2==DELETE )
-          elog.delete(mlistA.getEntry(matchIx).getNode().getBaseMatch());
+          elog.delete(mlistA.getEntry(matchIx).getNode().getBaseMatch(),mlistB.getEntryParent());
         mlistA.removeEntryAt(matchIx);
       } else if( op1 == MOVE_I && op2== MOVE_F ) {
         // CONFLICTCODE here
@@ -591,7 +561,7 @@ public class Merge {
         bn,mlistA.getEntry( mlistA.matchInList(bn) ).getNode(), null );
 //        System.out.println("CONFLICT: Node moved and deleted - moving on by deleting the node + hangons!. ");
         int matchIx = mlistA.matchInList(bn);
-        elog.delete(mlistA.getEntry(matchIx).getNode().getBaseMatch());
+        elog.delete(mlistA.getEntry(matchIx).getNode().getBaseMatch(), mlistB.getEntryParent());
         mlistA.removeEntryAt(matchIx);
       } else if( op1 == MOVE_F && op2 == MOVE_F ) {
         if( isMovefMovefConflict( bn ) ) {
@@ -616,14 +586,14 @@ public class Merge {
     BaseNode m = n.getBaseMatch();
     if( m == null )
       return true; // the node was inserted => modified
-    if( getOperation(m,ml) != NOP ) // Notice that we check for move instantly, dut updates only when
+    if( getOperation(m,ml) != NOP ) // Notice that we check for move instantly, but updates only when
                                     // we know the node was deleted. This is because moves are
                                     // visible on the previous level w.r.t. the updates
       return true; // the node has been moved
     if( n.getBaseMatchType() != BranchNode.MATCH_FULL )
       return true; // either structural or content modification (otherwise match would be full!)
-    boolean deletedInOther = n.getPartners().getMatches().isEmpty(); // NOTE: By definition of the merge
-                                                                     // matching, at least one match is full!
+                   // NOTE: By definition of a natural matching, at least one match is full!
+    boolean deletedInOther = n.getPartners().getMatches().isEmpty();
     if( deletedInOther ) {
       if( !matches( n, m ) )
         return true; // The node is updated

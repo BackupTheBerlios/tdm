@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.22 2001/06/08 08:40:38 ctl Exp $
+//$Id: TreeDM.java,v 1.23 2001/06/12 15:33:57 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -32,7 +32,7 @@ public class TreeDM {
     // NOTE: When running mergecases, check that the parameters are set as follows:
     // COPY_TRESHOLD = 0 (otherwise cases with copies won't work) (normal value = 18)
     //
-    (new TreeDM()).runHarness( args );
+    (new TreeDM()).runBM( args );
   }
 
   public void runHarness( String[] args ) {
