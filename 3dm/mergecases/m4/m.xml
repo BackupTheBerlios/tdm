@@ -1,2 +1,9 @@
-<!-- $Id: m.xml,v 1.1 2001/01/24 11:43:46 ctl Exp $ -->
-<conflict/>
+<!-- $Id: m.xml,v 1.2 2001/06/25 10:47:04 ctl Exp $ -->
+<!-- CONFLICT: Moves a to two different places. Below is result if
+     near-move is ignored --> 
+<R>
+        <b>
+                <a/>
+        </b>
+        <c/>
+</R>

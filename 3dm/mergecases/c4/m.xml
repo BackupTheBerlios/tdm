@@ -1,2 +1,12 @@
-<!-- $Id: m.xml,v 1.1 2001/01/24 11:43:42 ctl Exp $ -->
-<conflict/>
+<!-- $Id: m.xml,v 1.2 2001/06/25 10:47:04 ctl Exp $ -->
+<!-- AMBIGOUS: Two nodes copied to same destination. This file
+     reflects "sequence inserts"-policy -->
+<R>
+	<a>
+		<b/>
+		<c/>
+	</a>
+	<b/>
+	<c/>
+</R>
+
