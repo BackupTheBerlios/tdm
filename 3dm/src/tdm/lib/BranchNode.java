@@ -1,4 +1,4 @@
-// $Id: BranchNode.java,v 1.13 2003/01/09 14:15:25 ctl Exp $ D
+// $Id: BranchNode.java,v 1.14 2003/01/30 09:21:07 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -31,6 +31,7 @@ import java.util.Iterator;
 public class BranchNode extends Node {
 
   // Match types
+  // NOTE: If you change these, remember to change MATCHING_ATT_TYPES also!
   public static final int MATCH_FULL = 3;
   public static final int MATCH_CONTENT = 1;
   public static final int MATCH_CHILDREN = 2;

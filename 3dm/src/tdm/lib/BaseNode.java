@@ -1,4 +1,4 @@
-// $Id: BaseNode.java,v 1.10 2003/01/09 14:15:25 ctl Exp $ D
+// $Id: BaseNode.java,v 1.11 2003/01/30 09:21:07 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -19,6 +19,8 @@
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
 
+package tdm.lib;
+
 /**
  *  Node in a base tree matched witch is matched to two branches. In addition to
  *  the functionality provided by the node class, BaseNode adds matchings. Each
@@ -26,7 +28,6 @@
  *  left and right branches are accesed with the {@link #getLeft() getLeft} and
  *  {@link #getRight() getRight} methods.
  */
-package tdm.lib;
 
 public class BaseNode extends Node {
 
