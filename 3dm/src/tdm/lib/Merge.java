@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.9 2001/03/28 10:41:38 ctl Exp $
+// $Id: Merge.java,v 1.10 2001/03/28 12:15:49 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -30,6 +30,7 @@ public class Merge {
       throw new RuntimeException("mergeNode: match type should be match children, otherwise the node should be null!");
     MergeList mlistA = a != null ? makeMergeList( a ) : null;
     MergeList mlistB = b != null ? makeMergeList( b ) : null;
+/*
     System.out.println("Merge A list");
     if( mlistA != null )
       mlistA.print();
@@ -40,7 +41,7 @@ public class Merge {
       mlistB.print();
     else
       System.out.println("--none--");
-
+*/
     if( mlistA != null && mlistB != null ) {
       mlistA = mergeLists( mlistA, mlistB ); // Merge lists
       //System.out.println("Merged list:");
@@ -161,7 +162,7 @@ public class Merge {
       ml.add( END, false );
       return ml;
     }
-    Set baseMatches = new HashSet();
+    Map baseMatches = new HashMap();
     int prevChildPos = -1; // Next is always prevChildPos + 1, so the first should be 0 =>
                            // init to -1, -2 means not found in base
     int childPos = -1;
@@ -177,14 +178,21 @@ public class Merge {
         // Copied from elsewhere
         ml.addHangOn( current, !matches( match, current) );
         ml.lockNeighborhood(0,1);
-      } else if ( baseMatches.contains( match ) ) {
+      } else if ( baseMatches.containsKey( match ) ) {
         // current is the n:th copy of a node (n>1)
         ml.addHangOn( current, !matches( match, current) );
+        Integer firstPos = (Integer) baseMatches.get(match);
+        if( firstPos != null ) {
+          // Lock the first occurenece as well
+          ml.lockNeighborhood(firstPos.intValue(),1,1);
+          baseMatches.put(match,null);  // Put null into hashtable, so we won't lock more than once
+                                        // (it wouldn't hurt, but just to be nice)
+        }
         ml.lockNeighborhood(0,1);
       } else {
         // Found in base, check for moves
         ml.add( current,  !matches( match, current) );
-        baseMatches.add( match );
+        baseMatches.put( match, new Integer( ml.tailPos ) );
         childPos = match.getChildPos();
         childPos = childPos == -1 ? -2 : childPos; // Remember to set not found to -2
         if( (prevChildPos + 1) != childPos ) { // Out of sequence, lock previous and this
@@ -196,7 +204,7 @@ public class Merge {
           if( prevChildPos != -2 && childPos != -2 && prevChildPos < childPos ) {
             // Not moved if every node between prevChildPos+1 and childPos-1 (ends included) is
             // deleted
-
+            // SLOWCODE, should be optimized
             for(int j=0;!moved && j<parent.getChildCount();j++) {
               BaseNode aBase = parent.getChild(j).getBaseMatch();
               int basePos = aBase == null ? -1 : aBase.getChildPos();
@@ -253,19 +261,33 @@ public class Merge {
       merged.add( ea );
       ea.setMergePartner(eb.getNode());
       // Hangon nodes
-      if( eb.inserts.size() > 0 ) {
-        if( ea.inserts.size() > 0 ) {
+      if( eb.getHangonCount() > 0 ) {
+        boolean hangonsAreEqual = false;
+        if( ea.getHangonCount() > 0 ) {
+          // Check if the hangons match _exactly_ (no inserts, and exactly same sequence of copies)
+          // Then we can include the hangons just once. This reseamles the case when content of
+          // two nodes has been updated the same way... not a conflict, but maybe suspicious
+          if( eb.getHangonCount() == ea.getHangonCount() ) {
+            hangonsAreEqual = true;
+            for(int i=0;hangonsAreEqual && i<ea.getHangonCount();i++)
+              hangonsAreEqual = matches( eb.getHangon(i).getNode(),  ea.getHangon(i).getNode() );
+          }
           // Both have hangons,
           // add CONFLICTCODE here
           // for now, chain A and B hangons
-          System.out.println("CONFLICTW; both nodes have hangons; sequencing them"); // as updated(or A if no update)-Other");
+          if( hangonsAreEqual )
+            System.out.println("CONFLICTW; both nodes have hangons, but they were equal"); // as updated(or A if no update)-Other");
+          else
+            System.out.println("CONFLICTW; both nodes have hangons; sequencing them"); // as updated(or A if no update)-Other");
 /*          System.out.println("First list:");
           mlistA.print();
           System.out.println("Second list:");
           mlistB.print();*/
         }
-        for( int i=0;i<eb.inserts.size();i++)
-          ea.inserts.add( eb.inserts.elementAt(i) );
+        if( !hangonsAreEqual ) {
+          for( int i=0;i<eb.inserts.size();i++)
+            ea.inserts.add( eb.inserts.elementAt(i) );
+        }
       }
       // See if we're done
       if( ea.node == END || eb.node == END ) {
