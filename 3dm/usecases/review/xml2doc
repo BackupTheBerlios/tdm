@@ -1,5 +1,5 @@
 #!/bin/sh
 cp base.sxw $2.sxw
 cp $1.xml /tmp/Content.xml
-zip $2.sxw /tmp/Content.xml
+zip -j $2.sxw /tmp/Content.xml
 rm /tmp/Content.xml
