@@ -1,6 +1,9 @@
-//$Id: Measure.java,v 1.5 2001/04/26 17:27:16 ctl Exp $
+//$Id: Measure.java,v 1.6 2001/05/16 10:31:41 ctl Exp $
 
 import org.xml.sax.Attributes;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Iterator;
 
 public class Measure {
 
@@ -16,10 +19,10 @@ public class Measure {
   // Tester
   public static void main(String[] args) {
     String a = "return stringDist( a, b, a.length()+b.length() );";
-    String b = "rezurn stringDist( a,b, a.length()+b.length() );";
+    String b = "return stzingDist( a, b, a.length()+b.length() );";
     System.out.println("a="+a);
     System.out.println("b="+b);
-    //System.out.println("Dist = " + stringDist(a,b));
+    System.out.println("Dist = " + (new Measure()).qDist(a,b));
   }
 
   public Measure() {
@@ -134,23 +137,55 @@ public class Measure {
     };
 
   public int stringDist( String a, String b,double limit ) {
-    return stringDist( a, b,(int) a.length()+b.length(), stringComp);
+    return qDist(a,b);
+    //return stringDist( a, b,(int) a.length()+b.length(), stringComp);
   }
 
   public int stringDist( char[] a, char[] b,double limit ) {
-    return stringDist( a, b,(int) a.length+b.length, charArrayComp );
+    int d = qDist(a,b);
+/*    System.out.println("A="+new String(a,0,a.length));
+    System.out.println("B="+new String(b,0,b.length));
+    System.out.println("dist="+d);
+    System.out.println("sdist="+stringDist( a, b,(int) a.length+b.length, charArrayComp ));*/
+    return d;
+    //return qDist(a,b);
+    //return stringDist( a, b,(int) a.length+b.length, charArrayComp );
   }
 
   public double childListDistance( Node a, Node b ) {
     if( a.getChildCount()== 0 && b.getChildCount() == 0)
       return ZERO_CHILDREN_MATCH; // Zero children is also a match!
-    else
-      return ((double) stringDist(a,b,a.getChildCount()+b.getChildCount(),nodeChildComp))
+    else {
+      char[] ac = new char[a.getChildCount()];
+      char[] bc = new char[b.getChildCount()];
+      for( int i=0;i<a.getChildCount();i++)
+        ac[i]=(char) (a.getChildAsNode(i).getContent().getContentHash()&0xffff);
+      for( int i=0;i<b.getChildCount();i++)
+        bc[i]=(char) (b.getChildAsNode(i).getContent().getContentHash()&0xffff);
+      return ((double) stringDist(ac,bc,1.0))
                        / ((double) a.getChildCount() + b.getChildCount());
+/*      return ((double) stringDist(a,b,a.getChildCount()+b.getChildCount(),nodeChildComp))
+                       / ((double) a.getChildCount() + b.getChildCount());
+
+*/
+    }
   }
 
   public int matchedChildListDistance( BaseNode a, BranchNode b ) {
-    return stringDist(a,b,a.getChildCount()+b.getChildCount(),matchedNodeChildComp);
+    char[] ac = new char[a.getChildCount()];
+    char[] bc = new char[b.getChildCount()];
+    for( int i=0;i<a.getChildCount();i++)
+      ac[i]=(char) i;
+    for( int i=0;i<b.getChildCount();i++) {
+      BaseNode m = b.getBaseMatch();
+      if( m!= null && m.getParent() == a )
+        bc[i] = (char) m.getChildPos();
+      else
+        bc[i] = (char) -i;
+    }
+    return stringDist(ac,bc,1.0);
+
+//    return stringDist(a,b,a.getChildCount()+b.getChildCount(),matchedNodeChildComp);
   }
 
   // Directly adapted from [Myers86]
@@ -163,6 +198,7 @@ public class Measure {
     //max = max > 10 ? 10 : max;
     int arraySize = 2*max+1;
     int v[] = null;
+    if( true ) throw new RuntimeException("DISABLED---!");
     if( arraySize <= DISTBUF_SIZE )
       v = DISTBUF; // Use preallocated buffer (speedup!)
     else
@@ -194,4 +230,91 @@ public class Measure {
     abstract int getLength( Object o );
     abstract boolean equals( Object a, int ia, Object b, int ib );
   }
+
+  /// q-Gram Distance [Ukkonen92]
+
+  class Counter {
+    public int count = 1;
+  }
+
+  private static final int INIT_CAPACITY=2048;
+  private static /*final*/ int Q=4; // Which gram to use
+
+  private Map aGrams = new HashMap(INIT_CAPACITY);
+  private Map bGrams = new HashMap(INIT_CAPACITY);
+
+  public int qDist( String a , String b ) {
+    decideQ(a.length()+b.length());
+    buildQGrams(a,aGrams);
+    buildQGrams(b,bGrams);
+    return calcQDistance();
+  }
+
+  public int qDist( char[] a , char[] b ) {
+    decideQ(a.length+b.length);
+    buildQGrams(a,aGrams);
+    buildQGrams(b,bGrams);
+    return calcQDistance();
+  }
+
+  protected void buildQGrams(String a, Map grams) {
+    grams.clear();
+/*    if( a.length() < Q )
+        grams.put(a,new Counter());
+    else {*/
+      for( int i=0;i<a.length();i++) {
+      String gram = a.substring(i,i+Q > a.length() ? a.length() : i+Q );
+      if( grams.containsKey(gram) )
+        ((Counter) grams.get(gram)).count++;
+      else
+        grams.put(gram,new Counter());
+      }
+    //}
+  }
+
+  protected void buildQGrams(char[] a, Map grams) {
+    grams.clear();
+    for( int i=0;i<a.length;i++) {
+      int count = i + Q > a.length ? a.length -i : Q;
+      String gram = new String(a,i,count);
+      if( grams.containsKey(gram) )
+        ((Counter) grams.get(gram)).count++;
+      else
+        grams.put(gram,new Counter());
+    }
+  }
+
+  protected int decideQ( int total ) {
+   int q = 1;
+   if( total > 150 )
+      q = 4;
+    else if( total > 50 )
+      q = 2;
+    return q;
+  }
+
+  protected int calcQDistance() {
+    int dist = 0;
+    // first, loop over agrams
+    for( Iterator i = aGrams.keySet().iterator();i.hasNext();) {
+      Object gramA = i.next();
+      int countA = ((Counter) aGrams.get(gramA)).count;
+      int countB = 0;
+      if( bGrams.containsKey(gramA) )
+        countB = ((Counter) bGrams.get(gramA)).count;
+      else
+//        System.out.println("Not in B: " +gramA.toString());
+      dist += Math.abs(countA-countB);
+    }
+    // And add any grams present in b but not in a
+    for( Iterator i = bGrams.keySet().iterator();i.hasNext();) {
+      Object gramB = i.next();
+      if( !aGrams.containsKey(gramB) ) {
+        dist += ((Counter) bGrams.get(gramB)).count;
+//        System.out.println("Not in A: " +gramB.toString());
+      }
+    }
+    return dist;
+  }
+
 }

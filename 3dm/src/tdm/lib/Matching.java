@@ -1,4 +1,4 @@
-// $Id: Matching.java,v 1.6 2001/04/27 16:59:10 ctl Exp $
+// $Id: Matching.java,v 1.7 2001/05/16 10:31:41 ctl Exp $
 
 import java.util.Vector;
 import java.util.Iterator;
@@ -169,7 +169,7 @@ public class Matching {
     for(int i=0;i<base.getChildCount();i++)
       setMatchTypes(base.getChild(i));
     if( base.getLeft().getMatches().size() > 1 ) {
-      // Has multiple matches, need to deterime type of each copy
+      // Has multiple matches, need to determine type of each copy
       // Scan for primary copy...
       int minDist = Integer.MAX_VALUE;
       double minContentDist = Double.MAX_VALUE;

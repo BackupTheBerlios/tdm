@@ -1,4 +1,4 @@
-// $Id: XMLElementNode.java,v 1.5 2001/04/20 14:47:50 ctl Exp $
+// $Id: XMLElementNode.java,v 1.6 2001/05/16 10:31:41 ctl Exp $
 
 import org.xml.sax.Attributes;
 import java.util.Vector;
@@ -114,5 +114,10 @@ public class XMLElementNode extends XMLNode {
     return true;
   }
 //ENDPOSSIBLY
+
+  public int getContentHash() {
+    return (attrHash[0]+attrHash[1]<<8+attrHash[2]<<16+attrHash[3]<<24)^nHashCode;
+  }
+
 
 }
