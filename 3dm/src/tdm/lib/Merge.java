@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.24 2001/06/07 09:26:16 ctl Exp $
+// $Id: Merge.java,v 1.25 2001/06/07 09:44:09 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -308,37 +308,32 @@ public class Merge {
     }
     return merged;
   }
-
-  protected int logOperation(BranchNode a,MergeEntry ma, BranchNode b,MergeEntry mb, int childPos) {
-    if( !a.hasBaseMatch() )
+/*
+  protected int logOperation(BranchNode a, MergeEntry ma, BranchNode b, MergeEntry mb, int childPos) {
+    int opa = a != null ? getStructOperation(a,ma) : -1;
+    int opb = b != null ? getStructOperation(b,mb) : -1;
+    if( opa == INSERT )
       op_insert(a,childPos);
-    else if ( !b.hasBaseMatch() )
+    else if ( opb == INSERT )
       op_insert(b,childPos);
-    else {
-      opa = getStructOperation(a,ma);
-      opb = getStructOperation(a,ma);
-      // MOVE overrides copy (as the unmoved pair is then the "original"), and if both are copied only
-      if( opa == MOVE)
-        op_move(a,childPos);
-      else if ( opb == MOVE)
-        op_move(b,childPos);
-      else if (opa==COPY || opb == COPY )
-        op_copy( opa==COPY ? a : b, childPos );
-    }
-
-    // Check if copy operation
-
-    //if( ma.moved
+    else if ( opa == COPY ) // if opa == copy opb will also be copy and vice versa, and they have the same
+                            // base node
+      op_copy(a.getBaseMatch(),childPos);
+    else if ( opa == MOVE || opb == MOVE )
+      op_move(a.getBaseMatch(),childPos);
+    if( opa != INSERT && !matches( a, a.getBaseMatch() ) )
+      op_update( a , childPos );
+    else if( opb != INSERT && !matches( b, b.getBaseMatch() ) )
+      op_update( b , childPos );
   }
-
+*/
+  // m = null means hangon
   protected int getStructOperation( BranchNode n, MergeEntry m ) {
     if( !n.hasBaseMatch() )
       return INSERT;
-    BaseNode b = n.getBaseMatch();
-    if( (b.getLeft().getMatches().contains(n) && b.getLeft().getMatches().size() > 1 )||
-      (b.getRight().getMatches().size() > 1 ) )
-      return COPY;
-    if( m==null || m.moved ) // m=null & basematch (prev condition) => far move!
+    if( m == null )
+      return COPY; // hangon with base match = copy
+    else if( m.moved )
       return MOVE;
     return NOP;
   }
