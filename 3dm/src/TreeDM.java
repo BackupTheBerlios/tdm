@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.4 2001/03/26 14:44:45 ctl Exp $
+//$Id: TreeDM.java,v 1.5 2001/03/28 07:01:39 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -85,7 +85,19 @@ public class TreeDM {
       return;
     }
     ProtoBestMatching m1 = new ProtoBestMatching( docBase, docA, "docA" );
+     File mf1 = new File( dir, "match1");
+     if( mf1.exists() ) {
+      System.out.println("Additional matchings from "+mf1.getName());
+      m1.matchFromFile(mf1);
+     }
+
     ProtoBestMatching m2 = new ProtoBestMatching( docBase, docB, "docB" );
+     File mf2 = new File( dir, "match2");
+     if( mf2.exists() ) {
+      System.out.println("Additional matchings from "+mf2.getName());
+      m2.matchFromFile(mf2);
+     }
+
     Merge merge1 = new Merge( new TriMatching( docA, m1, docBase, m2, docB ) );
     Merge merge2 = new Merge( new TriMatching( docB, m2, docBase, m1, docA ) );
     PrintWriter p1 = null, p2=null;
@@ -124,7 +136,7 @@ public class TreeDM {
       return;
     }
     if( !likefacit )
-      System.out.print("FACIT failed " + ( symmtery || (!symmetry && !treesIdentical(facit,mr2)) ?
+      System.out.print("FACIT failed " + ( symmetry || (!symmetry && !treesIdentical(facit,mr2)) ?
         "(on both)" : "(on one only)" ) );
     if( likefacit && symmetry )
       System.out.println("Ok ");
@@ -159,7 +171,8 @@ public class TreeDM {
   // Run Best Matcher
   public void runBM( String[] args ) {
    ElementNode docA=null, docBase=null;
-   if( args.length < 2 ) {
+   final String OTHER = "2";
+    if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
       System.exit(0);
    }
@@ -167,8 +180,8 @@ public class TreeDM {
       Parser p = new Parser();
       System.out.println("Parsing " + args [0]);
       docBase = p.parse(args[0] + PSEP + "b.xml");
-      System.out.println("Parsing " + args [1]);
-      docA = p.parse(args[0] + PSEP+ "1.xml");
+      System.out.println("Parsing " + OTHER + ".xml");
+      docA = p.parse(args[0] + PSEP+ OTHER+".xml");
       System.out.println("OK.");
    } catch ( Exception e ) {
     e.printStackTrace();
@@ -176,6 +189,11 @@ public class TreeDM {
    }
 //   System.exit(0);
    ProtoBestMatching m1 = new ProtoBestMatching( docBase, docA, args[0] );
+   java.io.File mf = new java.io.File( args[0] + PSEP+ "match"+OTHER );
+   if( mf.exists() ) {
+    System.out.println("Additional matchings from match"+OTHER);
+    m1.matchFromFile(mf);
+   }
 
    //   System.out.println("Showing area tree..." );
 //   java.awt.Frame treeView = new TreeView(m1.atRoot , null, m1, null );

@@ -1,4 +1,4 @@
-// $Id: TreeView.java,v 1.1 2001/03/14 08:23:55 ctl Exp $
+// $Id: TreeView.java,v 1.2 2001/03/28 07:01:39 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 import java.awt.*;
@@ -216,13 +216,24 @@ public class TreeView extends Frame  {
 
     class LineMapping extends VisibleMapping {
       private int x1,y1,x2,y2;
-      LineMapping( Point p1, Point p2 ) {
+      int type;
+      LineMapping( Point p1, Point p2, int atype ) {
         x1 = p1.x; y1 = p1.y;
         x2 = p2.x; y2 = p2.y;
+        type=atype;
       }
 
       public void draw( Graphics g ) {
-        g.setColor(Color.blue);
+        switch(type) {
+          case 1:g.setColor(Color.green);
+                break;
+          case 2:g.setColor(Color.cyan);
+                break;
+          case 3:g.setColor(Color.blue);
+                break;
+          default: throw new RuntimeException("Invalid type");
+        }
+//        g.setColor(Color.blue);
         g.drawLine(x1,y1,x2,y2);
       }
     }
@@ -274,7 +285,7 @@ public class TreeView extends Frame  {
             } else {
               while( n2 != null ) {
                 Point dst = (Point) nodesMap.get( n2 );
-                VisibleMapping vm = new  LineMapping(p,dst);
+                VisibleMapping vm = new  LineMapping(p,dst,n2.matchType == 3 ? n.matchType : n2.matchType);
                 visibleMappings.add(vm);
                 vm.draw(g);
                 n2 = m.getNextMapping();

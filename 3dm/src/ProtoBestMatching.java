@@ -1,4 +1,4 @@
-// $Id: ProtoBestMatching.java,v 1.4 2001/03/27 12:30:23 ctl Exp $
+// $Id: ProtoBestMatching.java,v 1.5 2001/03/28 07:01:38 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 //import TreeMatching;
@@ -30,32 +30,37 @@ public class ProtoBestMatching  {
   }
 
   public void matchFromFile( File f ) {
-    BufferedReader r = new BufferedReader( new InputStreamReader( new FileInputStream(f) ));
-    String line = "";
-    while( line = r.readLine() != null ) {
-      if(line.length() == 0)
-        continue;
-      if(line.startsWith("#") )
-        continue;
-      int wspos = line.indexOf(";"),wstart=0;
-      String branchPath = line.substring(wstart,wspos).trim();
-      wstart=wspos+1;
-      wspos = line.indexOf(";",wstart);
-      int mtype = Integer.parseInt(line.substring(wstart,wspos).trim());
-      wstart=wspos+1;
-      wspos = line.indexOf(";",wstart);
-      String basePath = line.substring(wstart,wspos).trim();
-      ONode base = getNode(docA,basePath);
-      ONode target = getNode(docB,branchPath);
-      ONode oldbase = getFirstMapping(target);
-      if( oldBase != null ) {
-        delMatching(oldbase,target);
-        delMatching(target,oldbase);
+    try{
+      BufferedReader r = new BufferedReader( new InputStreamReader( new FileInputStream(f) ));
+      String line = "";
+      while( (line = r.readLine()) != null ) {
+        if(line.length() == 0)
+          continue;
+        if(line.startsWith("#") )
+          continue;
+        int wspos = line.indexOf(";"),wstart=0;
+        String branchPath = line.substring(wstart,wspos).trim();
+        wstart=wspos+1;
+        wspos = line.indexOf(";",wstart);
+        int mtype = Integer.parseInt(line.substring(wstart,wspos).trim());
+        wstart=wspos+1;
+//        wspos = line.indexOf(";",wstart);
+        String basePath = line.substring(wstart).trim();
+        ONode base = getNode(rootA,basePath);
+        ONode target = getNode(rootB,branchPath);
+        ONode oldbase = getFirstMapping(target);
+        if( oldbase != null ) {
+          delMatching(oldbase,target);
+          delMatching(target,oldbase);
+        }
+        addMatching(base,target);
+        addMatching(target,base);
+        target.matchType = mtype;
       }
-      addMatching(base,target);
-      addMatching(target,base);
-      target.matchType = mtype;
+    } catch ( Exception e ) {
+      System.out.println("read from file excepted");
     }
+
   }
 
   private ONode getNode(ONode root, String path ) {
