@@ -1,10 +1,11 @@
-<!-- Personalia for Maija Mellunmäki -->
-<!-- $Id: personalia2.xml,v 1.2 2001/06/18 10:28:54 ctl Exp $ -->
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Personalia for Maija MellunmÃ¤ki -->
+<!-- $Id: personalia2.xml,v 1.3 2002/10/22 10:23:03 ctl Exp $ -->
 <id-card>
-  <name>Maija Mellunmäki</name>
+  <name>Maija MellunmÃ¤ki</name>
   <telephone>+358-12-34567777</telephone>
   <street>Etukatu 34 B 12</street>
-  <city>Takaseinäjoki</city>
+  <city>TakaseinÃ¤joki</city>
   <zip>04321</zip> 
   <country>Finland</country>
   <ssn>260165-1234</ssn>
