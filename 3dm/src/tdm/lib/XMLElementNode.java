@@ -1,4 +1,4 @@
-// $Id: XMLElementNode.java,v 1.12 2003/01/09 14:15:26 ctl Exp $ D
+// $Id: XMLElementNode.java,v 1.13 2003/01/30 09:25:44 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -57,10 +57,10 @@ public class XMLElementNode extends XMLNode {
   public XMLElementNode( String aname, Attributes attr ) {
     name = aname;
     attributes = new AttributesImpl( attr );
-    makeHash();
+    rehash();
   }
 
-  private void makeHash() {
+  public void rehash() {
     nHashCode = name.hashCode();
     infoSize = Measure.ELEMENT_NAME_INFO;
     MessageDigest md = getMD();
