@@ -1,10 +1,14 @@
-// $Id: MarkableBaseNode.java,v 1.2 2002/10/28 14:07:09 ctl Exp $
+// $Id: MarkableBaseNode.java,v 1.3 2002/10/30 15:13:35 ctl Exp $
 package editgen;
 
 import BaseNode;
 import XMLNode;
 
 public class MarkableBaseNode extends BaseNode {
+
+  public static final int MARK_NONE = 0;
+  public static final int MARK_CONTENT = 1;
+  public static final int MARK_STRUCTURE = 2;
 
   protected int markCount = 0;
   protected int subtreeSize = 0;
@@ -13,20 +17,33 @@ public class MarkableBaseNode extends BaseNode {
     super( aContent );
   }
 
-  public void mark() {
-    markCount++;
+  public void mark(int mark) {
+    markCount|=mark;
   }
 
   public boolean isMarked() {
     return markCount > 0;
   }
 
+  public boolean isMarkedContent() {
+    return (markCount & MARK_CONTENT) != 0;
+  }
+
+  public boolean isMarkedStructure() {
+    return (markCount & MARK_STRUCTURE) != 0;
+  }
+
+  public int getMark() {
+    return markCount;
+  }
+
+/*
   public void unmark() {
     if(markCount==0)
       throw new IllegalStateException("Too many unmarks");
     markCount--;
   }
-
+*/
 /*  public boolean isLocked() {
     MarkableBaseNode leftSib = (MarkableBaseNode) getLeftSibling(),
       rightSib = (MarkableBaseNode) getRightSibling();
@@ -37,32 +54,32 @@ public class MarkableBaseNode extends BaseNode {
   }
 */
 
-  public void lock() {
-    lock( true, true );
+  public void lock(int type) {
+    lock( true, true, type );
   }
 
-  public void lockSubtree() {
+  public void lockSubtree(int type) {
     for( int i=0;i<getChildCount();i++) {
       MarkableBaseNode n = (MarkableBaseNode) getChild(i);
-      n.lock();
-      n.lockSubtree();
+      n.lock(type);
+      n.lockSubtree(type);
     }
   }
 
-  public void lockLeft() {
-    lock( true, false );
+  public void lockLeft(int type) {
+    lock( true, false, type );
   }
 
-  public void lockRight() {
-    lock( false, true );
+  public void lockRight(int type) {
+    lock( false, true, type );
   }
 
-  public void lock(boolean left, boolean right) {
+  public void lock(boolean left, boolean right, int type) {
     MarkableBaseNode leftSib = left ? (MarkableBaseNode) getLeftSibling() : null,
       rightSib = right ? (MarkableBaseNode) getRightSibling() : null;
-    mark();
-    if( rightSib != null ) rightSib.mark();
-    if( leftSib != null ) leftSib.mark();
+    mark(type);
+    if( rightSib != null ) rightSib.mark(type);
+    if( leftSib != null ) leftSib.mark(type);
   }
 
   public int getSubteeSize() {
