@@ -62,6 +62,10 @@ public class BranchNode extends Node {
       return getParent().isLeftTree();
   }
 
+  public boolean isMatch( int type) {
+    return ((matchType & type) != 0);
+  }
+
   // Remeber to check both steps! The canidate's match type is only from base
   // if A should match B structurally we need
   // A---------Base---------B

@@ -1,4 +1,4 @@
-// $Id: ProtoBestMatching.java,v 1.11 2001/03/31 22:26:11 ctl Exp $
+// $Id: ProtoBestMatching.java,v 1.12 2001/04/01 14:28:48 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 //import TreeMatching;
@@ -111,7 +111,7 @@ public class ProtoBestMatching  {
       while( copy != null ) {
 //        System.out.println("Loop2");
         if( copy != master ) {
-          boolean structMatch = childListDist(master,copy) < 1e-09;
+          boolean structMatch = exactChildListMatch(master,copy);
           boolean contMatch =  matches( master, copy );
           if( !structMatch && !contMatch)
             removed.add(copy);
@@ -450,7 +450,10 @@ public class ProtoBestMatching  {
       // Sort so that best candidate is in ix 0
       Arrays.sort(cands);
       bestCandidates.clear();
-      bestCandidates.add(cands[0].node);
+      if( bestCount == 1 && cands[0].nums[0] > 0.1 )
+        System.out.println("No candidate was very good, leaving unmatched" );
+      else
+        bestCandidates.add(cands[0].node);
     }
 
     if( bestCandidates.size() > 0 ) {
@@ -722,7 +725,7 @@ public class ProtoBestMatching  {
   class MisCorrelation {
     int mismatched=0;
     int total=0;
-    static final int C= 10; // Correlation damping value (default no of mismatched bytes)
+    static final int C= 20; // Correlation damping value (default no of mismatched bytes)
                             // A perfect match of C bytes gets correlation 0.5
                             // as matches ->perfect, miscorrelation -> 0
     public MisCorrelation correlate( ONode a, ONode b ) {
@@ -747,8 +750,9 @@ public class ProtoBestMatching  {
             String v1 = (String) ea.attributes.get(aname), v2 = (String)  eb.attributes.get(aname);
             int maxvallen =  v1.length() > v2.length() ? v1.length() : v2.length();
             if( maxvallen > 5 ) {
-              total+=maxvallen;
-              mismatched += stringDistance(v1,v2);
+              total+=maxvallen-5;
+              int strdist = stringDistance(v1,v2);
+              mismatched += strdist > maxvallen -5 ? maxvallen : strdist;
             } else {
               mismatched += v1.equals(v2) ? 0 : 2;
               total+=2;
@@ -816,6 +820,16 @@ public class ProtoBestMatching  {
     return distance + s2.length()-s1.length();
   }
 
+  private boolean exactChildListMatch( ONode a, ONode b) {
+    if( a.getChildCount() != b.getChildCount() )
+      return false;
+    for(int i=0;i<a.getChildCount();i++) {
+      if( !matches(a,b) )
+        return false;
+    }
+    return true;
+  }
+
   // 1.0 total mismatch
   // % of nodes below a not found below b
 
@@ -823,6 +837,8 @@ public class ProtoBestMatching  {
     // Make child lists representing children on a & b
     StringBuffer ac = new StringBuffer();
     StringBuffer bc = new StringBuffer();
+    if( a.getChildCount()== 0 && b.getChildCount() == 0)
+      return 0.5; // Zero children is also a match!
     for( int i=0;i<a.getChildCount();i++) {
       int hash = a.getChild(i).toString().hashCode();
 //      ac.append((char) (hash >> 16));
@@ -843,8 +859,7 @@ public class ProtoBestMatching  {
       if( bs.indexOf(as.substring(0,i+2)) != -1 )
         matches++;
     }
-    return 1.0 - ((double) matches)/((double) Math.max(as.length()-1,bs.length()-
-      (as.length()==1 ? -1 : 0)));
+    return 1.0 - ((double) matches)/((double) (as.length()-1)+0.2*Math.abs(as.length()-bs.length()));
   }
 
 }
