@@ -1,4 +1,4 @@
-// $Id: MatchedNodes.java,v 1.2 2001/03/15 13:09:14 ctl Exp $
+// $Id: MatchedNodes.java,v 1.3 2001/04/21 18:00:26 ctl Exp $
 import java.util.Set;
 import java.util.HashSet;
 
@@ -13,6 +13,10 @@ public class MatchedNodes {
 
   public void addMatch(BranchNode n) {
     matches.add(n);
+  }
+
+  public void delMatch(BranchNode n) {
+    matches.remove(n);
   }
 
   public Set getMatches() {

@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.16 2001/04/20 14:47:50 ctl Exp $
+//$Id: TreeDM.java,v 1.17 2001/04/21 18:00:26 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -228,7 +228,9 @@ public class TreeDM {
     System.exit(0);
    }
 //   System.exit(0);
+  System.out.println("Building matching...");
    Matching m1 = new Matching( docBase, docA );
+  System.out.println("done.");
    java.io.File mf = new java.io.File( args[0] + PSEP+ "match"+OTHER );
    if( mf.exists() ) {
     System.out.println("Additional matchings from match"+OTHER);

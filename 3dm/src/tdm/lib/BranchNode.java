@@ -44,6 +44,10 @@ public class BranchNode extends Node {
     matchType = amatchType;
   }
 
+  public void delBaseMatch() {
+    baseMatch = null;
+    matchType = 0;
+  }
   public int getBaseMatchType() {
     return matchType;
   }
