@@ -1,4 +1,4 @@
-// $Id: XMLElementNode.java,v 1.6 2001/05/16 10:31:41 ctl Exp $
+// $Id: XMLElementNode.java,v 1.7 2001/06/14 15:24:04 ctl Exp $
 
 import org.xml.sax.Attributes;
 import java.util.Vector;
@@ -68,6 +68,10 @@ public class XMLElementNode extends XMLNode {
 
   public Attributes getAttributes() {
     return attributes;
+  }
+
+  public void setAttributes(Attributes atts) {
+    attributes=new AttributesImpl( atts );
   }
 
   public String toString() {

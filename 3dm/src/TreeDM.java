@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.23 2001/06/12 15:33:57 ctl Exp $
+//$Id: TreeDM.java,v 1.24 2001/06/14 15:24:04 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -19,6 +19,7 @@ import org.xml.sax.Attributes;
 import org.xml.sax.InputSource;
 import org.xml.sax.helpers.XMLReaderFactory;
 import org.xml.sax.helpers.DefaultHandler;
+import org.xml.sax.helpers.AttributesImpl;
 import org.xml.sax.SAXException;
 
 public class TreeDM {
@@ -32,7 +33,8 @@ public class TreeDM {
     // NOTE: When running mergecases, check that the parameters are set as follows:
     // COPY_TRESHOLD = 0 (otherwise cases with copies won't work) (normal value = 18)
     //
-    (new TreeDM()).runBM( args );
+    String[] argset = {"rm.xml","edit.log"};
+    (new TreeDM()).runOOMarkup( argset );
   }
 
   public void runHarness( String[] args ) {
@@ -319,8 +321,114 @@ public class TreeDM {
     System.out.println("DIFF/PATCH worked!");
   }
 
+  public void runOOMarkup( String[] args ) {
+    BaseNode doc=null,docEdits=null;
+    if( args.length < 2 ) {
+        System.out.println("Usage: TreeDM OpenOfficefile editlog");
+        System.exit(0);
+    }
+    try {
+      XMLParser p = new XMLParser();
+      System.out.println("Parsing " + args [0]);
+      doc = (BaseNode) p.parse(args[0] ,baseNodeFactory);
+      System.out.println("Parsing " + args[1]);
+      docEdits =  (BaseNode) p.parse(args[1] ,baseNodeFactory);
+      System.out.println("OK.");
+    } catch ( Exception e ) {
+      e.printStackTrace();
+      System.exit(0);
+    }
+    // Put all edits in hashtable for later lookup
+    Map edits = new HashMap();
+    Node docRoot = doc; //.getChildAsNode(0);
+    Node logRoot = docEdits.getChild(0);
+    for( int i=0;i<logRoot.getChildCount();i++ ) {
+      XMLElementNode editOp = (XMLElementNode) logRoot.getChildAsNode(i).getContent();
+      if( !"delete".equals(editOp.getQName())) {
+        System.out.println(editOp.getQName() + ":" + editOp.getAttributes().getValue("path"));
+        try {
+          Node affected = followPath( docRoot, editOp.getAttributes().getValue("path") );
+          edits.put(affected,editOp);
+        } catch (Exception e ) {
+          System.err.println("HTBUILD: Path failure...");
+        }
+      }
+    }
+    for( int i=0;i<logRoot.getChildCount();i++ ) {
+      XMLElementNode editOp = (XMLElementNode) logRoot.getChildAsNode(i).getContent();
+      if( !"delete".equals(editOp.getQName())) {
+        try {
+          Node affected = followPath( docRoot, editOp.getAttributes().getValue("path") );
+          markAffected( affected, edits, true );
+        } catch (Exception e ) {
+          System.err.println("MARKUP: Path failure...");
+          System.err.println( e.getClass().getName());
+        }
+      }
+    }
+    try {
+      XMLPrinter p = new XMLPrinter( new PrintWriter( new FileOutputStream( "marked.xml" ) ) );
+      p.startDocument();
+      dumpTree( docRoot.getChildAsNode(0), p );
+      p.endDocument();
+    } catch (Exception e ) {
+      System.err.println("DUMP TANKED!");
+    }
 
+  }
 
+  private void markAffected( Node n, Map otherops, boolean recurse ) {
+    XMLNode c = n.getContent();
+    if( c instanceof XMLElementNode  && (((XMLElementNode) c).getQName().equals("text:p") ||
+      ((XMLElementNode) c).getQName().equals("text:h"))) {
+      XMLElementNode ce = (XMLElementNode) c;
+      AttributesImpl a = new AttributesImpl( ce.getAttributes() );
+      int ix = a.getIndex("text:style-name");
+      if( ix > -1 )
+        a.setAttribute(ix,"","","text:style-name","CDATA","P1");
+      else
+        a.addAttribute("","","text:style-name","CDATA","P1");
+      ce.setAttributes(a);
+      System.out.println("Modified!");
+    } else if (c instanceof XMLTextNode ) {
+      markAffected( n.getParentAsNode(), otherops, false ); // Kludge for text nodes...
+    }
+    if( !recurse)
+      return;
+    for( int i=0;i<n.getChildCount();i++) {
+      Node child = n.getChildAsNode(i);
+      if( !otherops.containsKey(child) )
+        markAffected( child,otherops, true);
+    }
+  }
+
+  private void dumpTree( Node n, org.xml.sax.ContentHandler ch ) throws SAXException {
+    if( n.getContent() instanceof XMLTextNode ) {
+      char [] text = ((XMLTextNode) n.getContent()).getText();
+      ch.characters(text,0,text.length);
+    } else {
+      XMLElementNode en = (XMLElementNode) n.getContent();
+      ch.startElement("","",en.getQName(),en.getAttributes());
+      for( int i=0;i<n.getChildCount();i++)
+        dumpTree(n.getChildAsNode(i),ch );
+      ch.endElement("","",en.getQName());
+    }
+  }
+  private Node followPath( Node root, String path ) {
+    int pos = 1;
+    if( path.length() < 1 )
+      return root;
+    while( pos < path.length() ) {
+      int childno=0;
+      while( pos < path.length() && Character.isDigit( path.charAt(pos) ) ){
+        childno = childno * 10 + (path.charAt(pos)-'0');
+        pos++;
+      }
+      pos++; // skip '/'
+      root = root.getChildAsNode(childno);
+    }
+    return root;
+  }
 
   class MergePrinter extends DefaultHandler {
 
@@ -436,6 +544,8 @@ public class TreeDM {
 
 
   }
+
+
 
   void printTree( Node n, org.xml.sax.ContentHandler h ) {
     XMLNode c = n.getContent();
