@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
-<!-- The computer lookos up prices for Dad's and Lisas additions,
-     as well as suggests new food amounts (and warns about the salomon!) -->
-<!-- $Id: L6.xml,v 1.1 2001/03/07 17:08:53 ctl Exp $ -->
+<!-- Mom has reviewed the computer suggestion list, and adds a cake and lettuce, remove the salmon
+     and decides on 8 apples.This is the final list pulled to Lisa's PDA when she requests the
+     shopping list. -->
+<!-- $Id: L6.xml,v 1.2 2001/03/08 10:32:45 ctl Exp $ -->
 <shoppinglist>
 	<item>
 		<name>Emmentaler Cheese</name>
@@ -16,17 +17,9 @@
 		<shop>LMart</shop>
 	</item>	
 	<item>
-		<name>Smoked salmon
-			<suggestion>Aunt Maija's husband is allergic to fish!</suggestion>
-		</name>
-		<quantity>250g</quantity>
-		<price>2.55</price>
-		<shop>LMart</shop>
-	</item>
-	<item>
 		<name>Apples</name>
-		<quantity>6</quantity>
-		<price>2.44</price>
+		<quantity>8</quantity>
+		<price>3.26</price>
 		<shop></shop>
 	</item>
 	<item>
@@ -38,13 +31,25 @@
 	<item>
 		<name>Orange juice</name>
 		<quantity>2l</quantity>
-		<price>1.97</price>
+		<price>1.96</price>
 		<shop>LMart</shop>
 	</item>
 	<item>
 		<name>Toilet paper</name>
 		<quantity>1 packet</quantity>
 		<price>3.80</price>
+		<shop>LMart</shop>
+	</item>
+	<item>
+		<name>Priness Cake</name>
+		<quantity>1</quantity>
+		<price>9.98</price>
+		<shop>LMart</shop>
+	</item>
+	<item>
+		<name>Lettuce</name>
+		<quantity>1 head</quantity>
+		<price>0.85</price>
 		<shop>LMart</shop>
 	</item>
 </shoppinglist>
