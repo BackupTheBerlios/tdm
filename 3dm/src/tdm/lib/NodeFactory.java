@@ -1,4 +1,4 @@
-// $Id: NodeFactory.java,v 1.7 2001/09/26 19:36:45 ctl Exp $ D
+// $Id: NodeFactory.java,v 1.8 2002/10/25 11:37:09 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -22,10 +22,7 @@
 /** Node factory. Used to build trees, whose node type is not known at
  *  compile time.
  */
-public abstract class NodeFactory {
-
-  public NodeFactory() {
-  }
+public abstract interface NodeFactory {
 
   public abstract Node makeNode( XMLNode content );
 }
