@@ -1,4 +1,4 @@
-// $Id: TriMatching.java,v 1.3 2001/03/15 13:09:14 ctl Exp $
+// $Id: TriMatching.java,v 1.4 2001/03/21 22:46:17 ctl Exp $
 
 public class TriMatching {
 
@@ -43,23 +43,25 @@ public class TriMatching {
     ONode _base = (ONode) XMLn2n.get(base);
     // Find all mappings to the left, then to the right
     ONode match = ml.getFirstMapping(_base);
-    do {
+    while (match != null ) {
      BranchNode n2 = (BranchNode) XMLn2n.get(match);
      base.getLeft().addMatch( n2 );
      n2.setPartners( base.getRight() );
      n2.setBaseMatch( base, BranchNode.MATCH_FULL );
-    } while( (match = ml.getNextMapping() ) != null );
+     match = ml.getNextMapping();
+    } ;
     //Saftey check- no glus?
     ml.getFirstMapping(match);
     if( ml.getNextMapping() != null )
       throw new RuntimeException("FATAL: GLU mappings encounted!");
     match = mr.getFirstMapping(_base);
-    do {
+    while( match != null ) {
      BranchNode n2 = (BranchNode) XMLn2n.get(match);
      base.getRight().addMatch( n2 );
      n2.setPartners( base.getLeft() );
      n2.setBaseMatch( base, BranchNode.MATCH_FULL );
-    } while( (match = mr.getNextMapping() ) != null );
+     match = mr.getNextMapping();
+    };
     //Saftey check- no glus?
     mr.getFirstMapping(match);
     if( mr.getNextMapping() != null )

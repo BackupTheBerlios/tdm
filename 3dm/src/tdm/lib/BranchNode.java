@@ -52,7 +52,24 @@ public class BranchNode extends Node {
     return baseMatch;
   }
 
+  // Tells if this node is in the left tree.
+  // notice the recursive structure, enabling us to tell this even if the node is
+  // unmatched. Assumes that at least the root is matched.
+  public boolean isLeftTree() {
+    if( baseMatch != null )
+      return baseMatch.getLeft().getMatches().contains(this);
+    else
+      return getParent().isLeftTree();
+  }
+
+  // Remeber to check both steps! The canidate's match type is only from base
+  // if A should match B structurally we need
+  // A---------Base---------B
+  //    struct      struct
+
   public BranchNode getFirstPartner( int typeFlags ) {
+    if( ( matchType & typeFlags) == 0 )
+      return null;
     MatchedNodes m= getPartners();
     if( m == null )
       return null;
