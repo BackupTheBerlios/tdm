@@ -1,6 +1,8 @@
 # 3DM makefile
-# $Id: Makefile,v 1.1 2001/09/26 19:36:43 ctl Exp $
+# $Id: Makefile,v 1.2 2001/09/30 13:04:20 ctl Exp $
 
+GPL_FILE = COPYING
+DISTDIR = ../../dist
 SRCDIR = src/
 CLASSDIR = build
 JAVAC = javac
@@ -21,8 +23,17 @@ $(FILES):
 
 3dm:	$(CLASSES)
 
-jar:	
+3dm.jar: 
+	rm -f 3dm.jar
 	$(JAR) cvf 3dm.jar -C $(CLASSDIR) .
 
 clean:
 	rm -f $(CLASSDIR)/*.class
+
+dist:	3dm.jar
+	rm $(DISTDIR)/3dm_src.tar.gz
+	rm $(DISTDIR)/3dm_src.zip
+	cp 3dm.jar $(DISTDIR)
+	tar -cf $(DISTDIR)/3dm_src.tar $(addprefix $(SRCDIR),$(addsuffix .java, $(FILES))) $(GPL_FILE)
+	gzip $(DISTDIR)/3dm_src.tar	
+	zip $(DISTDIR)/3dm_src.zip $(addprefix $(SRCDIR),$(addsuffix .java, $(FILES))) $(GPL_FILE)
