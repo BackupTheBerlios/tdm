@@ -1,4 +1,4 @@
-// $Id: ProtoBestMatching.java,v 1.6 2001/03/28 08:58:14 ctl Exp $
+// $Id: ProtoBestMatching.java,v 1.7 2001/03/29 14:51:48 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 //import TreeMatching;
@@ -463,6 +463,91 @@ public class ProtoBestMatching  {
 
   protected boolean matches( ONode a, ONode b ) {
     return a.contentEquals(b);
+  }
+
+  class MisCorrelation {
+    int mismatched=0;
+    int total=0;
+    static final int C= 10; // Correlation damping value (default no of mismatched bytes)
+                            // A perfect match of C bytes gets correlation 0.5
+                            // as matches ->perfect, miscorrelation -> 0
+    public MisCorrelation correlate( ONode a, ONode b ) {
+      if( a instanceof TextNode ) {
+        TextNode ta = (TextNode) a,tb=(TextNode) b;
+        total+=Math.max( ta.text.length(), tb.text.length() );
+        mismatched += stringDistance( ta.text, tb.text );
+      } else {
+        // Assume elementNode
+        ElementNode ea = (ElementNode) a,eb=(ElementNode) b;
+        total+=1;
+        mismatched += ea.name.equals(eb.name) ? 0 : 1; // Tag is 2 bytes of info
+        for( Iterator i=ea.attributes.keySet().iterator();i.hasNext();) {
+          String aname = (String) i.next();
+          if( eb.attributes.containsKey(aname) ) {
+            String v1 = (String) ea.attributes.get(aname), v2 = (String)  eb.attributes.get(aname);
+            int maxvallen =  v1.length() > v2.length() ? v1.length() : v2.length();
+            if( maxvallen > 5 ) {
+              total+=maxvallen;
+              mismatched += stringDistance(v1,v2);
+            } else {
+              mismatched += v1.equals(v2) ? 0 : 2;
+              total+=2;
+            }
+          } else
+            total += 2; // A missing attribute costs 2 bytes
+        }
+        // Penalties for missing attributes in ea
+        for( Iterator i=eb.attributes.keySet().iterator();i.hasNext();) {
+          String aname = (String) i.next();
+          if( !ea.attributes.containsKey(aname) ) {
+              mismatched += 2;
+              total+=2;
+           }
+        }
+      } // Elementnode
+      return this;
+    }
+
+    void addMC( MisCorrelation b ) {
+      total += b.total;
+      mismatched += b.mismatched;
+    }
+
+    double getValue() {
+      return ((double) (mismatched + C))/((double) total);
+    }
+  }
+
+  public void printCorr( ONode a, ONode b) {
+    System.out.println("MC= " + (new MisCorrelation()).correlate(a,b).getValue() );
+  }
+
+  //
+  // String similarity code...Very adhoc just for testing
+  //
+
+  private int stringDistance( String s1,String s2) {
+    if( s1 == s2 )
+      return 0;
+    if( s1 == null || s1.length() == 0)
+      return s2.length();
+    if( s2 == null || s2.length() == 0)
+      return s1.length();
+    if( s2.equals(s1) )
+      return 0;
+    if( s1.length() > s2.length() ) {
+      String t= s1; s1=s2;s2=t;
+    }
+    int distance = 0;
+    int s1len =s1.length();
+    for(int i=0;i<s1len;i+=3) {
+     String chunk = s1.substring(i,((i+3) > s1len ? s1len : i+3) );
+      if( s2.indexOf(chunk) == -1 )
+        distance +=3;
+    }
+//    System.out.println("Distance is " + distance  );
+//    System.out.println("Lengths " + s2.length() + " and " + s1.length() );
+    return distance + s2.length()-s1.length();
   }
 
 }

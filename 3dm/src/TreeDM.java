@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.6 2001/03/28 08:58:14 ctl Exp $
+//$Id: TreeDM.java,v 1.7 2001/03/29 14:51:48 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -29,7 +29,7 @@ public class TreeDM {
   }
 
   public static void main(String[] args) throws Exception {
-    (new TreeDM()).runHarness( args );
+    (new TreeDM()).runBM( args );
   }
 
   public void runHarness( String[] args ) {
@@ -183,7 +183,7 @@ public class TreeDM {
   // Run Best Matcher
   public void runBM( String[] args ) {
    ElementNode docA=null, docBase=null;
-   final String OTHER = "2";
+   final String OTHER = "1";
     if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
       System.exit(0);

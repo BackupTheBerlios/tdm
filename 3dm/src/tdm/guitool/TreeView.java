@@ -1,4 +1,4 @@
-// $Id: TreeView.java,v 1.2 2001/03/28 07:01:39 ctl Exp $
+// $Id: TreeView.java,v 1.3 2001/03/29 14:51:48 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 import java.awt.*;
@@ -288,6 +288,7 @@ public class TreeView extends Frame  {
                 VisibleMapping vm = new  LineMapping(p,dst,n2.matchType == 3 ? n.matchType : n2.matchType);
                 visibleMappings.add(vm);
                 vm.draw(g);
+                m.printCorr( n,n2);
                 n2 = m.getNextMapping();
               }
             }
