@@ -1,4 +1,4 @@
-// $Id: PathTracker.java,v 1.5 2003/01/09 14:15:26 ctl Exp $ D
+// $Id: PathTracker.java,v 1.6 2003/01/30 09:23:52 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -115,4 +115,21 @@ public class PathTracker {
     Collections.reverse(path);
     return path;
   }
+
+  public static Node followPath(Node root, String path) {
+    int pos = 1;
+    if (path.length() < 1)
+      return root;
+    while (pos < path.length()) {
+      int childno = 0;
+      while (pos < path.length() && Character.isDigit(path.charAt(pos))) {
+        childno = childno * 10 + (path.charAt(pos) - '0');
+        pos++;
+      }
+      pos++; // skip '/'
+      root = root.getChildAsNode(childno);
+    }
+    return root;
+  }
+
 }
