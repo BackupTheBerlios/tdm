@@ -1,0 +1,6 @@
+#!/bin/sh
+# 3DM startup script
+JAVA=/usr/local/jbuilder4/jdk1.3/bin/java
+JARPATH=/home/ctl/ubidoc-support/lib
+COMPILEPATH=/home/ctl/ubidoc/src/3dm/classes
+$JAVA -cp $JARPATH/java-getopt-1.0.8.jar:$JARPATH/sax2.jar:$JARPATH/xerces.jar:$COMPILEPATH TreeDiffMerge $*

@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.25 2001/06/15 13:54:16 ctl Exp $
+//$Id: TreeDM.java,v 1.26 2001/06/18 08:14:21 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -35,8 +35,9 @@ public class TreeDM {
     //
     String[] argset = {"../../usecases/shopping/L6.xml","../../usecases/shopping/edit.log"};
 //    String[] argset = {"rm.xml","edit.log"};
-//    (new TreeDM()).runOOMarkup( argset );
-    (new TreeDM()).runBM( args );
+    (new TreeDM()).runOOMarkup( argset );
+//    (new TreeDM()).runBM( args );
+//    (new TreeDM()).runHarness( args );
   }
 
   public void runHarness( String[] args ) {
