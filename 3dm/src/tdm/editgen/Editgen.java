@@ -1,4 +1,4 @@
-// $Id: Editgen.java,v 1.12 2003/01/16 11:05:14 ctl Exp $
+// $Id: Editgen.java,v 1.13 2003/01/16 15:02:03 ctl Exp $
 package tdm.editgen;
 
 import tdm.lib.XMLNode;
@@ -14,6 +14,8 @@ import tdm.lib.XMLNode;
 import tdm.lib.XMLPrinter;
 import tdm.lib.EditLog;
 import java.util.Iterator;
+import java.util.Set;
+import java.util.HashSet;
 
 public class Editgen {
 
@@ -56,13 +58,13 @@ public class Editgen {
    }
    // Make merge clone
    // total merge is left tree, current working tree is right
-   docMerged = clonedAndMatchedTree( docBase, true, true );
+   docMerged = clonedAndMatchedTree( docBase, true, true, null );
    EditLog mergeLog = new EditLog();
    // Make variants
    for( int iFile = 0; iFile < outfiles.length; iFile++ ) {
      System.err.println("Making "+outfiles[iFile]+"...");
      EditLog branchLog = new EditLog();
-     BranchNode outRoot = clonedAndMatchedTree( docBase, false, true );
+     BranchNode outRoot = clonedAndMatchedTree( docBase, false, true, null );
      ((MarkableBaseNode) docBase).mark(MarkableBaseNode.MARK_STRUCTURE | MarkableBaseNode.MARK_CONTENT);
      ((MarkableBaseNode) docBase.getChild(0)).mark(MarkableBaseNode.MARK_STRUCTURE); // Never edit root elem
      int edits = editCount == -1 ?
@@ -115,11 +117,19 @@ public class Editgen {
 
   public void transform( int edits, MarkableBaseNode base,MarkableBaseNode baseRoot,
                          EditLog mergeLog, EditLog branchLog ) {
+    final int TRIES = 10;
     MarkableBaseNode n = null;
+    //DBG= Run in two phases - dium and c
+    //DBGint copies = 0;
     for( int i=0;i<edits;i++) {
       char op = /*operations[i % operations.length];*/
-               operations[(int) (rnd.nextDouble()*operations.length)];
-      int tries = 10;
+          operations[(int) (rnd.nextDouble()*operations.length)];
+      /* DBG
+      if( op == 'Q' ) {
+        copies ++;
+        continue;
+      }*/
+      int tries = TRIES;
       do {
         n = getRandomNode(baseRoot,
             op=='u' ? MarkableBaseNode.MARK_CONTENT : MarkableBaseNode.MARK_STRUCTURE
@@ -132,6 +142,25 @@ public class Editgen {
       if( tries == 0)
           System.err.println("Warning: Unable to perform operation "+op);
     }
+    /*
+    // Copy
+    for( int i=0;i<copies;i++) {
+      char op = 'c';
+      int tries = TRIES;
+      do {
+        n = getRandomNode(baseRoot,
+                          MarkableBaseNode.MARK_STRUCTURE, null);
+        if (n == null) {
+          System.err.println("Ran out of free nodes to copy");
+          return;
+        }
+      }
+      while (!editNode(op, n, baseRoot, mergeLog, branchLog) && --tries > 0);
+      if (tries == 0)
+        System.err.println("Warning: Unable to perform operation " + op);
+    }
+    */
+
   }
 
   public boolean editNode( char op, MarkableBaseNode base,MarkableBaseNode baseRoot,
@@ -174,8 +203,12 @@ public class Editgen {
         base.beginMarkTransaction();
         base.lock( MarkableBaseNode.MARK_STRUCTURE);
         dest = getRandomNode( baseRoot, MarkableBaseNode.MARK_STRUCTURE, base ); // NOTE! Dest must be fetched AFTER src is locked!
-        if( dest == null )
+        // Check if No possible dest or
+        // move where a copy of dst is moved
+        if( dest == null || !_treeHasNoCopyOf(base,dest,true) ) {
+          base.abortMarkTransaction();
           return false; // No possible dest
+        }
         after = rnd.nextDouble() > 0.5;
         dest.lock(!after,after,MarkableBaseNode.MARK_STRUCTURE);
         // Text node move check
@@ -200,8 +233,12 @@ public class Editgen {
         base.lock(MarkableBaseNode.MARK_STRUCTURE);
         // Insert at dest (=insert code block)
         dest = getRandomNode( baseRoot, MarkableBaseNode.MARK_STRUCTURE, base ); // NOTE! Dest must be fetched AFTER src is locked!
-        if( dest == null )
-          return false; // No possible dest
+        // Check if No possible dest or
+        // circular copies (i.e. dest node (or parents of it) exists in copied tree)
+        if( dest == null || !_treeHasNoCopyOf(base,dest,true) ) {
+          base.abortMarkTransaction();
+          return false;
+        }
         after = rnd.nextDouble() > 0.5;
         dest.lock(!after,after,MarkableBaseNode.MARK_STRUCTURE);
         n = dest.getLeft().getFullMatch();
@@ -272,7 +309,7 @@ public class Editgen {
   protected MarkableBaseNode doGetRandomNode( int pos, MarkableBaseNode n,int markMask,
      MarkableBaseNode forbiddenTree ) {
     if( n == null || n == forbiddenTree )
-      throw new IllegalArgumentException("n==null or recursed into forbidden tree");
+      throw new IllegalArgumentException(n==null ? "n==null" : "recursed into forbidden tree");
     if( pos == SCAN_UNMARKED ) {
       if( (n.getMark() & markMask) == 0 )
         return n;
@@ -296,12 +333,15 @@ public class Editgen {
     int stSize = 0;
     MarkableBaseNode child= null;
     // BUGFIX 030116
-    if( n.getChildCount() == 0 )
+    if( n.getChildCount() == 0 || (n.getChildCount() == 1 && n.getChild(0)==forbiddenTree))
       return null; // Out of nodes to scan
     // ENDBUGFIX
     for( int i=0;i<n.getChildCount() && pos>0;i++) {
-      child = ((MarkableBaseNode) n.getChild(i));
-      stSize = child == forbiddenTree ? 0 : child.getSubteeSize();
+      MarkableBaseNode candidate = ((MarkableBaseNode) n.getChild(i));
+      if( candidate == forbiddenTree )
+        continue;
+      child = candidate;
+      stSize =  child.getSubteeSize();
       pos-= stSize;
     }
     if( child == null )
@@ -334,6 +374,34 @@ public class Editgen {
     for(int i=0;i<n.getChildCount();i++)
       _checkNotMarked((MarkableBaseNode) n.getChild(i));
   }
+
+  private boolean _treeHasNoCopyOf( BaseNode root, BaseNode forbiddenNode, boolean left) {
+    // Build set of forbidden nodes (=forbidden Node, or any of its parents)
+    Set forbidden = new HashSet();
+    while( forbiddenNode != null ) {
+      forbidden.add(forbiddenNode);
+      forbiddenNode = forbiddenNode.getParent();
+    }
+    MatchedNodes m = left ? root.getLeft() : root.getRight();
+    for( Iterator i = m.getMatches().iterator();i.hasNext();) {
+      BranchNode match = (BranchNode) i.next();
+      if( !_treeHasNoCopyOf(match,forbidden) )
+        return false;
+    }
+    return true;
+  }
+
+   private boolean _treeHasNoCopyOf( BranchNode root, Set forbidden) {
+     if( root == null )
+       return true;
+     if( forbidden.contains(root.getBaseMatch()) )
+       return false; //has copy throw new RuntimeException("ASSERT FAILED");
+     for( int i=0;i<root.getChildCount();i++) {
+       if( !_treeHasNoCopyOf(root.getChild(i), forbidden) )
+         return false;
+     }
+     return true;
+   }
 
   /** Function for manipulating trees. Use as described below (* means arg not used).
    * The base tree is never edited (but matches are added/removed). All operations
@@ -381,17 +449,27 @@ public class Editgen {
     if( dest != null ) {
       m = left ? dest.getLeft() : dest.getRight();
       for( Iterator i = m.getMatches().iterator();i.hasNext();) {
-        BranchNode match = (BranchNode) i.next();
+        BranchNode match = null; //DBG
+        try { // DBG
+          /*BranchNode*/ match = (BranchNode) i.next();
+        } catch (Exception x ) { // DBG
+          System.err.println("EXCEPT: "+x); //DBG
+        } //DBG
         int ix = match.getChildPos() + (after ? 1: 0);
         if (!cloneInsTree) {
           if( src != null )
             throw new IllegalStateException("Currently unneccessary/unimplemented state");
           match.getParent().addChild(ix,insTree);
         } else {
+//DBG          _treeHasNoCopyOf(dest,insTree instanceof BranchNode ? ((BranchNode) insTree).getBaseMatch() :
+//DBG                         (BaseNode) insTree,left);
+//DBG          HashSet _destSet = new HashSet();
+//DBG          _destSet.add(dest);
+//DBG          _treeHasNoCopyOf(insTree instanceof BranchNode ? (BranchNode) insTree:null,_destSet);
           BranchNode insRoot = clonedAndMatchedTree(
           insTree instanceof BaseNode ? (left ? ((BaseNode) insTree).getLeft().getFullMatch() :
           ((BaseNode) insTree).getRight().getFullMatch() ) : insTree
-          ,left,false);
+          ,left,false,dest);
           match.getParent().addChild(ix,insRoot);
           if( src == null ) {
             if( insTree instanceof BaseNode )
@@ -405,8 +483,12 @@ public class Editgen {
     }
   }
 
-  protected BranchNode clonedAndMatchedTree( Node n, boolean left, boolean resetMatches ) {
+  protected BranchNode clonedAndMatchedTree( Node n, boolean left, boolean resetMatches,
+                                            BaseNode _forbidden   ) { //DBG
     BaseNode b = n instanceof BaseNode ? (BaseNode) n : ((BranchNode) n).getBaseMatch();
+//DBG        _treeHasNoCopyOf(b,_forbidden,left);
+        if( b== _forbidden ) //DBG
+          throw new RuntimeException("TOUCHING FORBIDDEN NODE"); // DBG
     BranchNode nc = new BranchNode( (XMLNode) n.getContent().clone() );
     if( b != null ) { // Set matches for non-inserted nodes
       nc.setBaseMatch(b,BranchNode.MATCH_FULL);
@@ -416,7 +498,7 @@ public class Editgen {
       mn.addMatch(nc);
     }
     for( int i=0;i<n.getChildCount();i++)
-      nc.addChild(clonedAndMatchedTree(n.getChildAsNode(i),left,resetMatches));
+      nc.addChild(clonedAndMatchedTree(n.getChildAsNode(i),left,resetMatches, _forbidden)); //DBG
     return nc;
   }
 
