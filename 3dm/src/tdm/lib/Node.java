@@ -1,4 +1,4 @@
-// $Id: Node.java,v 1.13 2003/01/09 14:15:26 ctl Exp $ D
+// $Id: Node.java,v 1.14 2003/01/30 09:22:39 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -36,7 +36,7 @@ public abstract class Node {
   protected int childPos=-1; // zero-based, i.e. first child = 0
   protected MatchArea area = null;
 
-  public Node() {
+  protected Node() {
     parent = null;
     childPos = -1;
   }
@@ -45,6 +45,15 @@ public abstract class Node {
     n.parent=this;
     n.childPos=children.size();
     children.add(n);
+  }
+
+
+  public void setContent( XMLNode aContent ) {
+    content = aContent;
+  }
+
+  public void replaceChild(int ix, Node n ) {
+    children.setElementAt(n,ix);
   }
 
   public void addChild( int ix, Node n) {
@@ -132,6 +141,7 @@ public abstract class Node {
   public void debug( java.io.PrintWriter pw, int indent ) {
     String ind = "                                                   ".substring(0,indent+1);
     pw.println( ind + content );
+    //pw.println("MatchArea:"+getMatchArea());
   }
 
   public void debugTree( java.io.PrintWriter pw, int indent ) {
