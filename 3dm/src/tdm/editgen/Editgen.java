@@ -1,4 +1,4 @@
-// $Id: Editgen.java,v 1.11 2003/01/16 10:50:14 ctl Exp $
+// $Id: Editgen.java,v 1.12 2003/01/16 11:05:14 ctl Exp $
 package tdm.editgen;
 
 import tdm.lib.XMLNode;
@@ -295,6 +295,10 @@ public class Editgen {
     }
     int stSize = 0;
     MarkableBaseNode child= null;
+    // BUGFIX 030116
+    if( n.getChildCount() == 0 )
+      return null; // Out of nodes to scan
+    // ENDBUGFIX
     for( int i=0;i<n.getChildCount() && pos>0;i++) {
       child = ((MarkableBaseNode) n.getChild(i));
       stSize = child == forbiddenTree ? 0 : child.getSubteeSize();
