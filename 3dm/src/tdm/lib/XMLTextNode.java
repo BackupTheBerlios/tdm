@@ -1,4 +1,4 @@
-// $Id: XMLTextNode.java,v 1.3 2001/04/19 13:59:04 ctl Exp $
+// $Id: XMLTextNode.java,v 1.4 2001/04/19 20:45:50 ctl Exp $
 
 import java.security.MessageDigest;
 
@@ -18,6 +18,7 @@ public class XMLTextNode extends XMLNode {
   XMLTextNode( char[] srctext, int first, int length ) {
     text = new char[length];
     System.arraycopy(srctext,first,text,0,length);
+//    System.out.println("NEW TN:"+new String(text));
     cHash = calculateHash(text);
   }
 

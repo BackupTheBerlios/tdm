@@ -1,4 +1,4 @@
-// $Id: Node.java,v 1.2 2001/03/14 14:03:43 ctl Exp $
+// $Id: Node.java,v 1.3 2001/04/19 20:45:50 ctl Exp $
 
 import java.util.Vector;
 
@@ -22,10 +22,10 @@ public abstract class Node {
     return children.size();
   }
 
-/*  public Node getChild(int ix) {
+  public Node getChildAsNode(int ix) {
     return (Node) children.elementAt(ix);
   }
-*/
+
 /* Hopefully not needed
   public void setContent( XMLNode n ) {
     content = n;

@@ -1,4 +1,4 @@
-// $Id: TreeView.java,v 1.4 2001/04/02 07:37:55 ctl Exp $
+// $Id: TreeView.java,v 1.5 2001/04/19 20:45:50 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 import java.awt.*;
@@ -20,13 +20,13 @@ public class TreeView extends Frame  {
 
   private TreeCanvas tc = null;
 
-  public TreeView( ONode r1, ONode r2, ProtoBestMatching m ) {
+  public TreeView( BaseNode r1, BranchNode r2 ) {
 //    root = r;
     setBounds(100,100,1100,800);
     setLayout( new BorderLayout() );
     ScrollPane sp = new ScrollPane();
     //if( opTree == null ) {
-      tc = new MappingCanvas( r1, r2, m );
+      tc = new MappingCanvas( r1, r2 );
       tc.root = r1;
 /*    } else {
       tc = new TreeCanvas();
@@ -86,7 +86,7 @@ public class TreeView extends Frame  {
     public void paint( Graphics g ) {
       counter = 0;
       leafno=3;
-      if( root instanceof ElementNode )
+      if( root instanceof Node )
         drawTree( (Node) root ,0,g);
       else {
         depthDelta = 128;
@@ -101,18 +101,19 @@ public class TreeView extends Frame  {
     protected void makePoint( Object n, int x, int y ) {
     }
 
-    public int drawTree( Object n, int depth, Graphics g ) {
+    public int drawTree( Object m, int depth, Graphics g ) {
 /*      counter++;
       if( counter > 5000 )
         return leafno;
  */
-      if(n == null )
+      if(m == null )
         return 0;
-      if( n instanceof TextNode ) {
+      XMLNode n = ((Node) m).getContent();
+      if( n instanceof XMLTextNode ) {
         int x = depth * depthDelta, y= leafno * 12 + 6;
         g.drawOval(x-4,y-4,8,8);
-        makePoint( n, x, y);
-        String text = ((TextNode) n).text;
+        makePoint( m, x, y);
+        String text = ((XMLTextNode) n).toString();
         if( text.length() > 10 )
           text = text.substring(0,9) + "...";
         if( mirror )
@@ -126,19 +127,19 @@ public class TreeView extends Frame  {
         // first draw the children
         int x=0,y=0;
         //ElementNode en = (ElementNode) n;
-        Vector children = null;
+/*        Vector children = null;
         if( n instanceof ElementNode )
           children = ((ElementNode) n).children;
         else if( n instanceof AreaNode )
-          children = ((AreaNode) n).children;
-
-        if( children.size() > 0 ) {
-          int[] ys = new int[children.size()];
-          for( int i =0;i< children.size();i++) {
-            ys[i] = drawTree( (ONode) children.elementAt(i), depth + (mirror ? -1 : 1), g );
+          children = ((AreaNode) n).children; */
+        Node n2 = (Node) m;
+        if( n2.getChildCount() > 0 ) {
+          int[] ys = new int[n2.getChildCount()];
+          for( int i =0;i< n2.getChildCount();i++) {
+            ys[i] = drawTree( n2.getChildAsNode(i) , depth + (mirror ? -1 : 1), g );
           }
           int midy = (ys[0] + ys[ys.length-1])/2;
-          for( int i =0;i< children.size();i++) {
+          for( int i =0;i< n2.getChildCount();i++) {
             g.drawLine(depth*depthDelta,midy,(depth + (mirror ? -1 : 1))*depthDelta,ys[i]);
           }
           x = depth * depthDelta;
@@ -151,13 +152,9 @@ public class TreeView extends Frame  {
         // then myself
   //      int x = depth * 64, y= midleaf * 12 + 6;
         g.drawRect(x-4,y-4,8,8);
-        makePoint( n, x, y);
+        makePoint( m, x, y);
         g.setColor( tagColor );
-        String label = "";
-        if( n instanceof ElementNode )
-          label =  ((ElementNode) n).name +"(" + ((ElementNode) n).childNo +")";
-        else
-          label = n.toString();
+        String label = ((XMLElementNode) n).getQName();
         if( mirror )
           g.drawString( label, x-5-g.getFontMetrics().stringWidth(label), y+4);
         else
@@ -167,46 +164,12 @@ public class TreeView extends Frame  {
       }
     }
 
-/*    public int drawOpTree( MapNode en, int depth, Graphics g ) {
-      // it's an element node
-      // first draw the children
-      int x=0,y=0;
-      if( en.getChildCount() > 0 ) {
-        int[] ys = new int[en.getChildCount()];
-        for( int i =0;i< en.getChildCount();i++) {
-          ys[i] = drawOpTree( en.getChild(i), depth + (mirror ? -1 : 1), g );
-        }
-        int midy = (ys[0] + ys[ys.length-1])/2;
-        for( int i =0;i< en.getChildCount();i++) {
-          g.drawLine(depth*depthDelta,midy,(depth + (mirror ? -1 : 1))*depthDelta,ys[i]);
-        }
-        x = depth * depthDelta;
-        y= midy;
-      } else {
-        x= depth * depthDelta;
-        y = leafno * 12 + 6;
-        leafno++;
-      }
-      // then myself
-//      int x = depth * 64, y= midleaf * 12 + 6;
-      g.drawRect(x-4,y-4,8,8);
-      g.setColor( tagColor );
-      String label = en.operations.toString();
-      if( mirror )
-        g.drawString( label, x-5-g.getFontMetrics().stringWidth(label), y+4);
-      else
-        g.drawString( label, x+5, y+4);
-      g.setColor( Color.black );
-      return y;
-    }
-*/
 
   }
 
 
   class MappingCanvas extends TreeCanvas {
-    private ProtoBestMatching m = null;
-    private ONode rootA, rootB;
+    private Node rootA, rootB;
     private HashMap nodesMap = null;
     private HashSet visibleMappings = new HashSet();
 
@@ -252,22 +215,22 @@ public class TreeView extends Frame  {
     }
 
 
-    public MappingCanvas( ONode aRootA, ONode aRootB, ProtoBestMatching aM ) {
+    public MappingCanvas( BaseNode aRootA, BranchNode aRootB ) {
       super();
       rootA = aRootA;
       rootB = aRootB;
-      m = aM;
+
       addMouseListener( new  MouseAdapter () {
         public void mouseClicked( MouseEvent e ) {
           // Find clicked on node
           if( nodesMap == null )
             return;
-          ONode n = null;
+          Node n = null;
           Point p = e.getPoint();
           Graphics g = getGraphics();
           g.setColor(Color.blue);
           for( Iterator i = nodesMap.keySet().iterator();i.hasNext();) {
-            ONode temp = (ONode) i.next();
+            Node temp = (Node) i.next();
             Point p2 = (Point) nodesMap.get(temp);
             int dx = p2.x-p.x, dy = p2.y-p.y;
             if( dx*dx+dy*dy < 16 ) {
@@ -277,20 +240,32 @@ public class TreeView extends Frame  {
             }
           }
           if( n != null ) {
-            ONode n2 = m.getFirstMapping(rootA,n);
-            if( n2 == null ) {
+            int mc = 0;
+            if( n instanceof BaseNode ) {
+              BaseNode nb = (BaseNode) n;
+              for( java.util.Iterator i = nb.getLeft().getMatches().iterator();i.hasNext();) {
+                BranchNode br = (BranchNode) i.next();
+                Point dst = (Point) nodesMap.get( br );
+                VisibleMapping vm = new  LineMapping(p,dst,br.getBaseMatchType());
+                visibleMappings.add(vm);
+                vm.draw(g);
+                mc ++;
+//                m.printCorr( n,n2);
+              }
+            } else {
+              BranchNode br = (BranchNode) n;
+              if( br.getBaseMatch() != null ) {
+                Point dst = (Point) nodesMap.get( br.getBaseMatch()  );
+                VisibleMapping vm = new  LineMapping(p,dst,br.getBaseMatchType());
+                visibleMappings.add(vm);
+                vm.draw(g);
+                mc++;
+              }
+            }
+            if( mc == 0 ) {
               VisibleMapping vm = new  NoMapping(p);
               visibleMappings.add(vm);
               vm.draw(g);
-            } else {
-              while( n2 != null ) {
-                Point dst = (Point) nodesMap.get( n2 );
-                VisibleMapping vm = new  LineMapping(p,dst,n2.matchType == 3 ? n.matchType : n2.matchType);
-                visibleMappings.add(vm);
-                vm.draw(g);
-                m.printCorr( n,n2);
-                n2 = m.getNextMapping();
-              }
             }
           }
           g.setColor(Color.black);

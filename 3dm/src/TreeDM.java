@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.14 2001/04/02 11:39:13 ctl Exp $
+//$Id: TreeDM.java,v 1.15 2001/04/19 20:45:50 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -29,7 +29,7 @@ public class TreeDM {
   }
 
   public static void main(String[] args) throws Exception {
-    (new TreeDM()).runHarness( args );
+    (new TreeDM()).runBM( args );
   }
 
   public void runHarness( String[] args ) {
@@ -199,35 +199,45 @@ public class TreeDM {
 
   // Run Best Matcher
   public void runBM( String[] args ) {
-   ElementNode docA=null, docBase=null;
+   Node docA=null, docBase=null;
    final String OTHER = "2";
     if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
       System.exit(0);
    }
    try {
-      Parser p = new Parser();
+      XMLParser p = new XMLParser();
       System.out.println("Parsing " + args [0]);
-      docBase = p.parse(args[0] + PSEP + "b.xml");
+      docBase = p.parse(args[0] + PSEP + "b.xml",
+        new NodeFactory() {
+          public Node makeNode( Node parent, int childPos, XMLNode content ) {
+            return new BaseNode( parent, childPos, content  );
+          }
+        });
       System.out.println("Parsing " + OTHER + ".xml");
-      docA = p.parse(args[0] + PSEP+ OTHER+".xml");
+      docA = p.parse(args[0] + PSEP+ OTHER+".xml",
+        new NodeFactory() {
+          public Node makeNode( Node parent, int childPos, XMLNode content ) {
+            return new BranchNode( parent, childPos, content  );
+          }
+        });
       System.out.println("OK.");
    } catch ( Exception e ) {
     e.printStackTrace();
     System.exit(0);
    }
 //   System.exit(0);
-   ProtoBestMatching m1 = new ProtoBestMatching( docBase, docA, args[0] );
+//   ProtoBestMatching m1 = new ProtoBestMatching( docBase, docA, args[0] );
    java.io.File mf = new java.io.File( args[0] + PSEP+ "match"+OTHER );
    if( mf.exists() ) {
     System.out.println("Additional matchings from match"+OTHER);
-    m1.matchFromFile(mf);
+//    m1.matchFromFile(mf);
    }
 
    //   System.out.println("Showing area tree..." );
 //   java.awt.Frame treeView = new TreeView(m1.atRoot , null, m1, null );
    System.out.println("Showing mapping..." );
-   java.awt.Frame treeView = new TreeView(docBase , docA , m1  );
+   java.awt.Frame treeView = new TreeView((BaseNode) docBase , (BranchNode) docA  );
 
    treeView.setVisible(true);
   }

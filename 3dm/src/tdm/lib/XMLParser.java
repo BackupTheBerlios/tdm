@@ -1,4 +1,4 @@
-// $Id: XMLParser.java,v 1.1 2001/04/19 13:59:04 ctl Exp $
+// $Id: XMLParser.java,v 1.2 2001/04/19 20:45:50 ctl Exp $
 // Wrapper for SAX parser
 
 import org.xml.sax.XMLReader;
@@ -64,7 +64,7 @@ public class XMLParser extends DefaultHandler {
 
    public void startDocument ()
    {
-     currentNode = factory.makeNode( new XMLElementNode("$ROOT$", new java.util.HashMap() ) ); // HashMap -> trash when old constr removed
+     currentNode = factory.makeNode( null,0, new XMLElementNode("$ROOT$", new java.util.HashMap() ) ); // HashMap -> trash when old constr removed
    }
 
 
@@ -77,9 +77,10 @@ public class XMLParser extends DefaultHandler {
                              String qName, Attributes atts)
    {
      if( currentText != null )
-       currentNode.addChild( factory.makeNode( new XMLTextNode( currentText.trim().toCharArray() )  ) );
+       currentNode.addChild( factory.makeNode( currentNode, currentNode.getChildCount(),
+        new XMLTextNode( currentText.trim().toCharArray() )  ) );
      currentText = null;
-     Node n = factory.makeNode( new XMLElementNode( qName, atts ) );
+     Node n = factory.makeNode( currentNode, currentNode.getChildCount(), new XMLElementNode( qName, atts ) );
      currentNode.addChild(  n  );
      treestack.push( currentNode );
      currentNode = n;
@@ -90,7 +91,8 @@ public class XMLParser extends DefaultHandler {
    public void endElement (String uri, String name, String qName)
    {
      if( currentText != null )
-       currentNode.addChild( factory.makeNode( new XMLTextNode( currentText.trim().toCharArray() ) ) );
+       currentNode.addChild( factory.makeNode( currentNode, currentNode.getChildCount(),
+          new XMLTextNode( currentText.trim().toCharArray() ) ) );
      currentText = null;
      currentNode = (Node) treestack.pop();
    }
@@ -118,7 +120,7 @@ public class XMLParser extends DefaultHandler {
       if( currentText != null )
         currentText += chars;
       else {
-        currentText = ""; //new TextNode( chars );
+        currentText = chars; //new TextNode( chars );
         //currentNode.addChild( currentText );
       }
    }
