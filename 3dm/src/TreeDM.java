@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.26 2001/06/18 08:14:21 ctl Exp $
+//$Id: TreeDM.java,v 1.27 2001/06/18 09:43:07 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -35,9 +35,9 @@ public class TreeDM {
     //
     String[] argset = {"../../usecases/shopping/L6.xml","../../usecases/shopping/edit.log"};
 //    String[] argset = {"rm.xml","edit.log"};
-    (new TreeDM()).runOOMarkup( argset );
+//    (new TreeDM()).runOOMarkup( argset );
 //    (new TreeDM()).runBM( args );
-//    (new TreeDM()).runHarness( args );
+    (new TreeDM()).runHarness( args );
   }
 
   public void runHarness( String[] args ) {
@@ -132,6 +132,11 @@ public class TreeDM {
       merge1.getConflictLog().writeConflicts(new MergePrinter( cw));
 //      cw.close();
       System.setOut(sink); // keep symmtry merge quiet..
+      // Clean all old matchings
+      cleanBaseM(docBase);
+      cleanBranchM(docA);
+      cleanBranchM(docB);
+
       merge2 = new Merge( new TriMatching( docB, docBase, docA ) );
       merge2.merge( new MergePrinter(p2) );
       System.setOut(oldout);
@@ -187,6 +192,22 @@ public class TreeDM {
     return;
   }
 
+  private void cleanBaseM( BaseNode n ) {
+    n.getLeft().getMatches().clear();
+    n.getRight().getMatches().clear();
+    for(int i=0;i<n.getChildCount();i++)
+      cleanBaseM(n.getChild(i));
+  }
+
+  private void cleanBranchM( BranchNode n ) {
+    n.delBaseMatch();
+    n.setMatchArea(null);
+    n.setPartners(null);
+    for(int i=0;i<n.getChildCount();i++)
+      cleanBranchM(n.getChild(i));
+  }
+
+
   private boolean treesIdentical( Node a, Node b, boolean searchAll ) {
     boolean result = true;
     if( !a.getContent().contentEquals( b.getContent()) ) {
@@ -221,7 +242,7 @@ public class TreeDM {
   public void runBM( String[] args ) {
    BranchNode docA=null;
    BaseNode docBase=null;
-   final String OTHER = "1";
+   final String OTHER = "2";
     if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
       System.exit(0);

@@ -1,4 +1,4 @@
-// $Id: Matching.java,v 1.15 2001/06/18 08:14:21 ctl Exp $
+// $Id: Matching.java,v 1.16 2001/06/18 09:43:07 ctl Exp $
 
 import java.util.Vector;
 import java.util.Iterator;
@@ -27,6 +27,7 @@ public class Matching {
   }
 
   protected void buildMatching( BaseNode base, BranchNode branch ) {
+//    checkMa(branch);
     matchSubtrees( base, branch );
     removeSmallCopies(branch);
     matchSimilarUnmatched( base, branch );
@@ -122,8 +123,8 @@ public class Matching {
     }
     best = bestCandidates.isEmpty() ? null : (CandidateEntry) bestCandidates.elementAt(0);
     if( best!=null && (bestCount == 1 &&
-      (Math.min(best.leftRightDown,best.distance) > 0.1 ||
-        best.candidate.content.getInfoSize() < COPY_THRESHOLD )))
+      (Math.min(best.leftRightDown,best.distance) > 0.1 /*||
+        best.candidate.content.getInfoSize() < COPY_THRESHOLD */)))
       best=null; //System.out.println("No candidate was very good, leaving unmatched" );
     return best;
   }
@@ -288,7 +289,7 @@ public class Matching {
       }
       if( !deletia.isEmpty() ) {
         for( Iterator i = deletia.iterator();i.hasNext();)
-          delMatchArea(((BranchNode) i.next()).getMatchArea()); //delMatching((BranchNode) i.next(),base);
+          delMatchArea(((BranchNode) i.next()).getMatchArea());
       }
     }
     for(int i=0;i<root.getChildCount();i++)
@@ -317,7 +318,10 @@ public class Matching {
       // Also means matchings should be added
       addMatching( b, a );
       ma.addInfoBytes( a.getContent().getInfoSize() );
-      b.setMatchArea( ma);
+/*      if( ma==null)
+        System.err.println("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXDIEDIEDIE!!!!");
+*/
+      b.setMatchArea( ma );
     }
     boolean childrenMatch = true;
     if( a.getChildCount() == b.getChildCount() ) {
@@ -449,6 +453,7 @@ public class Matching {
   }
 
   protected void delMatchArea(MatchArea m) {
+//    if( 1==1) return;
     delMatchArea(m.getRoot(),m);
   }
 
@@ -461,7 +466,14 @@ public class Matching {
     }
   }
 
-
+/*
+  private void checkMa( BranchNode n) {
+    if( n.hasBaseMatch() && n.getMatchArea() == null )
+      System.err.println("!!!!!!!!!!!!!!!!!!!!!MATCHED, but NULL MA!");
+    for(int i=0;i<n.getChildCount();i++)
+      checkMa(n.getChild(i));
+  }
+*/
   class CandidateEntry {
     BaseNode candidate=null;
     double leftRightDown = 0.0;
