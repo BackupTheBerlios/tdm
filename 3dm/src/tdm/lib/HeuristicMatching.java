@@ -1,4 +1,4 @@
-// $Id: HeuristicMatching.java,v 1.4 2003/01/16 09:28:56 ctl Exp $ D
+// $Id: HeuristicMatching.java,v 1.5 2004/03/09 09:41:54 ctl Exp $ D
 // Renamed 2002/10/21, before that
 //   Id: Matching.java,v 1.20 2001/09/26 19:36:45 ctl Exp
 //
@@ -81,6 +81,10 @@ public class HeuristicMatching implements Matching {
 
   public BaseNode getBaseRoot() {
     return baseRoot;
+  }
+
+  public BranchNode getBranchRoot() {
+      return branchRoot;
   }
 
   public NodeFactory getBaseNodeFactory() {
@@ -436,7 +440,7 @@ public class HeuristicMatching implements Matching {
 
   /** Get the children the leaf nodes of a matching subtree. Uses the
    *  subtree tag of the nodes (MatchArea class) */
-  protected void getAreaStopNodes( Vector stopNodes, BranchNode n ) {
+  public void getAreaStopNodes( Vector stopNodes, BranchNode n ) {
     boolean childrenInSameArea = true;
     MatchArea parentArea = n.getMatchArea();
     if( parentArea == null )

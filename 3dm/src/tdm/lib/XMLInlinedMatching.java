@@ -1,4 +1,4 @@
-// $Id: XMLInlinedMatching.java,v 1.1 2003/01/30 09:28:28 ctl Exp $ D
+// $Id: XMLInlinedMatching.java,v 1.2 2004/03/09 09:41:54 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -22,6 +22,7 @@
 package tdm.lib;
 
 import org.xml.sax.helpers.AttributesImpl;
+import java.util.Vector;
 
 /** Use when matching is explicitly encoded in the XML file */
 public class XMLInlinedMatching implements Matching {
@@ -109,9 +110,18 @@ public class XMLInlinedMatching implements Matching {
      }
   }
 
+  public void getAreaStopNodes( Vector stopNodes, BranchNode n ) {
+    throw new java.lang.NoSuchMethodError("Not implemented");
+  }
+
   public BaseNode getBaseRoot() {
     return baseRoot;
   }
+
+  public BranchNode getBranchRoot() {
+    return branchRoot;
+  }
+
 
   public NodeFactory getBaseNodeFactory() {
     return baseNodeFactory;

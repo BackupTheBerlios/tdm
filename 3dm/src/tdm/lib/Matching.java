@@ -1,4 +1,4 @@
-// $Id: Matching.java,v 1.23 2003/01/09 14:15:26 ctl Exp $
+// $Id: Matching.java,v 1.24 2004/03/09 09:41:54 ctl Exp $
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -20,10 +20,15 @@
 //
 package tdm.lib;
 
+import java.util.Vector;
+
 public interface Matching {
 
   public void buildMatching( BaseNode base, BranchNode branch );
+  public void getAreaStopNodes( Vector stopNodes, BranchNode n );
   public BaseNode getBaseRoot();
+  public BranchNode getBranchRoot();
+
   public NodeFactory getBaseNodeFactory();
   public NodeFactory getBranchNodeFactory();
 }
