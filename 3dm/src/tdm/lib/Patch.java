@@ -1,4 +1,4 @@
-// $Id: Patch.java,v 1.9 2003/01/16 09:28:56 ctl Exp $ D
+// $Id: Patch.java,v 1.10 2003/01/16 10:25:31 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -80,11 +80,13 @@ public class Patch {
   protected BranchNode patch( BaseNode base, BranchNode diff ) throws
           ParseException  {
     initLookup(base,nodeLookup);
-    BranchNode patch = new BranchNode( new XMLElementNode("$ROOT$",
+    BranchNode patch = new BranchNode( new XMLElementNode("$DUMMY$",
       new org.xml.sax.helpers.AttributesImpl() ) );
-      // Getchild(0) to skip diff tag
-    copy( patch,diff.getChild(0),base.getChild(0));
-    return patch;
+    // Getchild(0) to skip diff tag
+    // Note that we need an $DUMMY$ node to which $ROOT$ is attached as an only child
+    // we cant use <root> as start of copy, since root elem may be changed!
+    copy( patch,diff.getChild(0),base);
+    return patch.getChild(0);
   }
 
   // diff => a command or just some nodes to insert
@@ -160,6 +162,15 @@ public class Patch {
     dfsCopy( patch, srcRoot , stopNodes );
     // Recurse for each diff child
     for( int i = 0; i < diff.getChildCount(); i++ ) {
+      // DEBUG
+      /*BranchNode _n = (BranchNode) stopNodes.get( dstNodes.elementAt(i) );
+      if(  _n == null  ) {
+        BaseNode _s = (BaseNode) dstNodes.elementAt(i);
+        System.err.println("Internal failure: Stop node not created");
+        System.err.println("src path=" + PathTracker.getPathString(srcRoot) );
+        System.err.println("stop path=" + PathTracker.getPathString(_s ));
+      }*/
+      //ENDDEBUG
       insert( (BranchNode) stopNodes.get( dstNodes.elementAt(i) ),
               diff.getChild(i));
     }
