@@ -1,10 +1,15 @@
-// $Id: MarkableBaseNode.java,v 1.3 2002/10/30 15:13:35 ctl Exp $
+// $Id: MarkableBaseNode.java,v 1.4 2002/10/31 12:35:18 ctl Exp $
 package editgen;
 
 import BaseNode;
 import XMLNode;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.Iterator;
 
 public class MarkableBaseNode extends BaseNode {
+
+  protected static Map markLog = null;
 
   public static final int MARK_NONE = 0;
   public static final int MARK_CONTENT = 1;
@@ -17,7 +22,31 @@ public class MarkableBaseNode extends BaseNode {
     super( aContent );
   }
 
+  public void beginMarkTransaction() {
+    if( markLog != null )
+      throw new IllegalStateException("Recursive transactions not supported");
+    markLog =  new HashMap();
+  }
+
+  public void commitMarkTransaction() {
+    if( markLog == null )
+      throw new IllegalStateException("No transaction in progress");
+    markLog =  null;
+  }
+
+  public void abortMarkTransaction() {
+    if( markLog == null )
+      throw new IllegalStateException("No transaction in progress");
+    for( Iterator i = markLog.entrySet().iterator();i.hasNext();) {
+      Map.Entry e = (Map.Entry) i.next();
+      ((MarkableBaseNode) e.getKey()).markCount = ((Integer) e.getValue()).intValue();
+    }
+    markLog =  null;
+  }
+
   public void mark(int mark) {
+    if( markLog != null )
+      markLog.put(this,new Integer(markCount));
     markCount|=mark;
   }
 

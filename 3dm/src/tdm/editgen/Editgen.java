@@ -1,4 +1,4 @@
-// $Id: Editgen.java,v 1.7 2002/10/30 15:16:16 ctl Exp $
+// $Id: Editgen.java,v 1.8 2002/10/31 12:35:18 ctl Exp $
 package editgen;
 
 import XMLNode;
@@ -115,18 +115,22 @@ public class Editgen {
 
   public void transform( int edits, MarkableBaseNode base,MarkableBaseNode baseRoot,
                          EditLog mergeLog, EditLog branchLog ) {
-
-    for( int i=0;i<edits;) {
-      char op = operations[(int) (rnd.nextDouble()*operations.length)];
-      MarkableBaseNode n = getRandomNode(baseRoot,
-          op=='u' ? MarkableBaseNode.MARK_CONTENT : MarkableBaseNode.MARK_STRUCTURE
-          ,null);
-      if( n == null ) {
-        System.err.println("Ran out of free nodes to edit");
-        return;
-      }
-      if( editNode(op,n,baseRoot,mergeLog,branchLog) )
-        i++;
+    MarkableBaseNode n = null;
+    for( int i=0;i<edits;i++) {
+      char op = /*operations[i % operations.length];*/
+               operations[(int) (rnd.nextDouble()*operations.length)];
+      int tries = 10;
+      do {
+        n = getRandomNode(baseRoot,
+            op=='u' ? MarkableBaseNode.MARK_CONTENT : MarkableBaseNode.MARK_STRUCTURE
+            ,null);
+        if( n == null ) {
+          System.err.println("Ran out of free nodes to edit");
+          return;
+        }
+      } while( !editNode(op,n,baseRoot,mergeLog,branchLog) && --tries > 0);
+      if( tries == 0)
+          System.err.println("Warning: Unable to perform operation "+op);
     }
   }
 
@@ -167,6 +171,7 @@ public class Editgen {
       case 'm': // Move subtree
         //System.err.println("MOV");
         // Delete from base (src of move) (=delete code block)
+        base.beginMarkTransaction();
         base.lock( MarkableBaseNode.MARK_STRUCTURE);
         dest = getRandomNode( baseRoot, MarkableBaseNode.MARK_STRUCTURE, base ); // NOTE! Dest must be fetched AFTER src is locked!
         if( dest == null )
@@ -179,11 +184,10 @@ public class Editgen {
         if( base.getContent() instanceof XMLTextNode &&
             ( (n.getContent() instanceof XMLTextNode) ||
             ( n2 != null && n2.getContent() instanceof XMLTextNode ))) {
-          // NOTE: Unfortunately we have locked the dst and src, so they are no
-          // longer eligable for other ops after the abort :( (unlocking is not trivial)
-//          System.err.println("-- Abort: copying text node adjacent to other text node not possible");
+          base.abortMarkTransaction();
           return false;
         }
+        base.commitMarkTransaction();
         moveCount++;
         editTrees(base,dest,null,after,true,mergeLog,branchLog);
         break;
@@ -192,6 +196,7 @@ public class Editgen {
         // if the node does not already have children (always inserts in childlist)
         //System.err.println("CPY");
         // Lock src of copy
+        base.beginMarkTransaction();
         base.lock(MarkableBaseNode.MARK_STRUCTURE);
         // Insert at dest (=insert code block)
         dest = getRandomNode( baseRoot, MarkableBaseNode.MARK_STRUCTURE, base ); // NOTE! Dest must be fetched AFTER src is locked!
@@ -204,12 +209,12 @@ public class Editgen {
         if( base.getContent() instanceof XMLTextNode &&
             ( (n.getContent() instanceof XMLTextNode) ||
             ( n2 != null && n2.getContent() instanceof XMLTextNode ))) {
-          // NOTE: Unfortunately we have locked the dst and src, so they are no
-          // longer eligable for other ops after the abort :( (unlocking is not trivial)
-          System.err.println("-- Abort: copying text node adjacent to other text node not possible");
+//          System.err.println("-- Abort: copying text node adjacent to other text node not possible");
+          base.abortMarkTransaction();
           return false;
         }
         copyCount++;
+        base.commitMarkTransaction();
         editTrees(null,dest,base,after,true,mergeLog,branchLog);
         break;
     }
