@@ -1,0 +1,37 @@
+// $Id: cases.txt,v 1.1 2001/01/23 16:56:12 ctl Exp $
+
+Merge cases: Purpose?
+
+- to demonstrate desired merging behaviour in various cases
+  (=> exact definition of reasonable merging behaviour??)
+- to test the merge tool against
+
+These are the merge cases
+(Mxx) is the case depicted
+[Mxx] is a similar case
+
+Insertion
+=========
+
+i1 Simple insertion i different subtrees (M18) [M14] 
+i2 Same subtree, end of list / same pos; can be seen as conflict (M19)
+i3 Several inserts in same subtree; can be seen as conflict (M16)
+
+Deletion
+========
+
+d1 Simple deletion in different subtrees (M13)
+d2 Deletion of same node (M21)
+d3 Several deletions in same subtree (M20)
+
+Conflicts cannot occur with deletions only.
+
+Updates
+=======
+
+Quite trivial, no paper cases
+
+u1 Update of differnt nodes
+u2 Update of same node, updates identical (possibly conflict all the same?)
+u3 CONFLICT: Same node, different updates  
+
