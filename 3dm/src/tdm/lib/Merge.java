@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.19 2001/05/24 12:35:52 ctl Exp $
+// $Id: Merge.java,v 1.20 2001/05/25 07:01:24 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -13,6 +13,7 @@ import java.util.NoSuchElementException;
 public class Merge {
 
   TriMatching m = null;
+  ConflictLog clog = new ConflictLog();
 
   public Merge(TriMatching am) {
     m = am;
@@ -33,6 +34,7 @@ public class Merge {
     MergeList mlistA = a != null ? makeMergeList( a ) : null;
     MergeList mlistB = b != null ? makeMergeList( b ) : null;
     MergePairList merged = null;
+    clog.enterSubtree();
 //    System.out.println("A = " + a ==null ? "-" : a.getContent().toString());
 //    System.out.println("B = " + b ==null ? "-" : b.getContent().toString());
 //    System.out.println("--------------------------");
@@ -54,16 +56,9 @@ public class Merge {
     else
       System.out.println("--none--");
     }
-    if( mlistA != null && mlistB != null ) {
-      try {
-        merged = mergeLists( mlistA, mlistB ); // Merge lists
-      } catch (SequencingConflict e ) {
-        // CONFLICTCODE--- choose first arg,
-        merged = mergeListToPairList( mlistA );
-      }
-      if(debug>0) {System.out.println("Merged list:");mlistA.print();}
-
-    } else
+    if( mlistA != null && mlistB != null )
+      merged = mergeLists( mlistA, mlistB ); // Merge lists
+    else
       merged = mergeListToPairList( mlistA == null ? mlistB : mlistA );
 
     // Now, the merged list is in merged
@@ -84,7 +79,9 @@ public class Merge {
         mergeNode(recursionPartners.getFirstNode(),recursionPartners.getSecondNode(),ch);
         ch.endElement(mergedElement.getNamespaceURI(),mergedElement.getLocalName(),mergedElement.getQName());
       }
+      clog.nextChild();
     }
+    clog.exitSubtree();
   }
 
   private XMLNode cmerge( MergePair mp ) {
@@ -154,16 +151,21 @@ public class Merge {
             bUpdated = !matches( b, b.getBaseMatch() );
     if( aUpdated && bUpdated ) {
       if( matches( a, b ) ) {
-        System.out.println("CONFLICTW; Node updated in both branches, but updates are equal");
+        clog.addWarning(ConflictLog.UPDATE,a.isLeftTree() ? b : a,
+          "Node updated in both branches, but updates are equal");
         return a.getContent();
       } else {
         //
         // CONFLICTCODE here
         // if XMLElementNode try merging attributes if XMLTextnode give up
+        clog.add(ConflictLog.UPDATE,a.isLeftTree() ? b : a,
+          "Node updated in both branches, using branch 1");
+/*
         System.out.println("CONFLICT; Node updated in both branches, picking first one:");
         System.out.println(a.getContent().toString());
         System.out.println(b.getContent().toString());
-        return a.getContent();
+*/
+        return a.isLeftTree() ? a.getContent() : b.getContent();
       }
     } else if ( bUpdated )
       return b.getContent();
@@ -249,8 +251,6 @@ public class Merge {
     return ml;
   }
 
-  class SequencingConflict extends Exception {}
-
   class MergePair {
     BranchNode first,second;
     MergePair( BranchNode aFirst, BranchNode aSecond ) {
@@ -297,7 +297,7 @@ public class Merge {
     return merged;
   }
 
-  public MergePairList mergeLists( MergeList mlistA, MergeList mlistB ) throws SequencingConflict {
+  public MergePairList mergeLists( MergeList mlistA, MergeList mlistB ) {
     MergePairList merged = new MergePairList();
     mergeDeletedOrMoved( mlistA, mlistB );
 /*
@@ -335,7 +335,10 @@ public class Merge {
           // add CONFLICTCODE here
           // for now, chain A and B hangons
           if( hangonsAreEqual )
-            System.out.println("CONFLICTW; both nodes have hangons, but they were equal"); // as updated(or A if no update)-Other");
+            // Need: add with explicit childpos
+            // How should we encode the inserts, i.e. tell which nodes were inserted
+            clog.addWarning(ConflictLog.INSERT,null,"Equal insertions in both branches at the same position");
+            //System.out.println(); // as updated(or A if no update)-Other");
           else
             System.out.println("CONFLICTW; both nodes have hangons; sequencing them"); // as updated(or A if no update)-Other");
 
@@ -372,7 +375,7 @@ public class Merge {
         // and infinite loop! (m5 rev 1.1!)
         // for now, follow sequencing of mlist A
         System.out.println("CONFLICT: Sequencing conflict, using only one list's sequencing");
-        throw new SequencingConflict();
+//        throw new SequencingConflict();
       }
       posA = nextA;
       posB = nextB;
