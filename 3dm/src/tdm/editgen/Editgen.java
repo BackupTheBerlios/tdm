@@ -1,4 +1,4 @@
-// $Id: Editgen.java,v 1.3 2002/10/28 14:07:09 ctl Exp $
+// $Id: Editgen.java,v 1.4 2002/10/29 09:01:55 ctl Exp $
 package editgen;
 
 import XMLNode;
@@ -17,6 +17,7 @@ import java.util.Iterator;
 public class Editgen {
 
   static java.util.Random rnd = new java.util.Random( 31415926L ); // repeatable runs!
+  static int idCounter = 1000000;
 
   public static void main(String[] args) {
     Editgen e = new Editgen();
@@ -72,25 +73,25 @@ public class Editgen {
     // Decide if node should be edited
     if( ! base.isMarked() ) {
       _visitCount++;
-      editNode = rnd.nextDouble() > 0.65;
+      editNode = rnd.nextDouble() > 0.7;
     }
     BranchNode n = null; // used by edit ops
     boolean after = false;
     MarkableBaseNode dest = null;
     if( editNode ) {
-      int op = 3;// (int) (rnd.nextDouble() *5.0);
+      int op = 4;// (int) (rnd.nextDouble() *5.0);
       switch(op) {
         case 0: // Delete node
           System.err.println("DEL");
-          base = getLargestDelTree(base);
-          if( base == null ) {
+          dest = getLargestDelTree(base);
+          if( dest == null ) {
             System.err.println("-- Nothing suitable to del found");
             break;
           }
-          _checkNotMarked(base);
-          base.lock();
-          base.lockSubtree();
-          editTrees(base,null,null,false,false);
+          _checkNotMarked(dest);
+          dest.lock();
+          dest.lockSubtree();
+          editTrees(dest,null,null,false,false);
           /*
           n = base.getLeft().getFullMatch();
           n.getParent().removeChild(n.getChildPos());
@@ -100,13 +101,17 @@ public class Editgen {
           break;
         case 1: // Insert node
           System.err.println("INS");
-          XMLTextNode content = new XMLTextNode("!INSERT!"+System.currentTimeMillis());
+          org.xml.sax.helpers.AttributesImpl atts = new org.xml.sax.helpers.AttributesImpl();
+          atts.addAttribute("","","id","CDATA",
+             ""+(idCounter++) ); //  rnd.nextLong()+"@"+ System.currentTimeMillis());
+          XMLElementNode content = new XMLElementNode("editgen:insert",atts);
           after = rnd.nextDouble() > 0.5;
           base.lock(!after,after);
-          base = after ? base : (base.hasLeftSibling() ?
-                                 (MarkableBaseNode) base.getLeftSibling() : base);
           editTrees(null,base,new BranchNode( content),after,false);
-          /*n = base.getLeft().getFullMatch();
+          /*
+                    base = after ? base : (base.hasLeftSibling() ?
+                                 (MarkableBaseNode) base.getLeftSibling() : base);
+          n = base.getLeft().getFullMatch();
           n.getParent().addChild(n.getChildPos()+1,new BranchNode( content));
           n = base.getRight().getFullMatch();
           n.getParent().addChild(n.getChildPos()+1,new BranchNode( content));
@@ -136,11 +141,6 @@ public class Editgen {
 
           editTrees(base,dest,null,after,true);
 
-          //DEBUG
-          java.util.Set s = new java.util.HashSet();
-          _getByIds(total,"olasdu8ahj",s);
-          if( s.size() > 1 )
-            System.err.println("DUP!");
           /*
           BranchNode l = base.getLeft().getFullMatch();
           l.getParent().removeChild(l.getChildPos());
@@ -302,8 +302,10 @@ public class Editgen {
         BranchNode match = (BranchNode) i.next();
         int ix = match.getChildPos() + (after ? 1: 0);
         if (!cloneInsTree) {
-          ((BranchNode) insTree).setBaseMatch( src, BranchNode.MATCH_FULL );
-          (left ? src.getLeft() : src.getRight()).addMatch((BranchNode)insTree);
+          if( src != null ) {
+            ((BranchNode) insTree).setBaseMatch( src, BranchNode.MATCH_FULL );
+            (left ? src.getLeft() : src.getRight()).addMatch((BranchNode)insTree);
+          }
           match.getParent().addChild(ix,insTree);
         } else {
           match.getParent().addChild(ix,clonedAndMatchedTree(insTree,left,false));
