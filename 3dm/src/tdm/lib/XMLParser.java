@@ -1,4 +1,4 @@
-// $Id: XMLParser.java,v 1.5 2001/09/26 19:36:47 ctl Exp $ D
+// $Id: XMLParser.java,v 1.6 2002/10/25 11:39:11 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -74,9 +74,11 @@ public class XMLParser extends DefaultHandler {
   public Node parse( String file, NodeFactory aFactory ) throws ParseException,
           java.io.FileNotFoundException, java.io.IOException {
     factory = aFactory;
-    FileReader r = new FileReader(file);
+    //FileReader r = new FileReader(file);
     try {
-      xr.parse(new InputSource(r));
+      InputSource is = new InputSource( new java.io.InputStreamReader( new java.io.FileInputStream(file), "utf-8" ));
+      //is.setEncoding("utf-8");
+      xr.parse(is);
     } catch ( org.xml.sax.SAXException x ) {
       throw new ParseException(x.getMessage());
     }
@@ -146,4 +148,5 @@ public class XMLParser extends DefaultHandler {
 ///        //currentNode.addChild( currentText );
       }
    }
+
 }

@@ -1,4 +1,4 @@
-// $Id: XMLPrinter.java,v 1.3 2002/09/19 11:29:38 ctl Exp $
+// $Id: XMLPrinter.java,v 1.4 2002/10/25 11:39:11 ctl Exp $
 
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.Attributes;
@@ -11,7 +11,7 @@ import org.xml.sax.Attributes;
  * The algorithm is to not ouput any linebreaks if there is any content between tags (open as
  * well as close).
  */
-class XMLPrinter extends DefaultHandler {
+public class XMLPrinter extends DefaultHandler {
 
   private static final int STATE_CHARS = 0;
   private static final int STATE_TAG = 1;
@@ -23,12 +23,27 @@ class XMLPrinter extends DefaultHandler {
   "                                                                              ";
   private java.io.PrintWriter pw = null;
 
-  public XMLPrinter( java.io.PrintWriter apw ) {
+/*  public XMLPrinter( java.io.PrintWriter apw ) {
     pw=apw;
   }
 
   public XMLPrinter( java.io.PrintWriter apw, boolean aPrettyPrint ) {
     pw=apw;
+    prettyPrint = aPrettyPrint;
+  }
+*/
+
+  public XMLPrinter( java.io.OutputStream out ) {
+    this(out,false);
+  }
+
+  public XMLPrinter(  java.io.OutputStream out, boolean aPrettyPrint ) {
+    try {
+      pw=new java.io.PrintWriter( new java.io.OutputStreamWriter( out, "utf-8" ));
+    } catch (java.io.UnsupportedEncodingException x ) {
+      System.err.println("Internal error: unknow encoding: utf-8");
+      System.exit(-1);
+    }
     prettyPrint = aPrettyPrint;
   }
 
