@@ -1,4 +1,4 @@
-// $Id: Patch.java,v 1.8 2003/01/09 14:15:26 ctl Exp $ D
+// $Id: Patch.java,v 1.9 2003/01/16 09:28:56 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -106,10 +106,13 @@ public class Patch {
       XMLElementNode ce = (XMLElementNode) cmdcontent;
       if( ce.getQName().equals(DIFF_NS+"esc") ||
           ce.getQName().equals(DIFF_NS+"insert") ) {
-        if( diff.getChildCount() == 0)
-            throw new ParseException("DIFFSYNTAX: insert/esc has no subtree " +
-                                      ce.toString() );
-        insert( patch, diff.getChild(0) );
+        // BUGFIX 030115
+        //if( diff.getChildCount() == 0)
+        //    throw new ParseException("DIFFSYNTAX: insert/esc has no subtree " +
+        //                              ce.toString() );
+        if( diff.getChildCount() > 0 )
+          insert( patch, diff.getChild(0) );
+        //ENDBUGFIX
       } else {
         // Copy operation
         BaseNode srcRoot = null;

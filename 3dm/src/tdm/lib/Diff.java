@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.8 2003/01/09 14:15:26 ctl Exp $ D
+// $Id: Diff.java,v 1.9 2003/01/16 09:28:56 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -74,10 +74,22 @@ public class Diff {
                         throws SAXException {
     // Find stopnodes
     Vector stopNodes = new Vector();
+    // DEBUG
+/*    java.io.PrintWriter dw = new java.io.PrintWriter(System.err);
+    branch.debugTree(dw,0);dw.flush();*/
+        //ENDDEBUG
     m.getAreaStopNodes( stopNodes, branch );
     for( Iterator i = stopNodes.iterator();i.hasNext();) {
       BranchNode stopNode = (BranchNode) i.next();
       String dst = getId(stopNode.getBaseMatch());
+      // BUGFIX 030115
+      if( stopNode.getChildCount()==0) {
+        AttributesImpl copyAtts = new AttributesImpl();
+        copyAtts.addAttribute("","","dst","CDATA",dst);
+        ch.startElement("","",DIFF_NS+"insert",copyAtts);
+        ch.endElement("","",DIFF_NS+"insert");
+      }
+      // ENDBUGFIX
       for( int ic = 0;ic < stopNode.getChildCount();ic++) {
         BranchNode child = stopNode.getChild(ic);
         if( child.hasBaseMatch() ) {

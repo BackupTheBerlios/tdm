@@ -1,4 +1,4 @@
-// $Id: HeuristicMatching.java,v 1.3 2003/01/09 14:15:26 ctl Exp $ D
+// $Id: HeuristicMatching.java,v 1.4 2003/01/16 09:28:56 ctl Exp $ D
 // Renamed 2002/10/21, before that
 //   Id: Matching.java,v 1.20 2001/09/26 19:36:45 ctl Exp
 //
@@ -443,6 +443,10 @@ public class HeuristicMatching implements Matching {
       throw new RuntimeException("ASSERT FAILED");
     for( int i=0;i<n.getChildCount() && childrenInSameArea;i++)
       childrenInSameArea&= n.getChild(i).getMatchArea() == parentArea;
+    /* BUGFIX 020115 */
+    if( n.getChildCount() == 0 && n.getBaseMatch().getChildCount()!=0)
+      childrenInSameArea=false;
+    // END BUGFIX
     if( !childrenInSameArea ) {
       stopNodes.add(n);
       return;
