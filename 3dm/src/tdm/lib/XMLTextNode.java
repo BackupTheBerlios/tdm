@@ -1,4 +1,4 @@
-// $Id: XMLTextNode.java,v 1.9 2001/09/26 19:36:47 ctl Exp $
+// $Id: XMLTextNode.java,v 1.10 2002/10/25 11:39:47 ctl Exp $
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -27,18 +27,18 @@ public class XMLTextNode extends XMLNode {
   private char[] text=null;
   private byte[] cHash = null;
 
-  XMLTextNode( String srctext ) {
+  public XMLTextNode( String srctext ) {
     this( srctext.toCharArray() );
   }
 
-  XMLTextNode( char[] srctext ) {
+  public XMLTextNode( char[] srctext ) {
     this( srctext,0,srctext.length);
   }
 
-  XMLTextNode( char[] srctext, int first, int length ) {
+  public XMLTextNode( char[] srctext, int first, int length ) {
     text = new char[length];
     System.arraycopy(srctext,first,text,0,length);
-///    System.out.println("NEW TN:"+new String(text));
+//    System.out.println("NEW TN:"+new String(text));
     cHash = calculateHash(text);
     infoSize = text.length > Measure.TEXT_THRESHOLD ? text.length -
                 Measure.TEXT_THRESHOLD : 1;
