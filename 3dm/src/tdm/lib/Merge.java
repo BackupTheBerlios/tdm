@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.17 2001/04/27 16:59:10 ctl Exp $
+// $Id: Merge.java,v 1.18 2001/05/04 12:59:21 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -263,7 +263,7 @@ public class Merge {
         Integer firstPos = (Integer) baseMatches.get(match);
         if( firstPos != null ) {
           // Lock the first occurenece as well
-          ml.lockNeighborhood(firstPos.intValue(),1,1);
+//TEMP UNCOMMNETED FOR review/p2          ml.lockNeighborhood(firstPos.intValue(),1,1);
           baseMatches.put(match,null);  // Put null into hashtable, so we won't lock more than once
                                         // (it wouldn't hurt, but just to be nice)
         }
@@ -315,6 +315,7 @@ public class Merge {
   public MergeList mergeLists( MergeList mlistA, MergeList mlistB ) {
     boolean __followAonly = false; // Special var, that when set causes merge to only follow A
                                     // used for quick'n'dirty conflict resolution
+    Set __visitedInA = new HashSet();
     MergeList merged = new MergeList(mlistA.getEntryParent());
     mergeDeletedOrMoved( mlistA, mlistB );
 
@@ -339,6 +340,7 @@ public class Merge {
     while(true) {
       // pos is set up so that ea and eb are merge-partners
       MergeEntry ea = mlistA.getEntry(posA), eb= mlistB.getEntry(posB);
+      __visitedInA.add(ea);
 //        MergeEntry chosenEn=ea,otherEn=eb;
       merged.add( ea );
       ea.setMergePartner(eb.getNode());
@@ -400,14 +402,29 @@ public class Merge {
         System.out.println("CONFLICT: Sequencing conflict, using only one list's sequencing");
         __followAonly = true;
         nextB = mlistB.findPartner(mlistA.getEntry(nextA)); ///getPartnerPos( mlistA.getEntry(nextA), mlistB, docB, docBMatching);
-        return mlistA;
-/*        System.out.println("posA="+posA+",posB="+posB);
+        // CONFLICT CODE
+        // Fixup hangons from mlistB
+
+        for( int i=1;i<mlistA.getEntryCount()-1;i++) {
+          MergeEntry a = mlistA.getEntry(i);
+          if( __visitedInA.contains(a) )
+            continue;
+          int bix = mlistB.findPartner( a );
+          MergeEntry b = bix < 0 ? null : mlistB.getEntry(bix);
+          if( b!= null && b.getHangonCount() > 0 ) {
+            for(int ih=0;ih<b.getHangonCount();ih++)
+              a.addHangon(b.getHangon(ih));
+          }
+        }
+        // END CONFLICT CODE
+//        return mlistA;
+        System.out.println("posA="+posA+",posB="+posB);
           System.out.println("First list:");
           mlistA.print();
           System.out.println("Second list:");
           mlistB.print();
-*/
-        //return mlistA;
+
+         return mlistA;
       }
       posA = nextA;
       posB = nextB;

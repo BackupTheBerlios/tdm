@@ -1,4 +1,4 @@
-// $Id: Patch.java,v 1.1 2001/04/27 16:59:11 ctl Exp $
+// $Id: Patch.java,v 1.2 2001/05/04 12:59:22 ctl Exp $
 
 import java.util.Map;
 import java.util.HashMap;
@@ -27,28 +27,28 @@ public class Patch {
     initLookup(base,nodeLookup);
     BranchNode patch = new BranchNode( new XMLElementNode("$ROOT$",
       new org.xml.sax.helpers.AttributesImpl() ) );
-    runCopy( patch,diff.getChild(0),base.getChild(0)); // Getchild0 to skip diff tag
+    copy( patch,diff.getChild(0),base.getChild(0)); // Getchild0 to skip diff tag
     return patch;
   }
 
   // diff => a command or just some nodes to insert
   // patch = the parent node, under which the subtree produced by the command shall be inserted
 
-  protected void patch( BranchNode patch, BranchNode diff) throws ParseException {
+  protected void insert( BranchNode patch, BranchNode diff) throws ParseException {
     XMLNode cmdcontent = diff.getContent();
     if( cmdcontent instanceof XMLTextNode || !RESERVED.contains(((XMLElementNode) cmdcontent).getQName())) {
       // Simple insert operation
       BranchNode node = new BranchNode( cmdcontent );
       patch.addChild(node);
       for( int i=0;i<diff.getChildCount();i++)
-        patch(node,diff.getChild(i)); // Recurse to nect level
+        insert(node,diff.getChild(i)); // Recurse to nect level
     } else {
       // Other ops..
       XMLElementNode ce = (XMLElementNode) cmdcontent;
       if( ce.getQName().equals(DIFF_NS+"esc") || ce.getQName().equals(DIFF_NS+"insert") ) {
         if( diff.getChildCount() == 0)
             throw new ParseException("DIFFSYNTAX: insert/esc has no subtree " + ce.toString() );
-        patch( patch, diff.getChild(0) );
+        insert( patch, diff.getChild(0) );
       } else {
         // Copy operation
         BaseNode srcRoot = null;
@@ -57,12 +57,12 @@ public class Patch {
         } catch ( Exception e ) {
             throw new ParseException("DIFFSYNTAX: Invalid parameters in command " + ce.toString() );
         }
-        runCopy( patch, diff, srcRoot );
+        copy( patch, diff, srcRoot );
       } // Copyop
     }
   }
 
-  protected void runCopy( BranchNode patch, BranchNode diff, BaseNode srcRoot ) throws ParseException {
+  protected void copy( BranchNode patch, BranchNode diff, BaseNode srcRoot ) throws ParseException {
     // Gather the stopnodes for the copy
     Vector dstNodes = new Vector();
     Map stopNodes = new HashMap();
@@ -89,7 +89,7 @@ public class Patch {
     dfsCopy( patch, srcRoot , stopNodes );
     // Recurse for each diff child
     for( int i = 0; i < diff.getChildCount(); i++ ) {
-      patch( (BranchNode) stopNodes.get( dstNodes.elementAt(i) ), diff.getChild(i));
+      insert( (BranchNode) stopNodes.get( dstNodes.elementAt(i) ), diff.getChild(i));
     }
   }
 
