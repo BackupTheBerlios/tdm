@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.29 2001/06/15 13:54:16 ctl Exp $
+// $Id: Merge.java,v 1.30 2001/06/18 07:30:41 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -473,9 +473,6 @@ public class Merge {
   private static final int MOVE_I = 2;
   private static final int MOVE_F = 3;
   private static final int DELETE = 4;
-  private static final int INSERT = 5;
-  private static final int COPY = 6;
-  private static final int MOVE = 7;
 
   // Tells what happens to bn in ml
 
@@ -537,7 +534,7 @@ public class Merge {
         int ix = mlistA.matchInList(bn);
         if( op2==DELETE && isDeletiaModified(mlistA.getEntry(ix).getNode(),mlistA) )
           // CONFLICTCODE here
-          clog.addListWarning( ConflictLog.UPDATE, "Modifications in deleted subtree.",
+          clog.addListWarning( ConflictLog.DELETE, "Modifications in deleted subtree.",
           bn,mlistA.getEntry(ix).getNode(),null);
 
 //          System.out.println("CONFLICTW: Modifications in deleted subtree.");

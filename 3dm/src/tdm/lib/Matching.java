@@ -1,4 +1,4 @@
-// $Id: Matching.java,v 1.13 2001/06/15 13:54:16 ctl Exp $
+// $Id: Matching.java,v 1.14 2001/06/18 07:30:41 ctl Exp $
 
 import java.util.Vector;
 import java.util.Iterator;
@@ -69,7 +69,7 @@ public class Matching {
     best = getBestCandidate(base,branch,bestCandidates,bestCount);
     Vector stopNodes = new Vector();
     if( best != null )
-      dfsMatch( best.candidate, branch, 0, stopNodes, new MatchArea() );
+      dfsMatch( best.candidate, branch, 0, stopNodes, new MatchArea(branch) );
     else {
       // Unmatched
       for( int i=0;i<branch.getChildCount();i++)
@@ -240,16 +240,55 @@ public class Matching {
   private void removeSmallCopies( BranchNode root ) {
     BaseNode base = root.getBaseMatch();
     if( base != null && base.getLeft().getMatches().size() > 1 ) {
-      // Itreate over the matches, and discard any that too small
+      // Iterate over the matches, and discard any that too small
       Set deletia = new HashSet();
       for( Iterator i = base.getLeft().getMatches().iterator();i.hasNext();) {
         BranchNode copy = (BranchNode) i.next();
-        if( copy.getMatchArea().getInfoBytes() < COPY_THRESHOLD )
-          deletia.add(copy);
+        if( copy.getMatchArea().getInfoBytes() < COPY_THRESHOLD ) {
+            deletia.add(copy);
+        }
+      }
+      if( base.getLeft().getMatches().size() == deletia.size() ) {
+        // We're deleting all matches... check if some match is the "original" instance
+        // and if it's found, don't delete it!
+        int maxcopybytes = 0, mincopybytes = Integer.MAX_VALUE;
+        BranchNode origInstance = null;
+        for( Iterator i = base.getLeft().getMatches().iterator();i.hasNext();) {
+          BranchNode copy = (BranchNode) i.next();
+          int copybytes = copy.getMatchArea().getInfoBytes();
+          Node copyRoot = copy.getMatchArea().getRoot();
+          Node copyBase = ((BranchNode) copyRoot).getBaseMatch();
+          // Scan left
+          while(  (copyRoot =  copyRoot.getLeftSibling()) != null &&
+                  (copyBase =  copyBase.getLeftSibling()) != null &&
+                  ((BranchNode) copyRoot).getBaseMatch() == copyBase &&
+                  copybytes < COPY_THRESHOLD)
+            copybytes += ((BranchNode) copyRoot).getMatchArea().getInfoBytes();
+          // Scan right
+          copyRoot = copy.getMatchArea().getRoot();
+          copyBase = ((BranchNode) copyRoot).getBaseMatch();
+          while(
+                  (copyRoot = (BranchNode) copyRoot.getRightSibling()) != null &&
+                  (copyBase = (BaseNode) copyBase.getRightSibling()) != null &&
+                  ((BranchNode) copyRoot).getBaseMatch() == copyBase &&
+                  copybytes < COPY_THRESHOLD)
+            copybytes += copyRoot.getMatchArea().getInfoBytes();
+          if( copybytes > maxcopybytes ) {
+            origInstance = copy;
+            maxcopybytes = copybytes;
+          }
+          if( copybytes < mincopybytes )
+            mincopybytes = copybytes;
+        }
+        if( maxcopybytes > mincopybytes ) {
+          // Mark if there is one copy that is "better" (more copybytes)
+          deletia.remove(origInstance);
+          origInstance.getMatchArea().addInfoBytes(COPY_THRESHOLD+1); // Now this is marked as the orig inst.
+        }
       }
       if( !deletia.isEmpty() ) {
         for( Iterator i = deletia.iterator();i.hasNext();)
-          delMatching((BranchNode) i.next(),base);
+          delMatchArea(((BranchNode) i.next()).getMatchArea()); //delMatching((BranchNode) i.next(),base);
       }
     }
     for(int i=0;i<root.getChildCount();i++)
@@ -408,6 +447,20 @@ public class Matching {
     a.delBaseMatch();
     b.getLeft().delMatch(a);
   }
+
+  protected void delMatchArea(MatchArea m) {
+    delMatchArea(m.getRoot(),m);
+  }
+
+  private void delMatchArea(BranchNode n,MatchArea m) {
+    if( n.getMatchArea() == m ) {
+      n.setMatchArea(null);
+      delMatching(n,n.getBaseMatch());
+      for( int i=0;i<n.getChildCount();i++)
+        delMatchArea(n.getChild(i),m);
+    }
+  }
+
 
   class CandidateEntry {
     BaseNode candidate=null;
