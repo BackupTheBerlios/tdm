@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.8 2001/03/31 15:32:09 ctl Exp $
+//$Id: TreeDM.java,v 1.9 2001/03/31 20:54:42 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -135,7 +135,7 @@ public class TreeDM {
       mr1 = p.parse( "m1.xml" );
       mr2 = p.parse( "m2.xml" );
     } catch ( Exception e ) {
-      System.out.println("PARSE ERROR IN CASE when parsing merged files. Giving up." );
+      System.out.println("PARSE ERROR IN CASE when parsing merged files. Giving up." +e.getMessage() );
       //e.printStackTrace();
       return;
     }
@@ -170,10 +170,16 @@ public class TreeDM {
   }
 
   private boolean treesIdentical( ONode a, ONode b ) {
-    if( !a.contentEquals(b) )
-      return false;
-    if( a.getChildCount() != b.getChildCount() )
-      return false;
+    if( !a.contentEquals(b) ) {
+      System.out.println("IDENTITY Failed");
+      System.out.println(a.toString());
+      System.out.println(b.toString());
+     return false;
+    }
+    if( a.getChildCount() != b.getChildCount() ) {
+      System.out.println("IDENTITY failed: childcount failed");
+       return false;
+    }
     for( int i=0;i<a.getChildCount();i++)
       if( !treesIdentical( a.getChild(i), b.getChild(i) ) )
         return false;
@@ -183,7 +189,7 @@ public class TreeDM {
   // Run Best Matcher
   public void runBM( String[] args ) {
    ElementNode docA=null, docBase=null;
-   final String OTHER = "2";
+   final String OTHER = "1";
     if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
       System.exit(0);
@@ -471,13 +477,24 @@ public class TreeDM {
 
      final Integer HAS_CONTENT = new Integer(0);
 
-     public void characters (char ch[], int start, int length)
+     public void characters (char ch[], int startpos, int length)
      {
-        pw.println(">");
+        if(childcounter!=HAS_CONTENT)
+           pw.println(">");
         childcounter = HAS_CONTENT;
-        String chars = new String( ch, start, length ).trim();
+        String chars = new String( ch, startpos, length ).trim();
         if( chars.length() == 0 )
-          return;
+          return;/*
+        int start=0,next=-1;
+        do {
+          next=chars.indexOf("\n",start);
+          if( next==-1)
+            pw.println(chars.substring(start));
+          else {
+            pw.println(chars.substring(start,next));
+            start=next+1;
+          }
+        } while( next != -1 );*/
         pw.print(chars);
      }
 

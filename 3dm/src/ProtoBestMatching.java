@@ -1,4 +1,4 @@
-// $Id: ProtoBestMatching.java,v 1.9 2001/03/31 15:32:08 ctl Exp $
+// $Id: ProtoBestMatching.java,v 1.10 2001/03/31 20:54:42 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 //import TreeMatching;
@@ -74,11 +74,59 @@ public class ProtoBestMatching  {
   public void match( ONode base, ONode derived ) {
     /*AreaNode */atRoot = new AreaNode(derived);
     buildAreaTree( derived, atRoot, base );
-    resolveAmbiguities( atRoot, base, derived );
+//    resolveAmbiguities( atRoot, base, derived );
     nodeMap.clear(); // Free all mappings
     makeMap( atRoot );
-    matchSamePosUnmatched( derived, base.getChild(0));
+//    matchSamePosUnmatched( derived, base.getChild(0));
     //
+    setMatchTypes(base);
+  }
+
+  private void setMatchTypes( ONode base ) {
+//    System.out.println("SMT: " + base.toString());
+    getFirstMapping(base);
+    if( getNextMapping() != null ) {
+      // The node is copied, we must resolve main copies as well as child/structmatches
+      // 1st task: find main copy
+      ONode copy = getFirstMapping(base), master=null;
+      boolean search = true;
+      double clmin = 1e+99;
+      // First candidate is perfect clist && match, second best possible clist.
+      while( copy != null && search) {
+//        System.out.println("Loop1");
+        double clmatch = childListDist(copy,base);
+        if( matches(copy,base) && clmatch<1e-09 ) {
+          master = copy;
+          search = false; // Fund a suitable master
+        } else if( clmatch<clmin ) {
+          master=copy;
+          clmin = clmatch;
+        }
+        copy = getNextMapping();
+      }
+      // POSSIBLE ACTION here: if clist is baad, then remove the mapping altogether.
+      copy = getFirstMapping(base);
+      Set removed = new HashSet();
+      while( copy != null ) {
+//        System.out.println("Loop2");
+        if( copy != master ) {
+          boolean structMatch = childListDist(master,copy) < 1e-09;
+          boolean contMatch =  matches( master, copy );
+          if( !structMatch && !contMatch)
+            removed.add(copy);
+          else
+            copy.matchType = (contMatch ? BranchNode.MATCH_CONTENT : 0) +
+                            (structMatch ? BranchNode.MATCH_CHILDREN : 0);
+          System.out.println("MTYPE="+copy.matchType+" for "+copy.toString());
+        }
+        copy = getNextMapping();
+      }
+      for( Iterator i=removed.iterator();i.hasNext();)
+        delMatching(base,(ONode) i.next());
+
+    } // if copy
+    for(int i=0;i<base.getChildCount();i++)
+      setMatchTypes(base.getChild(i));
   }
 
   private void makeMap( AreaNode n ) {
@@ -287,8 +335,8 @@ public class ProtoBestMatching  {
     } else // Maybe we should give end matches some points, I dunno?
         mn.nums[0] = 1.0;
     // Right ...
-    if( src.parent == null ) {
-     System.out.println("IMPOSSIBLE: parent is null of " + src.toString() );
+    if( src.parent == null || dst.parent == null ) {
+//     System.out.println("IMPOSSIBLE: parent is null of " + src.toString() );
      mn.nums[0]=1.0; mn.nums[1]=1.0;mn.nums[2]=1.0;mn.nums[3]=1.0;
       return mn;
     }
@@ -298,7 +346,7 @@ public class ProtoBestMatching  {
     } else // Maybe we should give end matches some points, I dunno?
       mn.nums[1] = 1.0;
     // Top...
-    mn.nums[2] = 1.0; // (new MisCorrelation()).correlate(src.parent,dst.parent ).getValue();
+    mn.nums[2] = (new MisCorrelation()).correlate(src,dst ).getValue();
     // Children
     if( !useDstChild ) {
       mn.nums[3]=1.0;
@@ -349,20 +397,22 @@ public class ProtoBestMatching  {
     double bestCount = 0;
     findCandidates( candidates, dstTreeNode, baseDoc ); // candidates in baseDoc
     if( candidates.isEmpty() ) {
-//      System.out.println("!!!!: No exact candidate for " + dstTreeNode.toString());
       // No exact candidates, try fuzzy search
       double minmc = fuzzyFindCandidates( candidates, dstTreeNode, baseDoc, 1e+99 ); // candidates in baseDoc
 // FUZZY CAND SEARCH -- currently disabled...
-     if( minmc > 0.0 )
+//      System.out.println("!!!!: No exact candidate (minmc =" +minmc+")for " + dstTreeNode.toString());
+     if( minmc > 0.1 )
+// ||
+// (dstTreeNode instanceof ElementNode && ((ElementNode) dstTreeNode).name.equalsIgnoreCase("path") ) )
         candidates.clear(); // All candidates bad
       else {
         Set c2= candidates;
         candidates = new HashSet();
         for( Iterator i2=c2.iterator();i2.hasNext();) {
           Candidate c = (Candidate) i2.next();
-          if( c.mc < 2*minmc ) {
+          if( c.mc <= 2*minmc ) {
             candidates.add(c.node);
-            System.out.println("!!!!: Fuzzy candidate (mc="+ c.mc + "):");// + c.node.toString());
+            System.out.println("!!!!: Fuzzy candidate (mc="+ c.mc + "):" + c.node.toString());
           }
         }
       }
@@ -384,16 +434,31 @@ public class ProtoBestMatching  {
     // PROBLEM!!!! Matches may not be isomorphic, how should this be solved??
 //    System.out.println("bestCandidates are:" + bestCandidates.toString() );
     Vector stopNodes = null;
+    if( bestCandidates.size() > 1 ) {
+      // Ambiguities - we need to find out which one is the best...
+      System.out.println("Solving ambiguities for " + dstTreeNode.toString() );
+      MatchNumbers[] cands = new MatchNumbers[ bestCandidates.size() ];
+      for( int i=0;i<bestCandidates.size();i++) {
+        AreaNode senitel = new AreaNode(  dstTreeNode );
+        dfsExactMatch( dstTreeNode, (ONode) bestCandidates.elementAt(i),false,0,null,senitel.bottomNodes );
+        cands[i]=getMatchNumbers( senitel, senitel.getNode(), (ONode) bestCandidates.elementAt(i) , false);
+      }
+      // Sort so that best candidate is in ix 0
+      Arrays.sort(cands);
+      bestCandidates.clear();
+      bestCandidates.add(cands[0].node);
+    }
+
     if( bestCandidates.size() > 0 ) {
       stopNodes = new Vector();
       atNode.matchCount=bestCount; // Just for info purposes, not used
       for( int i=0;i<bestCandidates.size();i++)
         atNode.addCandidate((ONode) bestCandidates.elementAt(i));
       dfsExactMatch( dstTreeNode, (ONode) bestCandidates.elementAt(0), false, 0, stopNodes, atNode.bottomNodes );
-    // KLUDGE!!! Add mappings for unambigious areas at this point, they're needed when running
-    // resolveambiguities
-    if( bestCandidates.size() == 1)
-        dfsExactMatch( dstTreeNode, (ONode) bestCandidates.elementAt(0), true, 0, null, null );
+      // KLUDGE!!! Add mappings for unambigious areas at this point, they're needed when running
+      // resolveambiguities
+      if( bestCandidates.size() == 1)
+          dfsExactMatch( dstTreeNode, (ONode) bestCandidates.elementAt(0), true, 0, null, null );
 
     } else {
       // No matching node in baseDoc
@@ -443,7 +508,7 @@ public class ProtoBestMatching  {
 //              docB.getChild(i).toString());
           childrenMatch =  mc < 0.2;
           if(childrenMatch)
-            System.out.println("!!!!: Fuzzmatched (mc=" + mc + "): " + docA.getChild(i).toString() +"," +
+            System.out.println("DFS: Fuzzmatched (mc=" + mc + "): " + docA.getChild(i).toString() +"," +
               docB.getChild(i).toString());
         }
       }
@@ -490,16 +555,18 @@ public class ProtoBestMatching  {
  // Candidates in treeRoot tree
   protected double fuzzyFindCandidates( HashSet candidates, ONode key, ONode treeRoot, double mmc ) {
     // Threshold should probably depend on distance from previous match etc.
-    MisCorrelation mc = new MisCorrelation();
+    MatchNumbers mc = getMatchNumbers(null,key,treeRoot,true);
+/*    MisCorrelation mc = new MisCorrelation();
     mc.correlate(key,treeRoot);
     double cval =  mc.getValue();
-    if( cval < 1.0 ) { // 1.0 Magic correlation for candidates
+*/
+    if( mc.nums[0] < 0.1 ) { // 1.0 Magic correlation for candidates
       Candidate c = new Candidate();
-      c.mc=cval;
+      c.mc=mc.nums[0];
       c.node=treeRoot;
       candidates.add(c);
-      if( cval < mmc )
-        mmc = cval;
+      if( c.mc < mmc )
+        mmc = c.mc;
     }
 
     if( treeRoot instanceof ElementNode ) {
