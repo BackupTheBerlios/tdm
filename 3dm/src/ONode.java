@@ -1,4 +1,4 @@
-// $Id: ONode.java,v 1.1 2001/03/14 08:23:54 ctl Exp $
+// $Id: ONode.java,v 1.2 2001/03/27 12:30:23 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -16,6 +16,7 @@ public abstract class ONode implements Cloneable {
   public ONode parent=null;
   public ProtoBestMatching matchTag = null;
   public int childNo=-1; // Child number
+  public int matchType = 3; // Full match by default
   //  abstract public String toString();
 
   public Object clone() {

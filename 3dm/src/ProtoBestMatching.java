@@ -1,8 +1,9 @@
-// $Id: ProtoBestMatching.java,v 1.3 2001/03/26 14:44:44 ctl Exp $
+// $Id: ProtoBestMatching.java,v 1.4 2001/03/27 12:30:23 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 //import TreeMatching;
 import java.util.*;
+import java.io.*;
 
 // This class aims to implement the definition of a best matching
 // in a naive manner. It main purpose is prototyping a best matching
@@ -11,19 +12,58 @@ import java.util.*;
 public class ProtoBestMatching  {
 
   public String name;
-
+  ONode rootA=null, rootB=null;
   protected HashMap nodeMap = new HashMap();
 
   public AreaNode atRoot = null;
 
   public ProtoBestMatching( ONode docA, ONode docB, String aName ) {
 //    System.out.println("Finding corresponing nodes in the trees...");
+    rootA=docA;
+    rootB=docB;
     match( docA, docB );
     name = aName;
 
 /*    System.out.println("Building nodemap...");
     mapRoot = buildMapping( null, docB );
 */
+  }
+
+  public void matchFromFile( File f ) {
+    BufferedReader r = new BufferedReader( new InputStreamReader( new FileInputStream(f) ));
+    String line = "";
+    while( line = r.readLine() != null ) {
+      if(line.length() == 0)
+        continue;
+      if(line.startsWith("#") )
+        continue;
+      int wspos = line.indexOf(";"),wstart=0;
+      String branchPath = line.substring(wstart,wspos).trim();
+      wstart=wspos+1;
+      wspos = line.indexOf(";",wstart);
+      int mtype = Integer.parseInt(line.substring(wstart,wspos).trim());
+      wstart=wspos+1;
+      wspos = line.indexOf(";",wstart);
+      String basePath = line.substring(wstart,wspos).trim();
+      ONode base = getNode(docA,basePath);
+      ONode target = getNode(docB,branchPath);
+      ONode oldbase = getFirstMapping(target);
+      if( oldBase != null ) {
+        delMatching(oldbase,target);
+        delMatching(target,oldbase);
+      }
+      addMatching(base,target);
+      addMatching(target,base);
+      target.matchType = mtype;
+    }
+  }
+
+  private ONode getNode(ONode root, String path ) {
+    if( path.length() == 0 )
+      return root;
+    else {
+      return getNode( root.getChild(path.charAt(0)-'1'),path.substring(1) );
+    }
   }
 
   public void match( ONode base, ONode derived ) {
@@ -364,6 +404,22 @@ public class ProtoBestMatching  {
       return null;
     else
       return (ONode) nodeIter.next();
+  }
+
+
+  protected void delMatching( ONode a, ONode b ) {
+    if( !nodeMap.containsKey(a) )
+      return; // No mapping
+    else {
+      Object match = nodeMap.get(a);
+      if( match instanceof Set ) {
+        ((Set) match).remove(b);
+        if( ((Set) match).isEmpty() )
+          nodeMap.remove(a);
+      } else {
+          nodeMap.remove(a);
+      }
+    }
   }
 
 
