@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="iso-8859-1"?>
 <!-- Dad adds suggestion for Christmas party present -->
-<!-- $Id: L2.xml,v 1.1 2001/03/07 17:08:52 ctl Exp $ -->
+<!-- $Id: L2.xml,v 1.2 2001/06/15 12:58:55 ctl Exp $ -->
 <shoppinglist>
 	<item>
 		<name>Emmentaler Cheese</name>
@@ -21,7 +21,7 @@
 		<shop></shop>
 	</item>
 	<item>
-		<name>Kalvin & Hobbes Comic (for Kalle's Xmas party!)</name>
+		<name>Calvin &amp; Hobbes Comic (for Kalle's Xmas party!)</name>
 		<quantity>1</quantity>
 		<price></price>
 		<shop></shop>

@@ -1,0 +1,45 @@
+Result log for shopping list
+
+=1= 
+Result: OK (but breaks easily)
+
+Works with -c 32 and EDGE_BYTES = 4. This is unstable, however: by changing the
+limit we can get the newly inserted item to be a copy (i.e. the item, price 
+etc tags) or the removeSmallCopies procedure to remove the matching for the
+Emmentaler structure (which it thinks is copied). The problem is that the
+removeSmallC doesn't understand which is the "original" instance in the branch.
+Looking at the siblings should help finding the right copy.
+Incidentally, a high copy limit produces the correct result (but a warning
+about equal "Emmentaler" inserts) whereas a too low limit confuses the merge 
+algorithm.
+Argument order yields different ordering for (L3 L2 vs L2 L3) the Apple/Comic
+items (OK). 
+Yields one confl. warning due to sequencing inserts, OK.
+
+tko-dhcp-42:~/ubidoc/usecases/shopping> 3dm --merge L0.xml L3.xml L2.xml g4.xml
+3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.1 $
+Warning: 1 conflict warnings.
+tko-dhcp-42:~/ubidoc/usecases/shopping> cat conflict.log 
+<?xml version="1.0" encoding="UTF-8"?>
+<conflictlist>
+ <warnings>
+  <insert>
+Insertions/copies in both branches after the context nodes. Sequencing the insertions.
+   <node tree="merged" path="/0" />
+   <node tree="base" path="/0/2" />
+   <node tree="branch1" path="/0/2" />
+   <node tree="branch2" path="/0/2" />
+  </insert>
+ </warnings>
+</conflictlist>
+
+=2=
+Result: OK (breaks with wrong -c)
+
+Warnings about sequencing insertions are OK: After salmon L4 adds apples &
+comic, L1 adds oriange juice & toilet paper. By mokeying around with the
+-c parameter (0 vs 1000) one gets the wrong results.
+
+Bug in the original case: merge & computer updates were both in L5. Now split
+so L5 = after merge, L6 = after computer has re-evaluated some fields
+

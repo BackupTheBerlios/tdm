@@ -1,0 +1,9 @@
+#!/bin/sh
+# =1=
+# First sync task: Sync Mr V's changes (L2) and Liisas (L3) into the
+# centralized list (L0) output = L4
+# The calling order is L3 L2 to get the inserts in facit order
+#
+3dm --merge L0.xml L3.xml L2.xml g4.xml
+# check
+3dm --diff g4.xml L4.xml
