@@ -1,9 +1,11 @@
 <!-- Personalia for Maija Mellunmäki -->
-<!-- $Id: personalia.xml,v 1.1 2001/03/08 15:45:33 ctl Exp $ -->
-<name>Maija Mellunmäki</name>
-<telephone>+358-12-34567890</telephone><p>
-<street>Takakatu 12 B 34</street>
-<city>Peräseinäjoki</city>
-<zip>01234</zip> 
-<country>Finland</country>
-<ssn>260165-1234</ssn>
+<!-- $Id: personalia.xml,v 1.2 2001/06/18 10:28:54 ctl Exp $ -->
+<id-card>
+  <name>Maija Mellunmäki</name>
+  <telephone>+358-12-34567890</telephone>
+  <street>Takakatu 12 B 34</street>
+  <city>Peräseinäjoki</city>
+  <zip>01234</zip> 
+  <country>Finland</country>
+  <ssn>260165-1234</ssn>
+</id-card>
