@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.10 2004/03/08 12:16:20 ctl Exp $ D
+// $Id: Diff.java,v 1.11 2004/03/09 09:40:56 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -31,6 +31,7 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Iterator;
+import tdm.lib.Diff.*;
 
 /** Produces the diff between two naturally matched trees.
  *  Collapsing multiple copy-ops using the run attribute is not implemented in
@@ -39,7 +40,8 @@ import java.util.Iterator;
 
 public class Diff {
 
-  private DiffMatching m = null;
+  private static final int NO_DST_REQUIRED = Integer.MIN_VALUE;
+  private Matching m = null;
   private static final Attributes EMPTY_ATTS = new AttributesImpl();
   static final Set RESERVED;
 
@@ -55,7 +57,7 @@ public class Diff {
    *  Note that the matching contains pointers to the base and new trees.
    *  @param am Matching between trees to diff
    */
-  public Diff(DiffMatching am) {
+  public Diff(Matching am) {
     m=am;
   }
 
@@ -89,69 +91,10 @@ public class Diff {
         ch.endElement("", "", DIFF_NS + "insert");
       }
       // ENDBUGFIX
-
-      for (int ic = 0; ic < stopNode.getChildCount(); ic++) {
-        boolean lastStopNode = ic == stopNode.getChildCount() - 1;
-        BranchNode child = stopNode.getChild(ic);
-        if (child.hasBaseMatch()) {
-          Vector childStopNodes = new Vector();
-          m.getAreaStopNodes(childStopNodes, child);
-          int src = getDiffId(child.getBaseMatch());
-          if (childStopNodes.size() == 0 && !lastStopNode) {
-            if (s.isEmpty()) {
-              s.init(src, dst);
-              continue;
-            }
-            else if (s.appends(src, dst)) {
-              s.append();
-              continue;
-            }
-          }
-          // Did not append to sequence (or @ last stopnode) => emit sequence
-          if (!s.appends(src, dst)) {
-            // Current does not append to prev seq -> output prev seq + new
-            // in separate tags
-            if (!s.isEmpty()) {
-              openCopy(s.src, s.dst, s.run, ch);
-              closeCopy(ch);
-            }
-            if (childStopNodes.size() > 0 || lastStopNode) {
-              openCopy(src, dst, 1, ch);
-              copy(child.getBaseMatch(), child, ch, childStopNodes);
-              closeCopy(ch);
-              s.setEmpty(); // Reset sequence
-            }
-            else
-              s.init(src, dst);
-          }
-          else { // appends to open sequence (other reason for seq. break)
-            s.append();
-            openCopy(s.src, s.dst, s.run, ch);
-            copy(child.getBaseMatch(), child, ch, childStopNodes);
-            closeCopy(ch);
-            s.setEmpty(); // Reset sequence
-          }
-
-        } // endif has base match
-        else {
-          if (!s.isEmpty()) {
-            openCopy(s.src, s.dst, s.run, ch);
-            closeCopy(ch);
-            s.setEmpty();
-          }
-          // Insert tree...
-          AttributesImpl copyAtts = new AttributesImpl();
-          copyAtts.addAttribute("", "", "dst", "CDATA", String.valueOf(dst));
-          // SHORTINS = Concatenate several <ins> tags to a single one
-          if (ic == 0 || stopNode.getChild(ic - 1).hasBaseMatch()) // SHORTINS
-            ch.startElement("", "", DIFF_NS + "insert", copyAtts);
-          insert(child, ch);
-          if (lastStopNode || stopNode.getChild(ic + 1).hasBaseMatch()) // SHORTINS
-            ch.endElement("", "", DIFF_NS + "insert");
-        }
-      } // endfor children
+      emitChildList(ch, s, stopNode, dst, false);
     }
   }
+
 
   protected void insert(BranchNode branch, ContentHandler ch) throws
       SAXException {
@@ -162,6 +105,7 @@ public class Diff {
     }
     else {
       // Element node
+      Sequence s = new Sequence();
       XMLElementNode ce = (XMLElementNode) content;
       boolean escape = RESERVED.contains(ce.getQName());
       if (escape)
@@ -170,27 +114,82 @@ public class Diff {
                       ce.getAttributes());
       if (escape)
         ch.endElement("", "", DIFF_NS + "esc");
-      for (int i = 0; i < branch.getChildCount(); i++) {
-        BranchNode child = branch.getChild(i);
-        if (child.hasBaseMatch()) {
-          AttributesImpl copyAtts = new AttributesImpl();
-          copyAtts.addAttribute("", "", "src", "CDATA",
-                                String.valueOf(getDiffId(child.getBaseMatch())));
-          ch.startElement("", "", DIFF_NS + "copy", copyAtts);
-          Vector stopNodes = new Vector();
-          m.getAreaStopNodes(stopNodes, child);
-          copy(child.getBaseMatch(), child, ch, stopNodes);
-          ch.endElement("", "", DIFF_NS + "copy");
-        }
-        else
-          insert(child, ch);
-      }
+      emitChildList(ch, s, branch, NO_DST_REQUIRED , true);
       if (escape)
         ch.startElement("", "", DIFF_NS + "esc", EMPTY_ATTS);
       ch.endElement(ce.getNamespaceURI(), ce.getLocalName(), ce.getQName());
       if (escape)
         ch.endElement("", "", DIFF_NS + "esc");
     }
+  }
+
+
+  private void emitChildList(ContentHandler ch, Sequence s, BranchNode parent,
+                             int dst, boolean insMode ) throws SAXException {
+    for (int ic = 0; ic < parent.getChildCount(); ic++) {
+      boolean lastStopNode = ic == parent.getChildCount() - 1;
+      BranchNode child = parent.getChild(ic);
+      if (child.hasBaseMatch()) {
+        Vector childStopNodes = new Vector();
+        m.getAreaStopNodes(childStopNodes, child);
+        int src = getDiffId(child.getBaseMatch());
+        if (childStopNodes.size() == 0 && !lastStopNode) {
+          if (s.isEmpty()) {
+            s.init(src, dst);
+            continue;
+          }
+          else if (s.appends(src, dst)) {
+            s.append();
+            continue;
+          }
+        }
+        // Did not append to sequence (or @ last stopnode) => emit sequence
+        if (!s.appends(src, dst)) {
+          // Current does not append to prev seq -> output prev seq + new
+          // in separate tags
+          if (!s.isEmpty()) {
+            openCopy(s.src, s.dst, s.run, ch);
+            closeCopy(ch);
+          }
+          if (childStopNodes.size() > 0 || lastStopNode) {
+            openCopy(src, dst, 1, ch);
+            copy(child.getBaseMatch(), child, ch, childStopNodes);
+            closeCopy(ch);
+            s.setEmpty(); // Reset sequence
+          }
+          else
+            s.init(src, dst);
+        }
+        else { // appends to open sequence (other reason for seq. break)
+          s.append();
+          openCopy(s.src, s.dst, s.run, ch);
+          copy(child.getBaseMatch(), child, ch, childStopNodes);
+          closeCopy(ch);
+          s.setEmpty(); // Reset sequence
+        }
+
+      } // endif has base match
+      else {
+        if (!s.isEmpty()) {
+          openCopy(s.src, s.dst, s.run, ch);
+          closeCopy(ch);
+          s.setEmpty();
+        }
+        if( !insMode ) {
+          // Insert tree...
+          AttributesImpl copyAtts = new AttributesImpl();
+          copyAtts.addAttribute("", "", "dst", "CDATA", String.valueOf(dst));
+          // SHORTINS = Concatenate several <ins> tags to a single one
+          if (ic == 0 || parent.getChild(ic - 1).hasBaseMatch()) // SHORTINS
+            ch.startElement("", "", DIFF_NS + "insert", copyAtts);
+        }
+        insert(child, ch);
+        if( !insMode ) {
+          if (lastStopNode || parent.getChild(ic + 1).hasBaseMatch()) // SHORTINS
+            ch.endElement("", "", DIFF_NS + "insert");
+        }
+      }
+    } // endfor children
   }
 
   protected Map nodeNumbers = new HashMap();
@@ -219,7 +218,8 @@ public class Diff {
       throws SAXException {
     AttributesImpl copyAtts = new AttributesImpl();
     copyAtts.addAttribute("", "", "src", "CDATA", String.valueOf(src));
-    copyAtts.addAttribute("", "", "dst", "CDATA", String.valueOf(dst));
+    if( dst != NO_DST_REQUIRED )
+      copyAtts.addAttribute("", "", "dst", "CDATA", String.valueOf(dst));
     if( run > 1)
       copyAtts.addAttribute("", "", "run", "CDATA", String.valueOf(run));
     ch.startElement("", "", DIFF_NS + "copy", copyAtts);
