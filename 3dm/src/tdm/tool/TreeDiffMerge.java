@@ -1,4 +1,4 @@
-// $Id: TreeDiffMerge.java,v 1.8 2003/01/09 14:15:26 ctl Exp $ D
+// $Id: TreeDiffMerge.java,v 1.9 2003/01/30 09:28:02 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -38,7 +38,7 @@ public class TreeDiffMerge {
 
   public static void main(String[] args) throws java.io.IOException {
     System.err.println(
-    "3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.8 $" );
+    "3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.9 $" );
     // Get command line options
     int firstFileIx = parseOpts( args );
     if( op == MERGE && (args.length - firstFileIx) == 3 )
@@ -79,15 +79,19 @@ public class TreeDiffMerge {
     BaseNode docBase=null;
     BranchNode docA=null,docB=null;
     String currentFile = "";
-    Matching m = getMatcherInstance( HeuristicMatching.class );
+    Matching mA = getMatcherInstance( leftMatchFromFile ?
+        XMLInlinedMatching.class : HeuristicMatching.class );
+    Matching mB = getMatcherInstance( rightMatchFromFile ?
+        XMLInlinedMatching.class : HeuristicMatching.class );
+
     try {
       XMLParser p = new XMLParser();
       currentFile = args[ix+0];
-      docBase = (BaseNode) p.parse( currentFile, m.getBaseNodeFactory());
+      docBase = (BaseNode) p.parse( currentFile, mA.getBaseNodeFactory());
       currentFile = args[ix+1];
-      docA = (BranchNode) p.parse( currentFile, m.getBranchNodeFactory());
+      docA = (BranchNode) p.parse( currentFile, mA.getBranchNodeFactory());
       currentFile = args[ix+2];
-      docB = (BranchNode) p.parse( currentFile, m.getBranchNodeFactory());
+      docB = (BranchNode) p.parse( currentFile, mB.getBranchNodeFactory());
     } catch ( Exception e ) {
       System.err.println("XML Parse error in " + currentFile +
                             ". Detailed exception info is:" );
@@ -96,7 +100,8 @@ public class TreeDiffMerge {
       return;
     }
     try {
-      Merge merge = new Merge( new TriMatching( docA, docBase, docB, m.getClass() ) );
+      Merge merge = new Merge( new TriMatching( docA, docBase, docB,
+                                                mA.getClass(), mB.getClass() ) );
 //$CUT
 /*      PrintWriter pw = new PrintWriter( new FileOutputStream("m.log"));
       dumpMatch(docA,pw);
@@ -105,6 +110,15 @@ public class TreeDiffMerge {
       pw.close();
 */
 //$CUT
+      if( matchFileName != null ) {
+
+        FileOutputStream outm = new FileOutputStream("left-"+matchFileName);
+        XMLInlinedMatching.dumpXMLWithMatchings(docA.getChild(0), new XMLPrinter(outm));
+        outm.close();
+        outm = new FileOutputStream("right-"+matchFileName);
+        XMLInlinedMatching.dumpXMLWithMatchings(docB.getChild(0), new XMLPrinter(outm));
+        outm.close();
+      }
       merge.merge( new XMLPrinter( out  ) );
       merge.getConflictLog().writeConflicts(new XMLPrinter(
          new FileOutputStream( conflictLogName )));
@@ -142,6 +156,12 @@ public class TreeDiffMerge {
     }
     try {
       m.buildMatching(docBase,docA);
+      if( matchFileName != null ) {
+        FileOutputStream outm = new FileOutputStream(matchFileName);
+        XMLInlinedMatching.dumpXMLWithMatchings(docA.getChild(0),
+                                                new XMLPrinter(outm));
+        outm.close();
+      }
       Diff diff = new Diff( m );
       diff.diff(new XMLPrinter( out ));
     } catch ( Exception e ) {
@@ -193,6 +213,10 @@ public class TreeDiffMerge {
   protected static boolean editLog = false;
   protected static String editLogName = EDITLOG;
   protected static String conflictLogName = CONFLICTLOG;
+  protected static String matchFileName = null;
+  protected static boolean leftMatchFromFile = false;
+  protected static boolean rightMatchFromFile = false;
+
   protected static int op = -1;
   public static String CUSTOM_MATCHER = null;
 
@@ -204,7 +228,12 @@ public class TreeDiffMerge {
       new LongOpt("merge",LongOpt.NO_ARGUMENT,null,'m'),
       new LongOpt("diff",LongOpt.NO_ARGUMENT,null,'d'),
       new LongOpt("patch",LongOpt.NO_ARGUMENT,null,'p'),
-      new LongOpt("Xmatcher",LongOpt.REQUIRED_ARGUMENT,null,'\u0001')
+      new LongOpt("Xmatcher",LongOpt.REQUIRED_ARGUMENT,null,'\u0001'),
+      new LongOpt("Xdumpmatching",LongOpt.OPTIONAL_ARGUMENT,null,'\u0002'),
+      new LongOpt("Xleftmatchinginfile",LongOpt.NO_ARGUMENT,null,'\u0003'),
+      new LongOpt("Xrightmatchinginfile",LongOpt.NO_ARGUMENT,null,'\u0004'),
+      new LongOpt("Xmatchinginfile",LongOpt.NO_ARGUMENT,null,'\u0005'),
+
     };
     Getopt g = new Getopt("3DM", args, "e::c:mdp", lopts);
     int c;
@@ -232,6 +261,19 @@ public class TreeDiffMerge {
           case '\u0001':
             CUSTOM_MATCHER = getStringArg(g,null);
           break;
+          case '\u0002': // Dump matchings
+            matchFileName = getStringArg(g,"match.xml");
+            break;
+          case '\u0003': // Load left matchings from file
+            leftMatchFromFile = true;
+            break;
+          case '\u0004': // Load right matchings from file
+            rightMatchFromFile = true;
+            break;
+          case '\u0005': // Load right matchings from file
+            leftMatchFromFile = true;
+            rightMatchFromFile = true;
+            break;
 
       }
     }
