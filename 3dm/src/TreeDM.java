@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.9 2001/03/31 20:54:42 ctl Exp $
+//$Id: TreeDM.java,v 1.10 2001/03/31 22:26:11 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -29,7 +29,7 @@ public class TreeDM {
   }
 
   public static void main(String[] args) throws Exception {
-    (new TreeDM()).runBM( args );
+    (new TreeDM()).runHarness( args );
   }
 
   public void runHarness( String[] args ) {
@@ -171,13 +171,13 @@ public class TreeDM {
 
   private boolean treesIdentical( ONode a, ONode b ) {
     if( !a.contentEquals(b) ) {
-      System.out.println("IDENTITY Failed");
-      System.out.println(a.toString());
-      System.out.println(b.toString());
+//      System.out.println("IDENTITY Failed");
+//      System.out.println(a.toString());
+//      System.out.println(b.toString());
      return false;
     }
     if( a.getChildCount() != b.getChildCount() ) {
-      System.out.println("IDENTITY failed: childcount failed");
+//      System.out.println("IDENTITY failed: childcount failed");
        return false;
     }
     for( int i=0;i<a.getChildCount();i++)
@@ -189,7 +189,7 @@ public class TreeDM {
   // Run Best Matcher
   public void runBM( String[] args ) {
    ElementNode docA=null, docBase=null;
-   final String OTHER = "1";
+   final String OTHER = "2";
     if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
       System.exit(0);

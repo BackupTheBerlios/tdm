@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.10 2001/03/28 12:15:49 ctl Exp $
+// $Id: Merge.java,v 1.11 2001/03/31 22:26:11 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -44,8 +44,9 @@ public class Merge {
 */
     if( mlistA != null && mlistB != null ) {
       mlistA = mergeLists( mlistA, mlistB ); // Merge lists
-      //System.out.println("Merged list:");
-      //mlistA.print();
+/*      System.out.println("Merged list:");
+      mlistA.print();
+*/
     } else if( mlistA == null ) {
       mlistA = mlistB;
       mlistB = null; // safety precaution
@@ -69,7 +70,7 @@ public class Merge {
         ch.startElement(mergedElement.getNamespaceURI(),mergedElement.getLocalName(),mergedElement.getQName(),mergedElement.getAttributes());
         // Figure out partners for recurse
         BranchNode ca = null, cb = null;
-        if( me instanceof MergeEntry  ) { // && mlistB != null: Earlier this cond, but it's not true- insert childs can have matches
+        if( me instanceof MergeEntry && mlistB != null){ //: Earlier this cond, but it's not true- insert childs can have matches
                                           // besides, all insert lists should be hangons only
           // The node was merged, MUST have a partner in the list
           MergeEntry me2 = (MergeEntry) me;

@@ -1,4 +1,4 @@
-// $Id: ProtoBestMatching.java,v 1.10 2001/03/31 20:54:42 ctl Exp $
+// $Id: ProtoBestMatching.java,v 1.11 2001/03/31 22:26:11 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 //import TreeMatching;
@@ -30,6 +30,7 @@ public class ProtoBestMatching  {
   }
 
   public void matchFromFile( File f ) {
+    if(1==1) return ; // TEMP disabled
     try{
       BufferedReader r = new BufferedReader( new InputStreamReader( new FileInputStream(f) ));
       String line = "";
@@ -77,7 +78,7 @@ public class ProtoBestMatching  {
 //    resolveAmbiguities( atRoot, base, derived );
     nodeMap.clear(); // Free all mappings
     makeMap( atRoot );
-//    matchSamePosUnmatched( derived, base.getChild(0));
+    matchSamePosUnmatched( derived, base.getChild(0));
     //
     setMatchTypes(base);
   }
@@ -121,8 +122,11 @@ public class ProtoBestMatching  {
         }
         copy = getNextMapping();
       }
-      for( Iterator i=removed.iterator();i.hasNext();)
-        delMatching(base,(ONode) i.next());
+      for( Iterator i=removed.iterator();i.hasNext();) {
+        ONode n = (ONode) i.next();
+       delMatching(base,n );
+       delMatching(n,base );
+      }
 
     } // if copy
     for(int i=0;i<base.getChildCount();i++)
@@ -583,36 +587,44 @@ public class ProtoBestMatching  {
   // A very simple heuristic - if there exists a pair of unmatched nodes with the
   // same address, they're matched
   public void matchSamePosUnmatched( ONode a, ONode rootB) {
-    if( getFirstMapping(null,a) == null ) {
-      // Unmapped...
-      System.out.println("Umapped="+ a.toString());
-      /*
-      AreaNode senitel = new AreaNode(a);
-      if( a instanceof ElementNode ) {
-        senitel.bottomNodes.addAll( new AreaBottomNode( a,  )
-      }*/
-      MatchNumbers m = new MatchNumbers();
-      m.nums[0]=1.0;  m.nums[1]=1.0;m.nums[2]=1.0;m.nums[3]=1.0;
-      m=getBestMatch(a,rootB,m);
-      if( m.nums[0] < 0.2 ) { // Threshold val when insert = match
-        System.out.println("Fuzzed with :"+ m.node.toString());
-        addMatching( a, m.node );
-        addMatching( m.node, a );
+    ONode baseparent =getFirstMapping(a);
+    if( baseparent != null && baseparent.getChildCount()>0 ) {
+      // Scan for unmapped nodes
+      for( int i=0;i<a.getChildCount();i++) {
+        ONode n = a.getChild(i);
+        ONode leftc=null,rightc=null;
+        if( getFirstMapping(n)!= null)
+          continue; // Mapped, all is well
+        if( i == 0 && getFirstMapping(baseparent.getChild(0)) == null )
+            leftc=baseparent.getChild(0);
+        else if( i>0) {
+          ONode m1 = getFirstMapping(a.getChild(i-1));
+          if( m1 != null && m1.parent == baseparent &&
+            baseparent.getChildCount() > m1.childNo+1 &&
+            getFirstMapping(baseparent.getChild(m1.childNo+1)) == null)
+            leftc = baseparent.getChild(m1.childNo+1);
+        }
+        if( i==a.getChildCount()-1 &&
+           getFirstMapping(baseparent.getChild(baseparent.getChildCount()-1))==null)
+          rightc=baseparent.getChild(baseparent.getChildCount()-1);
+        else if (i<a.getChildCount()-1) {
+          ONode m1 = getFirstMapping(a.getChild(i+1));
+          if( m1 != null && m1.parent == baseparent &&
+            m1.childNo > 0 &&
+            getFirstMapping(baseparent.getChild(m1.childNo-1)) == null)
+            rightc = baseparent.getChild(m1.childNo-1);
+        }
+        if( leftc != null ) {
+          addMatching(n,leftc);
+          addMatching(leftc,n);
+        } else if( rightc != null ) {
+          addMatching(n,rightc);
+          addMatching(rightc,n);
+        }
+
       }
-/*
-      Vector p = TreePath.buildNodePath(a);
-      ONode b = rootB;
-      try {
-        for(int i=1;i<p.size();i++)
-          b = (ONode) ((ElementNode) b).children.elementAt( ((ONode) p.elementAt(i)).childNo );
-      } catch ( Exception e ) {
-        b = null;
-      }
-      if( b!=null && getFirstMapping(null,b) == null ) {
-         addMatching( a,b );
-         addMatching( b,a );
-      }
-  */
+
+
     }
     if( a instanceof ElementNode ) {
       // process children
@@ -826,12 +838,13 @@ public class ProtoBestMatching  {
     if( as.length()==0)
       return 1.0;
     else if( as.length()==1)
-      return bs.indexOf(as) == -1 ? 1.0 : 0.0;
-    for( int i=0;i<as.length()-1;i++) {
+      matches = bs.indexOf(as) == -1 ? 0 : 1;
+    else for( int i=0;i<as.length()-1;i++) {
       if( bs.indexOf(as.substring(0,i+2)) != -1 )
         matches++;
     }
-    return 1.0 - ((double) matches)/((double) as.length()-1);
+    return 1.0 - ((double) matches)/((double) Math.max(as.length()-1,bs.length()-
+      (as.length()==1 ? -1 : 0)));
   }
 
 }
