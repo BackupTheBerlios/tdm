@@ -1,4 +1,4 @@
-// $Id: Node.java,v 1.10 2001/09/26 19:36:45 ctl Exp $ D
+// $Id: Node.java,v 1.11 2002/10/25 11:36:47 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -44,6 +44,37 @@ public abstract class Node {
     n.parent=this;
     n.childPos=children.size();
     children.add(n);
+  }
+
+  public void addChild( int ix, Node n) {
+    //System.err.println("add @ ix "+ix+" count ="+children.size());
+    n.parent=this;
+    children.add(ix,n);
+    n.childPos=ix;
+    // Update childPoses
+    for( int i=ix+1;i<getChildCount();i++)
+      getChildAsNode(i).childPos=i;
+/*    System.err.print("Chilposes after add is:");
+    for(int i=0;i<getChildCount();i++)
+      System.err.print(" "+getChildAsNode(i).getChildPos());
+    System.err.println();*/
+  }
+
+  public void removeChildren( ) {
+    children.clear();
+  }
+
+  public void removeChild( int ix) {
+    children.remove(ix);
+    // Update childPoses
+    for( int i=ix;i<getChildCount();i++)
+      getChildAsNode(i).childPos=i;
+      /*
+    System.err.print("Chilposes after del is:");
+    for(int i=0;i<getChildCount();i++)
+      System.err.print(" "+getChildAsNode(i).getChildPos());
+    System.err.println();*/
+
   }
 
   public Node getParentAsNode() {

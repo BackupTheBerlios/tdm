@@ -1,4 +1,4 @@
-// $Id: MatchedNodes.java,v 1.7 2001/09/26 19:36:45 ctl Exp $ D
+// $Id: MatchedNodes.java,v 1.8 2002/10/25 11:36:47 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -44,6 +44,10 @@ public class MatchedNodes {
 
   public void delMatch(BranchNode n) {
     matches.remove(n);
+  }
+
+  public void clearMatches() {
+    matches.clear();
   }
 
   public Set getMatches() {
