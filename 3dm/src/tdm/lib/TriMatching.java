@@ -1,4 +1,4 @@
-// $Id: TriMatching.java,v 1.15 2003/01/09 14:15:26 ctl Exp $ D
+// $Id: TriMatching.java,v 1.16 2003/01/30 09:24:59 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -28,21 +28,28 @@ public class TriMatching  {
   private BaseNode baseRoot = null;
 
   public TriMatching( BranchNode left, BaseNode base, BranchNode right) {
-    this(left,base,right,HeuristicMatching.class);
+    this(left,base,right,HeuristicMatching.class,HeuristicMatching.class);
   }
   /** Create matching */
-  public TriMatching( BranchNode left, BaseNode base, BranchNode right, Class matchType  ) {
+  public TriMatching( BranchNode left, BaseNode base, BranchNode right,
+                      Class leftMatchType, Class rightMatchType  ) {
     Matching m = null;
     try {
-      m = (Matching) matchType.newInstance();
+      m = (Matching) rightMatchType.newInstance();
     } catch (Exception e) {
-      throw new RuntimeException("Fatal Error instantiating matching class "+matchType.getName());
+      throw new RuntimeException("Fatal Error instantiating matching class "+rightMatchType.getName());
     }
     m.buildMatching( base, right );
     leftRoot =left;
     rightRoot = right;
     baseRoot = base;
     swapLeftRight( base );
+    try {
+      m = (Matching) leftMatchType.newInstance();
+    } catch (Exception e) {
+      throw new RuntimeException("Fatal Error instantiating matching class "+leftMatchType.getName());
+    }
+
     m.buildMatching( base, left );
     setPartners( left, false );
     setPartners( right, true );
