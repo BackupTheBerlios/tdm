@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.13 2001/04/02 07:37:54 ctl Exp $
+// $Id: Merge.java,v 1.14 2001/04/18 09:30:05 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -32,6 +32,12 @@ public class Merge {
       throw new RuntimeException("mergeNode: match type should be match children, otherwise the node should be null!");
     MergeList mlistA = a != null ? makeMergeList( a ) : null;
     MergeList mlistB = b != null ? makeMergeList( b ) : null;
+
+//    System.out.println("A = " + a ==null ? "-" : a.getContent().toString());
+//    System.out.println("B = " + b ==null ? "-" : b.getContent().toString());
+//    System.out.println("--------------------------");
+
+
 /*
   if( mlistA.getEntryCount() > 30 )
       debug=1;
@@ -173,6 +179,10 @@ public class Merge {
           } else {
             ca = me.getNode();
             cb = me.getNode().getFirstPartner( BranchNode.MATCH_CHILDREN );
+            if( cb== null)
+              // Conflict processing can maybe mess this up by not deleting me
+              throw new RuntimeException("No struct partner, but it MUST exist here. Otherwise me would"+
+                                         "have been deleted whe merging the lists");
           }
         }
 
@@ -433,7 +443,7 @@ public class Merge {
       BaseNode bn = baseParent.getChild(i);
       int op1 = getOperation( bn, mlistA ),
           op2 = getOperation( bn, mlistB );
-      // Swap ops, so that op1 is always the smaller (to simplyfy the if clauses)
+      // Swap ops, so that op1 is always the smaller (to simplify the if clauses)
       if( op1 > op2 ) {
         int t=op1; op1=op2; op2=t;
         MergeList tl = mlistA; mlistA = mlistB; mlistB = tl;
