@@ -1,7 +1,6 @@
-// $Id: ConflictLog.java,v 1.3 2001/06/07 08:35:48 ctl Exp $
+// $Id: ConflictLog.java,v 1.4 2001/06/08 08:40:37 ctl Exp $
 
 import java.util.List;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Iterator;
 import org.xml.sax.ContentHandler;
@@ -11,21 +10,17 @@ import org.xml.sax.SAXException;
 
 public class ConflictLog {
 
-  static final char PATHSEP='/';
-
   static final int UPDATE = 1;
   static final int DELETE = 2;
   static final int INSERT = 3;
   static final int MOVE = 4;
 
   final String[] TYPETAGS = {null,"update","delete","insert","move"};
-  private LinkedList path = null;
-  private int childPos = -1;
   private LinkedList conflicts = new LinkedList();
   private LinkedList warnings = new LinkedList();
-
-  public ConflictLog() {
-    resetContext();
+  private PathTracker pt = null;
+  public ConflictLog(PathTracker apt) {
+    pt=apt;
   }
 
   private class ConflictEntry {
@@ -70,9 +65,9 @@ public class ConflictLog {
       ce.b2 = ba;
     }
     if( list ) {
-      ce.mergePath=getPathString(path);
+      ce.mergePath=pt.getPathString();
     } else
-      ce.mergePath=getPathString(path)+PATHSEP+childPos;
+      ce.mergePath=pt.getFullPathString();
     if( warning )
       warnings.addLast(ce);
     else
@@ -116,66 +111,25 @@ public class ConflictLog {
     if( ce.b!= null ) {
       atts = new AttributesImpl();
       atts.addAttribute("","","tree","CDATA","base");
-      atts.addAttribute("","","path","CDATA",getPathString(makePath(ce.b)));
+      atts.addAttribute("","","path","CDATA",PathTracker.getPathString(ce.b));
       ch.startElement("","","node",atts);
       ch.endElement("","","node");
     }
     if( ce.b1!= null ) {
       atts = new AttributesImpl();
       atts.addAttribute("","","tree","CDATA","branch1");
-      atts.addAttribute("","","path","CDATA",getPathString(makePath(ce.b1)));
+      atts.addAttribute("","","path","CDATA",PathTracker.getPathString(ce.b1));
       ch.startElement("","","node",atts);
       ch.endElement("","","node");
     }
     if( ce.b2!= null ) {
       atts = new AttributesImpl();
       atts.addAttribute("","","tree","CDATA","branch2");
-      atts.addAttribute("","","path","CDATA",getPathString(makePath(ce.b2)));
+      atts.addAttribute("","","path","CDATA",PathTracker.getPathString(ce.b2));
       ch.startElement("","","node",atts);
       ch.endElement("","","node");
     }
     ch.endElement("","",TYPETAGS[ce.type]);
   }
-
-  private String getPathString( LinkedList path ) {
-    StringBuffer p = new StringBuffer();
-    Iterator i=path.iterator(); // Skip artificial root node
-    i.next();
-    for(;i.hasNext();) {
-      p.append(PATHSEP);
-      p.append(((Integer) i.next()).toString());
-    }
-    return p.toString();
-  }
-
-  private LinkedList makePath( Node n ) {
-    LinkedList path = new LinkedList();
-    do {
-      path.addLast(new Integer(n.getChildPos()));
-    } while( (n = n.getParentAsNode()) != null);
-//    path.removeLast(); // We don't want the artificial root node in the path
-    Collections.reverse(path);
-    return path;
-  }
-
-  public void resetContext() {
-    path = new LinkedList();
-    childPos = 0;
-  }
-
-  public void nextChild() {
-    childPos++;
-  }
-
-  public void enterSubtree() {
-    path.addLast(new Integer(childPos));
-    childPos = 0;
-  }
-
-  public void exitSubtree() {
-    Integer oldpos = (Integer) path.removeLast();
-    childPos = oldpos.intValue();
-  }
-
 
 }

@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.25 2001/06/07 09:44:09 ctl Exp $
+// $Id: Merge.java,v 1.26 2001/06/08 08:40:38 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -13,7 +13,9 @@ import java.util.NoSuchElementException;
 public class Merge {
 
   TriMatching m = null;
-  ConflictLog clog = new ConflictLog();
+  PathTracker pt = new PathTracker();
+  ConflictLog clog = new ConflictLog(pt);
+  EditLog elog = new EditLog(pt);
 
   public Merge(TriMatching am) {
     m = am;
@@ -24,6 +26,7 @@ public class Merge {
   }
 
   public void merge( ContentHandler ch ) throws SAXException {
+    pt.resetContext();
     ch.startDocument();
     mergeNode( m.getLeftRoot(), m.getRightRoot(), ch );
     ch.endDocument();
@@ -38,7 +41,7 @@ public class Merge {
     MergeList mlistA = a != null ? makeMergeList( a ) : null;
     MergeList mlistB = b != null ? makeMergeList( b ) : null;
     MergePairList merged = null;
-    clog.enterSubtree();
+    pt.enterSubtree();
 //    System.out.println("A = " + a ==null ? "-" : a.getContent().toString());
 //    System.out.println("B = " + b ==null ? "-" : b.getContent().toString());
 //    System.out.println("--------------------------");
@@ -83,9 +86,9 @@ public class Merge {
         mergeNode(recursionPartners.getFirstNode(),recursionPartners.getSecondNode(),ch);
         ch.endElement(mergedElement.getNamespaceURI(),mergedElement.getLocalName(),mergedElement.getQName());
       }
-      clog.nextChild();
+      pt.nextChild();
     }
-    clog.exitSubtree();
+    pt.exitSubtree();
   }
 
   private XMLNode cmerge( MergePair mp ) {
@@ -148,12 +151,13 @@ public class Merge {
     boolean aUpdated = !matches( a, a.getBaseMatch() ),
             bUpdated = !matches( b, b.getBaseMatch() );
     if( aUpdated && bUpdated ) {
-        System.out.println(a.isLeftTree() + ": " + a.getContent().toString() );
-        System.out.println(b.isLeftTree() + ": " + b.getContent().toString() );
+//        System.out.println(a.isLeftTree() + ": " + a.getContent().toString() );
+//        System.out.println(b.isLeftTree() + ": " + b.getContent().toString() );
 
       if( matches( a, b ) ) {
         clog.addNodeWarning(ConflictLog.UPDATE,"Node updated in both branches, but updates are equal",
           a.getBaseMatch(),a,b);
+        logUpdateOperation(a);
         return a.getContent();
       } else {
 
@@ -167,12 +171,22 @@ public class Merge {
         System.out.println(a.getContent().toString());
         System.out.println(b.getContent().toString());
 */
-        return a.isLeftTree() ? a.getContent() : b.getContent();
+        if( a.isLeftTree() ) {
+          logUpdateOperation(a);
+          return a.getContent();
+        } else {
+          logUpdateOperation(b);
+          return b.getContent();
+        }
       }
-    } else if ( bUpdated )
+    } else if ( bUpdated ) {
+      logUpdateOperation(b);
       return b.getContent();
-    else
-      return a.getContent(); // A modified, or none modified, a is ok in both cases
+    } else if (aUpdated ) {
+      logUpdateOperation(a);
+      return a.getContent();
+    } else
+      return a.getContent(); // none modified, a or b is ok
   }
 
   private MergeList makeMergeList( BranchNode parent ) {
@@ -286,15 +300,19 @@ public class Merge {
   }
 
   private MergePairList mergeListToPairList( MergeList mlistA, MergeList mlistB ) {
+    // NOTE: We want to log all children of a non-structurally matched node as copy/updates,
+    // That's why logHangonStructOps() is used throughout the function
     MergePairList merged = new MergePairList();
     for( int i=0;i<mlistA.getEntryCount()-1;i++) { // -1 due to end symbol
       MergeEntry me = mlistA.getEntry(i);
       if( i > 0) { // Don't append __START__
         merged.append(me.getNode(),me.getNode().getFirstPartner(BranchNode.MATCH_FULL));
+        logHangonStructOps(me.getNode(),merged.getPairCount()-1);
       }
       for( int ih=0;ih<me.getHangonCount();ih++) {
         BranchNode hangon=me.getHangon(ih).getNode();
         merged.append(hangon,hangon.getFirstPartner(BranchNode.MATCH_FULL));
+        logHangonStructOps(hangon,merged.getPairCount()-1);
       }
       if( mlistB != null ) {
         MergeEntry pair = mlistB.getEntry(mlistB.findPartner(me));
@@ -302,14 +320,15 @@ public class Merge {
           for(int ih=0;i<pair.getHangonCount();ih++) {
             BranchNode hangon = pair.getHangon(ih).getNode();
             merged.append(hangon,hangon.getFirstPartner(BranchNode.MATCH_FULL));
+            logHangonStructOps(hangon,merged.getPairCount()-1);
           }
         }
       }
     }
     return merged;
   }
-/*
-  protected int logOperation(BranchNode a, MergeEntry ma, BranchNode b, MergeEntry mb, int childPos) {
+
+/*  protected int logOperation(BranchNode a, MergeEntry ma, BranchNode b, MergeEntry mb, int childPos) {
     int opa = a != null ? getStructOperation(a,ma) : -1;
     int opb = b != null ? getStructOperation(b,mb) : -1;
     if( opa == INSERT )
@@ -326,21 +345,49 @@ public class Merge {
     else if( opb != INSERT && !matches( b, b.getBaseMatch() ) )
       op_update( b , childPos );
   }
-*/
-  // m = null means hangon
+
+  // m = null means the node is a hangon
   protected int getStructOperation( BranchNode n, MergeEntry m ) {
     if( !n.hasBaseMatch() )
       return INSERT;
-    if( m == null )
-      return COPY; // hangon with base match = copy
-    else if( m.moved )
+    if( m == null ) {
+      if( n.isLeftTree() && n.getBaseMatch().getLeft().getMatchCount() > 1 )
+        return COPY; // hangon with base match = copy
+      else if (!n.isLeftTree() && n.getBaseMatch().getRight().getMatchCount() > 1 )
+        return COPY;
+      return MOVE;
+    } else if( m.moved )
       return MOVE;
     return NOP;
+  }
+
+*/
+
+  protected void logHangonStructOps( BranchNode n, int childPos ) {
+    if( !n.hasBaseMatch() )
+      elog.insert(n,childPos);
+    else if( (n.isLeftTree() && n.getBaseMatch().getLeft().getMatchCount() > 1 ) ||
+            (!n.isLeftTree() && n.getBaseMatch().getRight().getMatchCount() > 1 ))
+      elog.copy(n.getBaseMatch(),childPos); // hangon with base match = copy
+    else
+      elog.move(n.getBaseMatch(),childPos);
+  }
+
+  protected void logEntryStructOps( MergeEntry m1, MergeEntry m2, int childPos ) {
+    if( m1.moved )
+      elog.move(m1.getNode().getBaseMatch(),childPos);
+    else if( m2.moved )
+      elog.move(m2.getNode().getBaseMatch(),childPos);
+  }
+
+  protected void logUpdateOperation( BranchNode n ) {
+    elog.update(n);
   }
 
   public MergePairList mergeLists( MergeList mlistA, MergeList mlistB ) {
     MergePairList merged = new MergePairList();
     mergeDeletedOrMoved( mlistA, mlistB );
+    elog.checkPoint();
 /*
     System.out.println("A list (after delormove):");
     mlistA.print();
@@ -352,13 +399,14 @@ public class Merge {
     if( mlistA.getEntryCount() != mlistB.getEntryCount() )
         throw new RuntimeException("ASSERTION FAILED: MergeList.merge(): lists different lengths!");
 
-    int posA = 0, posB = 0, logchildpos=-1;
+    int posA = 0, posB = 0;
     MergeEntry ea = mlistA.getEntry(posA), eb= mlistB.getEntry(posB);
     while(true) {
       // Dump hangons from ea... (we do this first as __START__ may have hangons)
       for(int i=0;i<ea.getHangonCount();i++) {
         BranchNode na = ea.getHangon(i).getNode();
         merged.append(na,na.getFirstPartner(BranchNode.MATCH_FULL));
+        logHangonStructOps(na,merged.getPairCount()-1);
       }
       // And then from eb..
       if( eb.getHangonCount() > 0 ) {
@@ -367,6 +415,7 @@ public class Merge {
           for(int i=0;i<eb.getHangonCount();i++) {
             BranchNode nb = eb.getHangon(i).getNode();
             merged.append(nb,nb.getFirstPartner(BranchNode.MATCH_FULL));
+            logHangonStructOps(nb,merged.getPairCount()-1);
           }
         }
       }
@@ -388,6 +437,7 @@ public class Merge {
         // add CONFLICTCODE here
         clog.addListConflict( ConflictLog.MOVE,"Conflicting moves inside child list, using the sequencing of branch 1",
           ea.getNode().getBaseMatch(),ea.getNode(),eb.getNode()/*, mlistA, mlistB*/ );
+        elog.rewind(); // Remove all edit ops made by this list merge attempt
         return mergeListToPairList(ea.getNode().isLeftTree() ? mlistA : mlistB,
           ea.getNode().isLeftTree() ? mlistB : mlistA);
       }
@@ -403,8 +453,9 @@ public class Merge {
       }
       // pos is set up so that ea and eb are merge-partners
       merged.append(ea.getNode(),eb.getNode());
-      logchildpos = merged.getPairCount()-1;
+      logEntryStructOps(ea,eb,merged.getPairCount()-1);
     }
+    elog.commit();
     return merged;
   }
 
@@ -509,7 +560,7 @@ public class Merge {
       if( op1 == NOP && ( op2 == MOVE_F || op2 == DELETE ) ) {
         // Delete the node from mlistA
         int ix = mlistA.matchInList(bn);
-        if( isDeletiaModified(mlistA.getEntry(ix).getNode(),mlistA) )
+        if( op2==DELETE && isDeletiaModified(mlistA.getEntry(ix).getNode(),mlistA) )
           // CONFLICTCODE here
           clog.addListWarning( ConflictLog.UPDATE, "Modifications in deleted subtree.",
           bn,mlistA.getEntry(ix).getNode(),null);
@@ -521,7 +572,10 @@ public class Merge {
           for( int ih = 0; ih < mlistA.getEntry(ix).getHangonCount(); ih++)
             mlistA.getEntry(ix-1).addHangon(mlistA.getEntry(ix).getHangon(ih));
         }
-        mlistA.removeEntryAt(mlistA.matchInList(bn));
+        int matchIx = mlistA.matchInList(bn);
+        if( op2==DELETE )
+          elog.delete(mlistA.getEntry(matchIx).getNode().getBaseMatch());
+        mlistA.removeEntryAt(matchIx);
       } else if( op1 == MOVE_I && op2== MOVE_F ) {
         // CONFLICTCODE here
         BranchNode op1node = mlistA.getEntry( mlistA.matchInList(bn) ).getNode();
@@ -536,7 +590,9 @@ public class Merge {
         "Node moved and deleted - trying to recover by deleting the node (copies and inserts immediately following the node may also have been deleted)",
         bn,mlistA.getEntry( mlistA.matchInList(bn) ).getNode(), null );
 //        System.out.println("CONFLICT: Node moved and deleted - moving on by deleting the node + hangons!. ");
-        mlistA.removeEntryAt(mlistA.matchInList(bn));
+        int matchIx = mlistA.matchInList(bn);
+        elog.delete(mlistA.getEntry(matchIx).getNode().getBaseMatch());
+        mlistA.removeEntryAt(matchIx);
       } else if( op1 == MOVE_F && op2 == MOVE_F ) {
         if( isMovefMovefConflict( bn ) ) {
           // CONFLICTCODE here

@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.21 2001/06/06 21:44:18 ctl Exp $
+//$Id: TreeDM.java,v 1.22 2001/06/08 08:40:38 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -126,10 +126,10 @@ public class TreeDM {
       PrintWriter cw = new PrintWriter( System.out );
       merge1.getConflictLog().writeConflicts(new MergePrinter( cw));
 //      cw.close();
-//      System.setOut(sink); // keep symmtry merge quiet..
+      System.setOut(sink); // keep symmtry merge quiet..
       merge2 = new Merge( new TriMatching( docB, docBase, docA ) );
       merge2.merge( new MergePrinter(p2) );
-//      System.setOut(oldout);
+      System.setOut(oldout);
       merge2.getConflictLog().writeConflicts(new MergePrinter( cw));
  cw.flush();
     } catch ( org.xml.sax.SAXException e ) {
