@@ -1,3 +1,5 @@
+<!-- $Id: m.xml,v 1.2 2001/06/25 08:36:41 ctl Exp $ -->
+<!-- AMBIGOUS: Could just conflict or insert i2,i1 instead. --->
 <R>
 	<a/>
 	<i1/>

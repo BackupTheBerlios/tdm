@@ -1,0 +1,16 @@
+#!/bin/sh
+echo
+echo CASE M1
+./run-onecase m1
+echo
+echo CASE M2
+./run-onecase m2
+echo
+echo CASE M3
+./run-onecase m3
+echo
+echo CASE M4
+./run-onecase m4
+echo
+echo CASE M5
+./run-onecase m5
