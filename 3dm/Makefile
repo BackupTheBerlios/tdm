@@ -1,13 +1,13 @@
 # 3DM makefile
-# $Id: Makefile,v 1.2 2001/09/30 13:04:20 ctl Exp $
+# $Id: Makefile,v 1.3 2002/06/01 19:41:18 ctl Exp $
 
 GPL_FILE = COPYING
-DISTDIR = ../../dist
-SRCDIR = src/
+DISTDIR = doc
+SRCDIR = src
 CLASSDIR = build
 JAVAC = javac
 JAR = jar
-CLASSPATH=../../../ubidoc-support/lib/java-getopt-1.0.8.jar\;../../../ubidoc-support/lib/xerces.jar\;../../../ubidoc-support/lib/sax2.jar\;$(CLASSDIR)
+CLASSPATH=lib/java-getopt-1.0.8.jar\;lib/xerces.jar\;lib/sax2.jar\;$(CLASSDIR)
 
 # 3DM source files
 FILES= BaseNode MatchedNodes Patch XMLElementNode BranchNode Matching PathTracker XMLNode \
