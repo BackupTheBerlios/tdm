@@ -1,4 +1,4 @@
-// $Id: DiffMatching.java,v 1.1 2001/04/27 16:59:09 ctl Exp $
+// $Id: DiffMatching.java,v 1.2 2001/06/14 13:12:43 ctl Exp $
 
 import Matching;
 import java.util.Vector;
@@ -12,7 +12,7 @@ public class DiffMatching extends Matching {
   }
 
   protected void buildMatching( BaseNode base, BranchNode branch ) {
-    match( base, branch );
+    matchSubtrees( base, branch );
   }
 
   // We never match fuzzy when diffing

@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.27 2001/06/12 15:33:57 ctl Exp $
+// $Id: Merge.java,v 1.28 2001/06/14 13:12:43 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -32,13 +32,13 @@ public class Merge {
   public void merge( ContentHandler ch ) throws SAXException {
     pt.resetContext();
     ch.startDocument();
-    mergeNode( m.getLeftRoot(), m.getRightRoot(), ch );
+    treeMerge( m.getLeftRoot(), m.getRightRoot(), ch );
     ch.endDocument();
   }
 
   int debug = 0; // Debug variable
 
-  public void mergeNode( BranchNode a, BranchNode b, ContentHandler ch ) throws SAXException {
+  protected void treeMerge( BranchNode a, BranchNode b, ContentHandler ch ) throws SAXException {
     if( (a != null && ((a.getBaseMatchType() | BranchNode.MATCH_CHILDREN) == 0 )) ||
         (b != null && ((b.getBaseMatchType() | BranchNode.MATCH_CHILDREN) == 0 ) ) )
       throw new RuntimeException("mergeNode: match type should be match children, otherwise the node should be null!");
@@ -67,8 +67,9 @@ public class Merge {
     else
       System.out.println("--none--");
     }
+    // Generate merge pair List
     if( mlistA != null && mlistB != null )
-      merged = mergeLists( mlistA, mlistB ); // Merge lists
+      merged = makeMergePairList( mlistA, mlistB ); // Merge lists
     else
       merged = mergeListToPairList( mlistA == null ? mlistB : mlistA, null );
 
@@ -76,7 +77,7 @@ public class Merge {
     // Handle updates & Recurse
     for( int i=0;i<merged.getPairCount();i++) {
       MergePair mergePair = merged.getPair(i);
-      XMLNode mergedNode = cmerge( mergePair );
+      XMLNode mergedNode = mergeNodeContent( mergePair );
       if( mergedNode instanceof XMLTextNode ) {
         XMLTextNode text = (XMLTextNode) mergedNode;
         ch.characters(text.getText(),0,text.getText().length);
@@ -87,7 +88,7 @@ public class Merge {
         // Figure out partners for recurse
         MergePair recursionPartners = getRecursionPartners( mergePair );
         // Recurse!
-        mergeNode(recursionPartners.getFirstNode(),recursionPartners.getSecondNode(),ch);
+        treeMerge(recursionPartners.getFirstNode(),recursionPartners.getSecondNode(),ch);
         ch.endElement(mergedElement.getNamespaceURI(),mergedElement.getLocalName(),mergedElement.getQName());
       }
       pt.nextChild();
@@ -95,7 +96,7 @@ public class Merge {
     pt.exitSubtree();
   }
 
-  private XMLNode cmerge( MergePair mp ) {
+  private XMLNode mergeNodeContent( MergePair mp ) {
     // Merge contents of node and partner (but only if there's a partner)
     //-------------------
     // Table
@@ -115,13 +116,13 @@ public class Merge {
       if( !n2.isMatch(BranchNode.MATCH_CONTENT) )
         return n2.getContent();
       else
-        return mergeNodeContent( n1, n2 );
+        return cmerge( n1, n2 );
     } else {
        // n doesn't match content
       if( n2.isMatch(BranchNode.MATCH_CONTENT) )
         return n1.getContent();
       else // Neither matches content => forced merge
-        return mergeNodeContent( n1, n2 );
+        return cmerge( n1, n2 );
     }
   }
 
@@ -151,7 +152,7 @@ public class Merge {
     }
   }
 
-  private XMLNode mergeNodeContent( BranchNode a, BranchNode b ) {
+  private XMLNode cmerge( BranchNode a, BranchNode b ) {
     boolean aUpdated = !matches( a, a.getBaseMatch() ),
             bUpdated = !matches( b, b.getBaseMatch() );
     if( aUpdated && bUpdated ) {
@@ -354,9 +355,9 @@ public class Merge {
     elog.update(n);
   }
 
-  public MergePairList mergeLists( MergeList mlistA, MergeList mlistB ) {
+  protected MergePairList makeMergePairList( MergeList mlistA, MergeList mlistB ) {
     MergePairList merged = new MergePairList();
-    mergeDeletedOrMoved( mlistA, mlistB );
+    removeDeletedOrMoved( mlistA, mlistB );
     elog.checkPoint();
 /*
     System.out.println("A list (after delormove):");
@@ -496,7 +497,7 @@ public class Merge {
   }
 
 
-  private void mergeDeletedOrMoved( MergeList mlistA, MergeList mlistB ) {
+  private void removeDeletedOrMoved( MergeList mlistA, MergeList mlistB ) {
     BaseNode baseParent = mlistA.getEntryParent().getBaseMatch();
     for( int i=0;i<baseParent.getChildCount();i++) {
       BaseNode bn = baseParent.getChild(i);

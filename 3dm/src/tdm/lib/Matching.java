@@ -1,4 +1,4 @@
-// $Id: Matching.java,v 1.11 2001/06/12 15:33:57 ctl Exp $
+// $Id: Matching.java,v 1.12 2001/06/14 13:12:43 ctl Exp $
 
 import java.util.Vector;
 import java.util.Iterator;
@@ -27,8 +27,8 @@ public class Matching {
   }
 
   protected void buildMatching( BaseNode base, BranchNode branch ) {
-    match( base, branch );
-    matchSamePosUnmatched( base, branch );
+    matchSubtrees( base, branch );
+    matchSimilarUnmatched( base, branch );
     removeSmallCopies(branch);
     setMatchTypes(base);
   }
@@ -42,7 +42,7 @@ public class Matching {
   }
 
   static int fccount=0;
-  protected void match( BaseNode base, BranchNode branch ) {
+  protected void matchSubtrees( BaseNode base, BranchNode branch ) {
 //    System.out.println("Finding cand for " +branch.getContent().toString());
     Vector candidates = findCandidates( base, branch ); // Find candidates for node branch in base
     // Find best trees
@@ -78,7 +78,7 @@ public class Matching {
     // Recurse
     //System.out.println("---Recurse");
     for( Iterator i=stopNodes.iterator();i.hasNext();)
-      match(base,(BranchNode) i.next());
+      matchSubtrees(base,(BranchNode) i.next());
   }
 
   protected CandidateEntry getBestCandidate( BaseNode base, BranchNode branch, Vector bestCandidates,
@@ -128,10 +128,10 @@ public class Matching {
     return best;
   }
 
-  private void matchSamePosUnmatched( BaseNode base, BranchNode branch) {
+  private void matchSimilarUnmatched( BaseNode base, BranchNode branch) {
     // Traverse in preorder -- to avoid building trees, just fixing levels where parents are matched
     for( int i=0;i<branch.getChildCount();i++)
-      matchSamePosUnmatched(base,branch.getChild(i));
+      matchSimilarUnmatched(base,branch.getChild(i));
 
     BaseNode baseMatch = branch.getBaseMatch(); // old  baseparent
     if( baseMatch != null && baseMatch.getChildCount()>0 ) {
