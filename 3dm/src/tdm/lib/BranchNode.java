@@ -73,8 +73,11 @@ public class BranchNode extends Node {
   public boolean isLeftTree() {
     if( baseMatch != null )
       return baseMatch.getLeft().getMatches().contains(this);
-    else
+    else {
+      //System.err.println("Recurse:"+getContent().toString());
+      //System.err.flush();
       return getParent().isLeftTree();
+    }
   }
 
   public boolean isMatch( int type) {

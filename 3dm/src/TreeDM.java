@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.30 2001/06/20 13:25:58 ctl Exp $
+//$Id: TreeDM.java,v 1.31 2001/06/25 14:53:53 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -33,10 +33,11 @@ public class TreeDM {
     // NOTE: When running mergecases, check that the parameters are set as follows:
     // COPY_TRESHOLD = 0 (otherwise cases with copies won't work) (normal value = 18)
     //
+    Matching.COPY_THRESHOLD =0;
     String[] argset = {"../../usecases/review/gmergeb123.xml","../../usecases/review/edit.log"};
 //    String[] argset = {"rm.xml","edit.log"};
 //    (new TreeDM()).runOOMarkup( argset );
-    //(new TreeDM()).runBM( args );
+//    (new TreeDM()).runBM( args );
     (new TreeDM()).runHarness( args );
   }
 

@@ -1,4 +1,4 @@
-// $Id: TreeDiffMerge.java,v 1.2 2001/06/20 13:25:58 ctl Exp $
+// $Id: TreeDiffMerge.java,v 1.3 2001/06/25 14:53:53 ctl Exp $
 import gnu.getopt.*;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -10,7 +10,7 @@ import org.xml.sax.Attributes;
 
 public class TreeDiffMerge {
   public static void main(String[] args) throws java.io.IOException {
-    System.err.println("3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.2 $"  );
+    System.err.println("3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.3 $"  );
     // Get command line options
     int firstFileIx = parseOpts( args );
     if( op == MERGE && (args.length - firstFileIx) == 3 )
@@ -177,6 +177,7 @@ public class TreeDiffMerge {
             break;
           case 'c':
             Matching.COPY_THRESHOLD = getIntArg(g,Matching.COPY_THRESHOLD);
+            //System.err.println("COPY_THRESHOLD=" + Matching.COPY_THRESHOLD);
             break;
           case 'm':
             op = MERGE;

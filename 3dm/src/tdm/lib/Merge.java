@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.33 2001/06/20 13:25:58 ctl Exp $
+// $Id: Merge.java,v 1.34 2001/06/25 14:53:53 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -72,14 +72,16 @@ public class Merge {
       else
         System.out.println("--none--");
       debug =0;
-    }
-*/
+    }*/
     // Generate merge pair List
     if( mlistA != null && mlistB != null )
       merged = makeMergePairList( mlistA, mlistB ); // Merge lists
     else
       merged = mergeListToPairList( mlistA == null ? mlistB : mlistA, null );
-
+/*    if( debug>=0) {
+      System.out.println("#########################################MERGED LIST");
+      merged.print();
+    }*/
     // Now, the merged list is in merged
     // Handle updates & Recurse
     for( int i=0;i<merged.getPairCount();i++) {
@@ -296,7 +298,7 @@ public class Merge {
         Integer firstPos = (Integer) baseMatches.get(match);
         if( firstPos != null ) {
           // Lock the first occurenece as well
-//TEMP UNCOMMNETED FOR review/p2          ml.lockNeighborhood(firstPos.intValue(),1,1);
+          ml.lockNeighborhood(firstPos.intValue(),1,1);
           baseMatches.put(match,null);  // Put null into hashtable, so we won't lock more than once
                                         // (it wouldn't hurt, but just to be nice)
         }
@@ -370,6 +372,13 @@ public class Merge {
 
     public MergePair getPair(int ix){
       return (MergePair) list.elementAt(ix);
+    }
+
+    public void print() {
+      for(int i=0;i<list.size();i++) {
+        MergePair mp = (MergePair) list.elementAt(i);
+        System.out.println("<"+mp.first.getContent().toString()+","+mp.second.getContent().toString()+">");
+      }
     }
   }
 
@@ -476,10 +485,12 @@ public class Merge {
       else if (nextB != mlistB.findPartner(mlistA.getEntry(nextA))) {
         // add CONFLICTCODE here
         clog.addListConflict( ConflictLog.MOVE,"Conflicting moves inside child list, using the sequencing of branch 1",
-          ea.getNode().getBaseMatch(),ea.getNode(),eb.getNode()/*, mlistA, mlistB*/ );
+          ea.getNode() != START ? ea.getNode().getBaseMatch() : null,
+          ea.getNode() != START ? ea.getNode() : null,
+          eb.getNode() != START ? eb.getNode() : null );
         elog.rewind(); // Remove all edit ops made by this list merge attempt
-        return mergeListToPairList(ea.getNode().isLeftTree() ? mlistA : mlistB,
-          ea.getNode().isLeftTree() ? mlistB : mlistA);
+        return mergeListToPairList(mlistA.getEntryParent().isLeftTree() ? mlistA : mlistB,
+          mlistA.getEntryParent().isLeftTree() ? mlistB : mlistA);
       }
       posA = nextA;
       posB = nextB;
@@ -614,6 +625,11 @@ public class Merge {
         int matchIx = mlistA.matchInList(bn);
         if( op2==DELETE )
           elog.delete(mlistA.getEntry(matchIx).getNode().getBaseMatch(),mlistB.getEntryParent());
+        if( op2==DELETE && mlistA.getEntry(matchIx).locked ) {
+          clog.addListConflict(ConflictLog.DELETE, "Moved or copied node deleted. Moving on by allowing the delete.",
+            bn,mlistA.getEntry(ix).getNode(),null);
+          //System.err.println("!!!!LOCKED/DEL CONFLICT "+mlistA.getEntry(ix).getNode().getContent().toString());
+        }
         mlistA.removeEntryAt(matchIx);
       } else if( op1 == MOVE_I && op2== MOVE_F ) {
         // CONFLICTCODE here
