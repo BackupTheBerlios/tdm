@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.9 2003/01/16 09:28:56 ctl Exp $ D
+// $Id: Diff.java,v 1.10 2004/03/08 12:16:20 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -41,8 +41,9 @@ public class Diff {
 
   private DiffMatching m = null;
   private static final Attributes EMPTY_ATTS = new AttributesImpl();
-  private static final Set RESERVED;
-  private static final String DIFF_NS ="diff:";
+  static final Set RESERVED;
+
+  static final String DIFF_NS ="diff:";
   static {
       RESERVED = new HashSet();
       RESERVED.add(DIFF_NS+"copy");
@@ -65,89 +66,138 @@ public class Diff {
     enumerateNodes(m.getBaseRoot(),nodeNumbers);
     ch.startDocument();
     ch.startElement("","","diff",EMPTY_ATTS);
-    copy( m.getBaseRoot(), m.getBranchRoot(), ch );
+    Vector stopNodes = new Vector();
+    m.getAreaStopNodes(stopNodes, m.getBranchRoot());
+    copy(m.getBaseRoot(), m.getBranchRoot(), ch, stopNodes);
     ch.endElement("","","diff");
     ch.endDocument();
   }
 
-  protected void copy( BaseNode b, BranchNode branch, ContentHandler ch )
-                        throws SAXException {
+  protected void copy(BaseNode b, BranchNode branch, ContentHandler ch,
+                      Vector stopNodes) throws
+      SAXException {
     // Find stopnodes
-    Vector stopNodes = new Vector();
-    // DEBUG
-/*    java.io.PrintWriter dw = new java.io.PrintWriter(System.err);
-    branch.debugTree(dw,0);dw.flush();*/
-        //ENDDEBUG
-    m.getAreaStopNodes( stopNodes, branch );
-    for( Iterator i = stopNodes.iterator();i.hasNext();) {
+    Sequence s = new Sequence();
+    for (Iterator i = stopNodes.iterator(); i.hasNext(); ) {
       BranchNode stopNode = (BranchNode) i.next();
-      String dst = getId(stopNode.getBaseMatch());
+      int dst = getDiffId(stopNode.getBaseMatch());
       // BUGFIX 030115
-      if( stopNode.getChildCount()==0) {
+      if (stopNode.getChildCount() == 0) {
         AttributesImpl copyAtts = new AttributesImpl();
-        copyAtts.addAttribute("","","dst","CDATA",dst);
-        ch.startElement("","",DIFF_NS+"insert",copyAtts);
-        ch.endElement("","",DIFF_NS+"insert");
+        copyAtts.addAttribute("", "", "dst", "CDATA", String.valueOf(dst));
+        ch.startElement("", "", DIFF_NS + "insert", copyAtts);
+        ch.endElement("", "", DIFF_NS + "insert");
       }
       // ENDBUGFIX
-      for( int ic = 0;ic < stopNode.getChildCount();ic++) {
+
+      for (int ic = 0; ic < stopNode.getChildCount(); ic++) {
+        boolean lastStopNode = ic == stopNode.getChildCount() - 1;
         BranchNode child = stopNode.getChild(ic);
-        if( child.hasBaseMatch() ) {
-          // Copy tree...
-          AttributesImpl copyAtts = new AttributesImpl();
-          copyAtts.addAttribute("","","src","CDATA",getId(child.getBaseMatch()));
-          copyAtts.addAttribute("","","dst","CDATA",dst);
-          ch.startElement("","",DIFF_NS+"copy",copyAtts);
-          copy( child.getBaseMatch(), child, ch );
-          ch.endElement("","",DIFF_NS+"copy");
-        } else {
+        if (child.hasBaseMatch()) {
+          Vector childStopNodes = new Vector();
+          m.getAreaStopNodes(childStopNodes, child);
+          int src = getDiffId(child.getBaseMatch());
+          if (childStopNodes.size() == 0 && !lastStopNode) {
+            if (s.isEmpty()) {
+              s.init(src, dst);
+              continue;
+            }
+            else if (s.appends(src, dst)) {
+              s.append();
+              continue;
+            }
+          }
+          // Did not append to sequence (or @ last stopnode) => emit sequence
+          if (!s.appends(src, dst)) {
+            // Current does not append to prev seq -> output prev seq + new
+            // in separate tags
+            if (!s.isEmpty()) {
+              openCopy(s.src, s.dst, s.run, ch);
+              closeCopy(ch);
+            }
+            if (childStopNodes.size() > 0 || lastStopNode) {
+              openCopy(src, dst, 1, ch);
+              copy(child.getBaseMatch(), child, ch, childStopNodes);
+              closeCopy(ch);
+              s.setEmpty(); // Reset sequence
+            }
+            else
+              s.init(src, dst);
+          }
+          else { // appends to open sequence (other reason for seq. break)
+            s.append();
+            openCopy(s.src, s.dst, s.run, ch);
+            copy(child.getBaseMatch(), child, ch, childStopNodes);
+            closeCopy(ch);
+            s.setEmpty(); // Reset sequence
+          }
+
+        } // endif has base match
+        else {
+          if (!s.isEmpty()) {
+            openCopy(s.src, s.dst, s.run, ch);
+            closeCopy(ch);
+            s.setEmpty();
+          }
           // Insert tree...
           AttributesImpl copyAtts = new AttributesImpl();
-          copyAtts.addAttribute("","","dst","CDATA",dst);
-          ch.startElement("","",DIFF_NS+"insert",copyAtts);
-          insert( child, ch );
-          ch.endElement("","",DIFF_NS+"insert");
+          copyAtts.addAttribute("", "", "dst", "CDATA", String.valueOf(dst));
+          // SHORTINS = Concatenate several <ins> tags to a single one
+          if (ic == 0 || stopNode.getChild(ic - 1).hasBaseMatch()) // SHORTINS
+            ch.startElement("", "", DIFF_NS + "insert", copyAtts);
+          insert(child, ch);
+          if (lastStopNode || stopNode.getChild(ic + 1).hasBaseMatch()) // SHORTINS
+            ch.endElement("", "", DIFF_NS + "insert");
         }
       } // endfor children
     }
   }
 
-  protected void insert( BranchNode branch, ContentHandler ch )
-                          throws SAXException {
+  protected void insert(BranchNode branch, ContentHandler ch) throws
+      SAXException {
     XMLNode content = branch.getContent();
-    if( content instanceof XMLTextNode ) {
+    if (content instanceof XMLTextNode) {
       XMLTextNode ct = (XMLTextNode) content;
-      ch.characters(ct.getText(),0,ct.getText().length);
-    } else {
+      ch.characters(ct.getText(), 0, ct.getText().length);
+    }
+    else {
       // Element node
       XMLElementNode ce = (XMLElementNode) content;
       boolean escape = RESERVED.contains(ce.getQName());
-      if( escape ) ch.startElement("","",DIFF_NS+"esc",EMPTY_ATTS);
-      ch.startElement(ce.getNamespaceURI(),ce.getLocalName(),ce.getQName(),ce.getAttributes());
-      if( escape ) ch.endElement("","",DIFF_NS+"esc");
-      for( int i=0;i<branch.getChildCount();i++) {
+      if (escape)
+        ch.startElement("", "", DIFF_NS + "esc", EMPTY_ATTS);
+      ch.startElement(ce.getNamespaceURI(), ce.getLocalName(), ce.getQName(),
+                      ce.getAttributes());
+      if (escape)
+        ch.endElement("", "", DIFF_NS + "esc");
+      for (int i = 0; i < branch.getChildCount(); i++) {
         BranchNode child = branch.getChild(i);
-        if( child.hasBaseMatch() ) {
+        if (child.hasBaseMatch()) {
           AttributesImpl copyAtts = new AttributesImpl();
-          copyAtts.addAttribute("","","src","CDATA",
-            getId(child.getBaseMatch()));
-          ch.startElement("","",DIFF_NS+"copy",copyAtts);
-          copy( child.getBaseMatch(), child, ch );
-          ch.endElement("","",DIFF_NS+"copy");
-        } else
-          insert( child, ch );
+          copyAtts.addAttribute("", "", "src", "CDATA",
+                                String.valueOf(getDiffId(child.getBaseMatch())));
+          ch.startElement("", "", DIFF_NS + "copy", copyAtts);
+          Vector stopNodes = new Vector();
+          m.getAreaStopNodes(stopNodes, child);
+          copy(child.getBaseMatch(), child, ch, stopNodes);
+          ch.endElement("", "", DIFF_NS + "copy");
+        }
+        else
+          insert(child, ch);
       }
-      if( escape ) ch.startElement("","",DIFF_NS+"esc",EMPTY_ATTS);
-      ch.endElement(ce.getNamespaceURI(),ce.getLocalName(),ce.getQName());
-      if( escape ) ch.endElement("","",DIFF_NS+"esc");
+      if (escape)
+        ch.startElement("", "", DIFF_NS + "esc", EMPTY_ATTS);
+      ch.endElement(ce.getNamespaceURI(), ce.getLocalName(), ce.getQName());
+      if (escape)
+        ch.endElement("", "", DIFF_NS + "esc");
     }
   }
 
   protected Map nodeNumbers = new HashMap();
 
   // Get BFS number of node
-  protected String getId( Node n ) {
-    return ((Integer) nodeNumbers.get(n)).toString();
+  protected int getDiffId( Node n ) {
+    return ((Integer) nodeNumbers.get(n)).intValue();
   }
 
   // BFS Enumeration of nodes. Useful beacuse adjacent nodes have subsequent ids
@@ -162,6 +212,57 @@ public class Diff {
       for( int i=0;i<n.getChildCount();i++)
         queue.add(n.getChildAsNode(i));
       id++;
+    }
+  }
+
+  protected void openCopy( int src, int dst, int run, ContentHandler ch )
+      throws SAXException {
+    AttributesImpl copyAtts = new AttributesImpl();
+    copyAtts.addAttribute("", "", "src", "CDATA", String.valueOf(src));
+    copyAtts.addAttribute("", "", "dst", "CDATA", String.valueOf(dst));
+    if( run > 1)
+      copyAtts.addAttribute("", "", "run", "CDATA", String.valueOf(run));
+    ch.startElement("", "", DIFF_NS + "copy", copyAtts);
+  }
+
+  protected void closeCopy( ContentHandler ch )
+    throws SAXException {
+    ch.endElement("", "", DIFF_NS + "copy");
+  }
+
+  protected void openInsert( int src, int dst ) {
+
+  }
+
+  protected void closeInsert() {
+
+  }
+
+  class Sequence {
+    int src = -1;
+    int run = -1;
+    int dst = -1;
+
+    void setEmpty() {
+      run = -1;
+    }
+
+    boolean isEmpty() {
+      return run == -1;
+    }
+
+    void init(int asrc, int adst) {
+      src = asrc;
+      dst = adst;
+      run = 1;
+    }
+
+    void append() {
+      run++;
+    }
+
+    boolean appends(int asrc, int adst) {
+      return !isEmpty() && adst == dst && asrc == (src + run);
     }
   }
 }
