@@ -1,4 +1,4 @@
-// $Id: cases.txt,v 1.1 2001/01/23 16:56:12 ctl Exp $
+// $Id: cases.txt,v 1.2 2001/01/24 11:43:40 ctl Exp $
 
 Merge cases: Purpose?
 
@@ -35,3 +35,27 @@ u1 Update of differnt nodes
 u2 Update of same node, updates identical (possibly conflict all the same?)
 u3 CONFLICT: Same node, different updates  
 
+Moves
+=====
+
+m1 Moves in different childlist (renders uglily) (M24)
+m2 Moves in same childlist (M4)
+m3 Moves at different levels of same subtree (M5)
+m4 Move conflict RENDERING BUGS! (M22)
+m5 Move with shifting (M25)
+
+Copies
+======
+
+c1 Copies into different childlists RENDER PROBS
+c2 Copies to same childlist (M28)
+c3 Copy with shifting (M26)
+c4 CONFLICT: Differnt node to same dest (M27)
+
+Combinations
+============
+
+INS DEL UPC MOV CPY 
+
+Conflicts
+=========
