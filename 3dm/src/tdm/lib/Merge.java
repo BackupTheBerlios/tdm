@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.32 2001/06/19 11:26:59 ctl Exp $
+// $Id: Merge.java,v 1.33 2001/06/20 13:25:58 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -41,9 +41,11 @@ public class Merge {
   int debug = 0; // Debug variable
 
   protected void treeMerge( BranchNode a, BranchNode b, ContentHandler ch ) throws SAXException {
+
     if( (a != null && ((a.getBaseMatchType() | BranchNode.MATCH_CHILDREN) == 0 )) ||
         (b != null && ((b.getBaseMatchType() | BranchNode.MATCH_CHILDREN) == 0 ) ) )
       throw new RuntimeException("mergeNode: match type should be match children, otherwise the node should be null!");
+
     MergeList mlistA = a != null ? makeMergeList( a ) : null;
     MergeList mlistB = b != null ? makeMergeList( b ) : null;
     MergePairList merged = null;
@@ -58,17 +60,18 @@ public class Merge {
       debug=1;
 */
 /*
-    if(debug>0 || mlistA.getEntryCount()>40) {
-    System.out.println("Merge A list");
-    if( mlistA != null )
-      mlistA.print();
-    else
-      System.out.println("--none--");
-    System.out.println("Merge B list");
-    if( mlistB != null )
-      mlistB.print();
-    else
-      System.out.println("--none--");
+    if(debug>=0 ) {
+      System.out.println("#########################################Merge A list");
+      if( mlistA != null )
+        mlistA.print();
+      else
+        System.out.println("--none--");
+      System.out.println("Merge B list");
+      if( mlistB != null )
+        mlistB.print();
+      else
+        System.out.println("--none--");
+      debug =0;
     }
 */
     // Generate merge pair List
@@ -152,7 +155,6 @@ public class Merge {
         return new MergePair(n1,null);
       else // Both content matches --> forced merge
         return mp;
-
     }
   }
 

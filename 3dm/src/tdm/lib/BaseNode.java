@@ -1,4 +1,4 @@
-// $Id: BaseNode.java,v 1.5 2001/04/27 16:59:08 ctl Exp $
+// $Id: BaseNode.java,v 1.6 2001/06/20 13:25:58 ctl Exp $
 
 public class BaseNode extends Node {
 
@@ -13,9 +13,11 @@ public class BaseNode extends Node {
     content = aContent;
   }
 
+/*
   public boolean isMatched() {
-    return !left.getMatches().isEmpty() || !left.getMatches().isEmpty();
+    return !left.getMatches().isEmpty() || !right.getMatches().isEmpty();
   }
+*/
 
   public BaseNode getChild( int ix ) {
     return (BaseNode) children.elementAt(ix);

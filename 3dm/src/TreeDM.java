@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.29 2001/06/19 11:26:59 ctl Exp $
+//$Id: TreeDM.java,v 1.30 2001/06/20 13:25:58 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -33,11 +33,11 @@ public class TreeDM {
     // NOTE: When running mergecases, check that the parameters are set as follows:
     // COPY_TRESHOLD = 0 (otherwise cases with copies won't work) (normal value = 18)
     //
-    String[] argset = {"../../usecases/pdaedit/ccs-complex-2.html","../../usecases/pdaedit/edit.log"};
+    String[] argset = {"../../usecases/review/gmergeb123.xml","../../usecases/review/edit.log"};
 //    String[] argset = {"rm.xml","edit.log"};
-    //(new TreeDM()).runOOMarkup( argset );
-    (new TreeDM()).runBM( args );
-    //(new TreeDM()).runHarness( args );
+//    (new TreeDM()).runOOMarkup( argset );
+    //(new TreeDM()).runBM( args );
+    (new TreeDM()).runHarness( args );
   }
 
   public void runHarness( String[] args ) {
@@ -240,9 +240,9 @@ public class TreeDM {
 
   // Run Best Matcher
   public void runBM( String[] args ) {
-   BranchNode docA=null;
+   BranchNode docA=null,docB=null;
    BaseNode docBase=null;
-   final String OTHER = "2";
+   final String OTHER = "1";
     if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
       System.exit(0);
@@ -253,6 +253,8 @@ public class TreeDM {
       docBase = (BaseNode) p.parse(args[0] + PSEP + "b.xml",baseNodeFactory);
       System.out.println("Parsing " + OTHER + ".xml");
       docA =  (BranchNode) p.parse(args[0] + PSEP+ OTHER+".xml",branchNodeFactory);
+      System.out.println("Parsing other.xml");
+      docB =  (BranchNode) p.parse(args[0] + PSEP+ ("1".equals(OTHER) ? "2" : "1") +".xml",branchNodeFactory);
       System.out.println("OK.");
    } catch ( Exception e ) {
     e.printStackTrace();
@@ -260,7 +262,7 @@ public class TreeDM {
    }
 //   System.exit(0);
   System.out.println("Building matching...");
-   Matching m1 = new Matching( docBase, docA );
+   Matching m1 = new TriMatching( docA, docBase, docB );
   System.out.println("done.");
    java.io.File mf = new java.io.File( args[0] + PSEP+ "match"+OTHER );
    if( mf.exists() ) {
@@ -406,8 +408,8 @@ public class TreeDM {
     XMLNode c = n.getContent();
     if( c instanceof XMLElementNode ) {
       XMLElementNode ce = (XMLElementNode) c;
-      AttributesImpl a = new AttributesImpl( /*ce.getAttributes()*/ );
-      a.addAttribute("","","_3dm:edit","CDATA",opStr);
+      AttributesImpl a =   new AttributesImpl( /*ce.getAttributes()*/ );
+      a.addAttribute("","","tdm:edit","CDATA",opStr);
       ce.setAttributes(a);
       System.out.println("GMA:Modified!");
     } else if (c instanceof XMLTextNode ) {

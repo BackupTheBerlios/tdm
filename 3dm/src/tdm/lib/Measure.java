@@ -1,4 +1,4 @@
-//$Id: Measure.java,v 1.6 2001/05/16 10:31:41 ctl Exp $
+//$Id: Measure.java,v 1.7 2001/06/20 13:25:58 ctl Exp $
 
 import org.xml.sax.Attributes;
 import java.util.Map;
@@ -174,14 +174,15 @@ public class Measure {
   public int matchedChildListDistance( BaseNode a, BranchNode b ) {
     char[] ac = new char[a.getChildCount()];
     char[] bc = new char[b.getChildCount()];
+    // NOTE! i+1's as 0=-0! (Which would yield equality for all child lists of length 1)
     for( int i=0;i<a.getChildCount();i++)
-      ac[i]=(char) i;
+      ac[i]=(char) (i+1);
     for( int i=0;i<b.getChildCount();i++) {
       BaseNode m = b.getBaseMatch();
       if( m!= null && m.getParent() == a )
         bc[i] = (char) m.getChildPos();
       else
-        bc[i] = (char) -i;
+        bc[i] = (char) -(i+1);
     }
     return stringDist(ac,bc,1.0);
 

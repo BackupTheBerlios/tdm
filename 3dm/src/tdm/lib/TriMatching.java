@@ -1,4 +1,4 @@
-// $Id: TriMatching.java,v 1.9 2001/06/12 15:33:57 ctl Exp $
+// $Id: TriMatching.java,v 1.10 2001/06/20 13:25:59 ctl Exp $
 
 public class TriMatching extends Matching {
 
@@ -14,6 +14,7 @@ public class TriMatching extends Matching {
     setPartners( left, false );
     setPartners( right, true );
   }
+
 
   private void swapLeftRight( BaseNode base ) {
     base.swapLeftRightMatchings();

@@ -1,4 +1,4 @@
-// $Id: TreeDiffMerge.java,v 1.1 2001/06/12 15:33:57 ctl Exp $
+// $Id: TreeDiffMerge.java,v 1.2 2001/06/20 13:25:58 ctl Exp $
 import gnu.getopt.*;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -10,7 +10,7 @@ import org.xml.sax.Attributes;
 
 public class TreeDiffMerge {
   public static void main(String[] args) throws java.io.IOException {
-    System.err.println("3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.1 $"  );
+    System.err.println("3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.2 $"  );
     // Get command line options
     int firstFileIx = parseOpts( args );
     if( op == MERGE && (args.length - firstFileIx) == 3 )
@@ -65,6 +65,12 @@ public class TreeDiffMerge {
     }
     try {
       Merge merge = new Merge( new TriMatching( docA, docBase, docB ) );
+/*      PrintWriter pw = new PrintWriter( new FileOutputStream("m.log"));
+      dumpMatch(docA,pw);
+      pw.println("------docb-----------");
+      dumpMatch(docB,pw);
+      pw.close();
+*/
       merge.merge( new XMLPrinter( new PrintWriter( out)  ) );
       merge.getConflictLog().writeConflicts(new XMLPrinter(
         new PrintWriter( new FileOutputStream( conflictLogName ))));
@@ -207,4 +213,14 @@ public class TreeDiffMerge {
     }
   }
 
+  // DEBUg code
+  private static void dumpMatch(BranchNode n, PrintWriter pw ) {
+    if( n.hasBaseMatch() )
+      pw.print(n.getBaseMatchType()+":"+PathTracker.getPathString(n.getBaseMatch())+" ");
+    else
+      pw.print("N/A ");
+    pw.println(n.getContent().toString());
+    for(int i=0;i<n.getChildCount();i++)
+      dumpMatch(n.getChild(i),pw);
+  }
 }

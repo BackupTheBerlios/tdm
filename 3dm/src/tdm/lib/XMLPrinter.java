@@ -1,4 +1,4 @@
-// $Id: XMLPrinter.java,v 1.1 2001/06/12 15:33:58 ctl Exp $
+// $Id: XMLPrinter.java,v 1.2 2001/06/20 13:25:59 ctl Exp $
 
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.Attributes;
@@ -116,6 +116,7 @@ class XMLPrinter extends DefaultHandler {
         }
       } while( next != -1 );*/
       pw.println(chars);
+      //System.err.println("OUT:"+chars);
    }
 
 

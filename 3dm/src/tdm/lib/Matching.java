@@ -1,4 +1,4 @@
-// $Id: Matching.java,v 1.16 2001/06/18 09:43:07 ctl Exp $
+// $Id: Matching.java,v 1.17 2001/06/20 13:25:58 ctl Exp $
 
 import java.util.Vector;
 import java.util.Iterator;
@@ -22,8 +22,6 @@ public class Matching {
     baseRoot = abase;
     branchRoot = abranch;
     buildMatching( baseRoot, branchRoot );
-    // Artificial roots always match (otherwise BranchNode.isLeft may fail!)
-    branchRoot.setBaseMatch(baseRoot,BranchNode.MATCH_FULL);
   }
 
   protected void buildMatching( BaseNode base, BranchNode branch ) {
@@ -32,7 +30,10 @@ public class Matching {
     removeSmallCopies(branch);
     matchSimilarUnmatched( base, branch );
     setMatchTypes(base);
+    // Artificial roots always match (otherwise BranchNode.isLeft may fail!)
+    branch.setBaseMatch(base,BranchNode.MATCH_FULL);
   }
+
 
   public BaseNode getBaseRoot() {
     return baseRoot;
@@ -144,10 +145,10 @@ public class Matching {
         if( n.getBaseMatch() != null)
           continue; // Mapped, all is well
         // end points
-        if( i == 0 && !baseMatch.getChild(0).isMatched() ){
+        if( i == 0 && !isMatched(baseMatch.getChild(0)) ){
           addMatching(n, baseMatch.getChild(0) );
           continue;
-        } else if (i==branch.getChildCount()-1 && !baseMatch.getChild(lastBaseChild).isMatched()) {
+        } else if (i==branch.getChildCount()-1 && !isMatched(baseMatch.getChild(lastBaseChild))) {
           addMatching(n, baseMatch.getChild(lastBaseChild) );
           continue;
         }
@@ -156,7 +157,7 @@ public class Matching {
           // Base    xy     p=n's predecessor, x matches p and y unmatched
           // Branch  pn        => match y and n
           BaseNode x = branch.getChild(i-1).getBaseMatch();
-          if( x != null && x.hasRightSibling() && !((BaseNode) x.getRightSibling()).isMatched()) {
+          if( x != null && x.hasRightSibling() && !isMatched((BaseNode) x.getRightSibling())) {
             addMatching(n,(BaseNode) x.getRightSibling() );
             continue;
           }
@@ -166,7 +167,7 @@ public class Matching {
           // Base    yx     p=n's succecessor, x matches p and y unmatched
           // Branch  np        => match y and n
           BaseNode x = branch.getChild(i+1).getBaseMatch();
-          if( x != null && x.hasLeftSibling() && !((BaseNode) x.getLeftSibling()).isMatched()) {
+          if( x != null && x.hasLeftSibling() && !isMatched((BaseNode) x.getLeftSibling())) {
             addMatching(n,(BaseNode) x.getLeftSibling() );
             continue;
           }
@@ -195,6 +196,7 @@ public class Matching {
           minDist = dist;
           master = cand;
         } else if( dist == minDist ) {
+          minContentDist = measure.getDistance( base, master ); // May not have been calced already...
           double cDist = measure.getDistance( base, cand );
           if( cDist < minContentDist ) {
             minContentDist = cDist;
@@ -205,16 +207,16 @@ public class Matching {
       removedMatchings.clear();
       // Master is now the best match, which will be assigned as MATCH_FULL
       for( Iterator i=base.getLeft().getMatches().iterator();i.hasNext();) {
-      BranchNode cand = (BranchNode) i.next();
-      if( cand == master )
-        continue;
-      boolean structMatch = exactChildListMatch(base,cand);
-      boolean contMatch = cand.getContent().contentEquals(base.getContent());
-      if( !structMatch && !contMatch )
-        removedMatchings.add( cand );
-      else
-        cand.setMatchType( (contMatch ? BranchNode.MATCH_CONTENT : 0) +
-                          (structMatch ? BranchNode.MATCH_CHILDREN : 0) );
+        BranchNode cand = (BranchNode) i.next();
+        if( cand == master )
+          continue;
+        boolean structMatch = exactChildListMatch(base,cand); // && false; //XXXXXXXXX
+        boolean contMatch = cand.getContent().contentEquals(base.getContent()); // || true; //XXXXXXXXX
+        if( !structMatch && !contMatch )
+          removedMatchings.add( cand );
+        else
+          cand.setMatchType( (contMatch ? BranchNode.MATCH_CONTENT : 0) +
+                            (structMatch ? BranchNode.MATCH_CHILDREN : 0) );
       }
       // Delete any removed matchings
       for( Iterator i = removedMatchings.iterator();i.hasNext();) {
@@ -466,9 +468,13 @@ public class Matching {
     }
   }
 
+  private boolean isMatched( BaseNode n) {
+    return n.getLeft().getMatchCount() > 0;
+  }
+
 /*
   private void checkMa( BranchNode n) {
-    if( n.hasBaseMatch() && n.getMatchArea() == null )
+    if( n.hasBaseMatch() || n.getMatchArea() != null )
       System.err.println("!!!!!!!!!!!!!!!!!!!!!MATCHED, but NULL MA!");
     for(int i=0;i<n.getChildCount();i++)
       checkMa(n.getChild(i));
