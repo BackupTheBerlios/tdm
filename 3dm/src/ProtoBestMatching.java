@@ -1,4 +1,4 @@
-// $Id: ProtoBestMatching.java,v 1.13 2001/04/02 07:37:55 ctl Exp $
+// $Id: ProtoBestMatching.java,v 1.14 2001/04/02 11:39:13 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 //import TreeMatching;
@@ -599,6 +599,12 @@ public class ProtoBestMatching  {
   // A very simple heuristic - if there exists a pair of unmatched nodes with the
   // same address, they're matched
   public void matchSamePosUnmatched( ONode a, ONode rootB) {
+    // Traverse in preorder -- to avoid building trees, just fixing levels where parents are matched
+    if( a instanceof ElementNode ) {
+      // process children
+      for( int i=0;i<((ElementNode) a).children.size();i++)
+        matchSamePosUnmatched( (ONode) ((ElementNode) a).children.elementAt(i) , rootB);
+    }
     ONode baseparent =getFirstMapping(a);
     if( baseparent != null && baseparent.getChildCount()>0 ) {
       // Scan for unmapped nodes
@@ -637,11 +643,6 @@ public class ProtoBestMatching  {
       }
 
 
-    }
-    if( a instanceof ElementNode ) {
-      // process children
-      for( int i=0;i<((ElementNode) a).children.size();i++)
-        matchSamePosUnmatched( (ONode) ((ElementNode) a).children.elementAt(i) , rootB);
     }
   }
 
