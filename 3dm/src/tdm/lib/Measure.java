@@ -1,4 +1,4 @@
-//$Id: Measure.java,v 1.4 2001/04/24 10:00:42 ctl Exp $
+//$Id: Measure.java,v 1.5 2001/04/26 17:27:16 ctl Exp $
 
 import org.xml.sax.Attributes;
 
@@ -68,7 +68,7 @@ public class Measure {
         int index = ab.getIndex(aa.getQName(i));
         if( index != -1 ) {
           String v1 =  aa.getValue(i), v2 = ab.getValue(index);
-          int amismatch = stringDist( v1,v2 );
+          int amismatch = stringDist( v1,v2,1.0 );
           int info = (v1.length() > ATTR_VALUE_THRESHOLD ? v1.length() : 1 ) +
                      (v2.length() > ATTR_VALUE_THRESHOLD ? v2.length() : 1 );
           mismatched += amismatch > info ? info : amismatch;
@@ -87,7 +87,7 @@ public class Measure {
       }
     } else if ( ca instanceof XMLTextNode && cb instanceof XMLTextNode ) {
       int info = ca.getInfoSize() + cb.getInfoSize() / 2,
-        amismatch = stringDist( ((XMLTextNode) ca).getText(), ((XMLTextNode) cb).getText() ) / 2;
+        amismatch = stringDist( ((XMLTextNode) ca).getText(), ((XMLTextNode) cb).getText(),1.0 ) / 2;
       mismatched += amismatch > info  ? info : amismatch;
       total+=info;
     } else
@@ -133,12 +133,12 @@ public class Measure {
       }
     };
 
-  public int stringDist( String a, String b ) {
-    return stringDist( a, b, a.length()+b.length(), stringComp);
+  public int stringDist( String a, String b,double limit ) {
+    return stringDist( a, b,(int) a.length()+b.length(), stringComp);
   }
 
-  public int stringDist( char[] a, char[] b ) {
-    return stringDist( a, b, a.length+b.length, charArrayComp );
+  public int stringDist( char[] a, char[] b,double limit ) {
+    return stringDist( a, b,(int) a.length+b.length, charArrayComp );
   }
 
   public double childListDistance( Node a, Node b ) {
@@ -157,6 +157,10 @@ public class Measure {
 
   private int stringDist( Object a, Object b, int max, TokenComparator tc ) {
 //DBG    if( 1==1 ) return max/2;
+//    if( 1==1) return (int) Math.round( Math.random()*tc.getLength(a)*.4 );
+    /*if( max > 50 )
+      System.out.println("max="+max);*/
+    //max = max > 10 ? 10 : max;
     int arraySize = 2*max+1;
     int v[] = null;
     if( arraySize <= DISTBUF_SIZE )

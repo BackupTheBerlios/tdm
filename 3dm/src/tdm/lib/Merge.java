@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.15 2001/04/19 13:59:03 ctl Exp $
+// $Id: Merge.java,v 1.16 2001/04/26 17:27:16 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -42,7 +42,7 @@ public class Merge {
   if( mlistA.getEntryCount() > 30 )
       debug=1;
 */
-    if(debug>0) {
+    if(debug>0 || mlistA.getEntryCount()>40) {
     System.out.println("Merge A list");
     if( mlistA != null )
       mlistA.print();
@@ -129,9 +129,9 @@ public class Merge {
                                           // besides, all insert lists should be hangons only
           // The node was merged, MUST have a partner in the list
           MergeEntry me2 = (MergeEntry) me;
-/*          if( me2.getMergePartner() == null ) {
+          if( me2.getMergePartner() == null ) {
             System.out.println("WARNING: I had to explicitly set mergePartner (should result only from sequencing conflict)");
-             mlistA.print();
+//             mlistA.print();
   //          debug = 1;
             BranchNode nn = me2.getNode().getFirstPartner(BranchNode.MATCH_CHILDREN);
             if( nn== null) {
@@ -142,7 +142,7 @@ public class Merge {
               }
             }
             me2.setMergePartner(nn);
-          } */
+          }
           if( (me2.getNode().getBaseMatchType() & BranchNode.MATCH_CHILDREN) == 0 ) {
             ca=me2.getNode(); // Was content match, so we must use this one
             if( (me2.getMergePartner().getBaseMatchType() & BranchNode.MATCH_CHILDREN) == 0 ) {
@@ -181,8 +181,8 @@ public class Merge {
             cb = me.getNode().getFirstPartner( BranchNode.MATCH_CHILDREN );
             if( cb== null)
               // Conflict processing can maybe mess this up by not deleting me
-              throw new RuntimeException("No struct partner, but it MUST exist here. Otherwise me would"+
-                                         "have been deleted whe merging the lists");
+//              throw new RuntimeException("No struct partner, but it MUST exist here. Otherwise me would"+
+;//                                         "have been deleted whe merging the lists");
           }
         }
 
@@ -309,6 +309,7 @@ public class Merge {
   }
 
 
+
 //-------- merging mergelists: this & other
 // May modify mlistA by adding hangons from mlistB
   public MergeList mergeLists( MergeList mlistA, MergeList mlistB ) {
@@ -360,6 +361,7 @@ public class Merge {
             System.out.println("CONFLICTW; both nodes have hangons, but they were equal"); // as updated(or A if no update)-Other");
           else
             System.out.println("CONFLICTW; both nodes have hangons; sequencing them"); // as updated(or A if no update)-Other");
+
 /*          System.out.println("First list:");
           mlistA.print();
           System.out.println("Second list:");
@@ -398,6 +400,13 @@ public class Merge {
         System.out.println("CONFLICT: Sequencing conflict, using only one list's sequencing");
         __followAonly = true;
         nextB = mlistB.findPartner(mlistA.getEntry(nextA)); ///getPartnerPos( mlistA.getEntry(nextA), mlistB, docB, docBMatching);
+        return mlistA;
+/*        System.out.println("posA="+posA+",posB="+posB);
+          System.out.println("First list:");
+          mlistA.print();
+          System.out.println("Second list:");
+          mlistB.print();
+*/
         //return mlistA;
       }
       posA = nextA;
@@ -623,11 +632,14 @@ public class Merge {
       return mergePartner;
     }
 
-    void print() {
+    void print(int pos) {
+      System.out.print(pos+": ");
       System.out.print(isMoved() ? 'm' : '-');
       System.out.print(locked ? '*' : '-');
       System.out.print(mergePartner!=null ? 'p' : '-');
       System.out.print(' ' + node.getContent().toString() + ' ');
+      if( node.getChildCount() > 0 )
+        System.out.print(' ' + node.getChild(0).getContent().toString() + ' ');
       System.out.println( inserts.toString() );
     }
 
@@ -805,7 +817,7 @@ public class Merge {
       MergeEntry me = null;
       do {
         me = (MergeEntry) list.elementAt(pos);
-        me.print();
+        me.print(pos);
         pos++;
       } while( me.node != END );
     }

@@ -1,4 +1,4 @@
-// $Id: BaseNode.java,v 1.3 2001/04/21 18:00:25 ctl Exp $
+// $Id: BaseNode.java,v 1.4 2001/04/26 17:27:15 ctl Exp $
 
 public class BaseNode extends Node {
 
@@ -31,6 +31,12 @@ public class BaseNode extends Node {
 
   public MatchedNodes getRight() {
     return right;
+  }
+
+  public void swapLeftRightMatchings() {
+    MatchedNodes t = left;
+    left=right;
+    right=t;
   }
 
 }

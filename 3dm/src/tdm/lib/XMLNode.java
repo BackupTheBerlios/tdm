@@ -1,4 +1,4 @@
-// $Id: XMLNode.java,v 1.4 2001/04/20 14:47:50 ctl Exp $
+// $Id: XMLNode.java,v 1.5 2001/04/26 17:27:16 ctl Exp $
 
 import java.security.MessageDigest;
 
@@ -44,6 +44,5 @@ public abstract class XMLNode {
     }
     return contentHash.digest();
   }
-
 
 }

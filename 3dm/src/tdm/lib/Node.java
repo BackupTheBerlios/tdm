@@ -1,4 +1,4 @@
-// $Id: Node.java,v 1.5 2001/04/21 18:00:26 ctl Exp $
+// $Id: Node.java,v 1.6 2001/04/26 17:27:16 ctl Exp $
 
 import java.util.Vector;
 
@@ -43,7 +43,7 @@ public abstract class Node {
   }
 
   public Node getRightSibling() {
-    if( parent == null || childPos == children.size() -1 )
+    if( parent == null || childPos == parent.children.size() -1 )
       return null;
     else
       return parent.getChildAsNode(childPos+1);
