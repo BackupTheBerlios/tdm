@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.27 2001/06/18 09:43:07 ctl Exp $
+//$Id: TreeDM.java,v 1.28 2001/06/18 10:02:09 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -242,7 +242,7 @@ public class TreeDM {
   public void runBM( String[] args ) {
    BranchNode docA=null;
    BaseNode docBase=null;
-   final String OTHER = "2";
+   final String OTHER = "1";
     if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
       System.exit(0);

@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.30 2001/06/18 07:30:41 ctl Exp $
+// $Id: Merge.java,v 1.31 2001/06/18 10:02:09 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -601,7 +601,7 @@ public class Merge {
         return true; // The node is updated
       // Check children
       MergeList mlistN = makeMergeList(n);
-      for( int i=1;i<n.getChildCount();i++) { // Strange ixes because we ignore start & end symbols
+      for( int i=0;i<n.getChildCount();i++) {
         if( isDeletiaModified( n.getChild(i), mlistN ) )
           return true;
       }
