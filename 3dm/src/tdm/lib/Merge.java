@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.5 2001/03/21 22:46:17 ctl Exp $
+// $Id: Merge.java,v 1.6 2001/03/26 08:48:49 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -30,6 +30,7 @@ public class Merge {
       throw new RuntimeException("mergeNode: match type should be match children, otherwise the node should be null!");
     MergeList mlistA = a != null ? makeMergeList( a ) : null;
     MergeList mlistB = b != null ? makeMergeList( b ) : null;
+/*
     System.out.println("Merge A list");
     if( mlistA != null )
       mlistA.print();
@@ -40,11 +41,11 @@ public class Merge {
       mlistB.print();
     else
       System.out.println("--none--");
-
+*/
     if( mlistA != null && mlistB != null ) {
       mlistA = mergeLists( mlistA, mlistB ); // Merge lists
-      System.out.println("Merged list:");
-      mlistA.print();
+      //System.out.println("Merged list:");
+      //mlistA.print();
     } else if( mlistA == null ) {
       mlistA = mlistB;
       mlistB = null; // safety precaution
@@ -241,7 +242,7 @@ public class Merge {
   private static final int MOVE_F = 3;
   private static final int DELETE = 4;
 
-  // what happens to bn in ml?
+  // Tells what happens to bn in ml
 
   private int getOperation( BaseNode bn, MergeList ml ) {
     int mlPos = ml.matchInList(bn);
@@ -291,9 +292,18 @@ public class Merge {
       * MOVE_F  DELETE  Conflict - node is deleted and moved
       * DELETE  DELETE  OK
       ***************************************************************/
+      if( (op1==NOP && op2==NOP ) ||
+          (op1==NOP && op2==MOVE_I ) ||
+          (op1==MOVE_I && op2==MOVE_I ) ||
+          (op1==DELETE && op2==DELETE ) )
+        continue; // All OK cases
       if( op1 == NOP && ( op2 == MOVE_F || op2 == DELETE ) ) {
         // Delete the node from mlistA
         int ix = mlistA.matchInList(bn);
+        if( isDeletiaModified(mlistA.getEntry(ix).getNode(),mlistA) )
+          // CONFLICTCODE here
+          System.out.println("CONFLICTW: Modifications in deleted subtree.");
+
         if( mlistA.getEntry(ix).getHangonCount() > 0 ) {
           // we need to move the hangons to the predecessor
           for( int ih = 0; ih < mlistA.getEntry(ix).getHangonCount(); ih++)
@@ -326,6 +336,34 @@ public class Merge {
           System.out.println("CONFLICT: Node is far-moved and deleted. The far-moved copy will persist.");
       }
     }
+  }
+
+  // Check if the deletia rooted at n is modified w.r.t. base
+
+  private boolean isDeletiaModified(BranchNode n, MergeList ml) {
+    BaseNode m = n.getBaseMatch();
+    if( m == null )
+      return true; // the node was inserted => modified
+    if( getOperation(m,ml) != NOP ) // Notice that we check for move instantly, dut updates only when
+                                    // we know the node was deleted. This is because moves are
+                                    // visible on the previous level w.r.t. the updates
+      return true; // the node has been moved
+    if( n.getBaseMatchType() != BranchNode.MATCH_FULL )
+      return true; // either structural or content modification (otherwise match would be full!)
+    boolean deletedInOther = n.getPartners().getMatches().isEmpty(); // NOTE: By definition of the merge
+                                                                     // matching, at least one match is full!
+    if( deletedInOther ) {
+      if( !matches( n, m ) )
+        return true; // The node is updated
+      // Check children
+      MergeList mlistN = makeMergeList(n);
+      for( int i=1;i<n.getChildCount();i++) { // Strange ixes because we ignore start & end symbols
+        if( isDeletiaModified( n.getChild(i), mlistN ) )
+          return true;
+      }
+      return false; // got trough the children (recursively), no modifications
+    } else
+      return false; // No modification here, and no recurse needed (the node has a structmatch in the other tree)
   }
 
   private boolean isMovefMovefConflict( BaseNode n ) {
@@ -365,6 +403,10 @@ public class Merge {
     }
 
     HangonEntry() {
+    }
+
+    public BranchNode getNode() {
+      return node;
     }
 
     public String toString() {
