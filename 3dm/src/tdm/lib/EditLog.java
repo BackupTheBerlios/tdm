@@ -1,4 +1,4 @@
-// $Id: EditLog.java,v 1.2 2001/06/12 15:33:57 ctl Exp $
+// $Id: EditLog.java,v 1.3 2001/06/13 13:37:16 ctl Exp $
 
 import java.util.Vector;
 import java.util.Stack;
@@ -55,7 +55,7 @@ public class EditLog {
   }
 
   public void update( BranchNode n ) {
-    edits.add( new EditEntry(UPDATE,null,n,pt.getPathString()));
+    edits.add( new EditEntry(UPDATE,n.getBaseMatch(),n,pt.getFullPathString()));
 
 //    System.out.println("UPDATE: " + pt.getFullPathString());
 //    System.out.println(n.getContent().toString());
@@ -80,13 +80,15 @@ public class EditLog {
     AttributesImpl atts = new AttributesImpl();
     if( ee.type != DELETE )
       atts.addAttribute("","","path","CDATA",ee.dstPath);
-    if( ee.type == DELETE || ee.type == COPY || ee.type == MOVE )
+    if( ee.type != INSERT )
       atts.addAttribute("","","src","CDATA",PathTracker.getPathString(ee.baseSrc));
     atts.addAttribute("","","originTree","CDATA",ee.branchSrc.isLeftTree() ? "branch1" : "branch2");
-    atts.addAttribute("","","originList","CDATA",PathTracker.getPathString(ee.branchSrc));
+    atts.addAttribute("","",(ee.type != DELETE ) ? "originNode" : "originList",
+      "CDATA",PathTracker.getPathString(ee.branchSrc));
     ch.startElement("","",OPTAGS[ee.type],atts);
     ch.endElement("","",OPTAGS[ee.type]);
   }
+
 
   public void checkPoint() {
     checkPoints.push(new  Integer( edits.size() ) );
