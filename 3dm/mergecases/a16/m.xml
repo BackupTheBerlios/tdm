@@ -1,13 +1,12 @@
-<!-- $Id: m.xml,v 1.2 2001/06/25 10:47:03 ctl Exp $ -->
+<?xml version="1.0" encoding="UTF-8"?>
 <Rp>
-	<c>
-		<cc/>
-	</c>
-	<c>
-		<cc/>
-	</c>
-	<m>
-		<i/>
-	</m>
+ <c>
+  <cc />
+ </c>
+ <c>
+  <cc />
+ </c>
+ <m>
+  <i />
+ </m>
 </Rp>
-
