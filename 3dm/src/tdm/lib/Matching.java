@@ -1,4 +1,4 @@
-// $Id: Matching.java,v 1.17 2001/06/20 13:25:58 ctl Exp $
+// $Id: Matching.java,v 1.18 2001/07/29 17:12:09 ctl Exp $
 
 import java.util.Vector;
 import java.util.Iterator;
@@ -146,10 +146,10 @@ public class Matching {
           continue; // Mapped, all is well
         // end points
         if( i == 0 && !isMatched(baseMatch.getChild(0)) ){
-          addMatching(n, baseMatch.getChild(0) );
+          addMatchingIfSameType(n, baseMatch.getChild(0) );
           continue;
         } else if (i==branch.getChildCount()-1 && !isMatched(baseMatch.getChild(lastBaseChild))) {
-          addMatching(n, baseMatch.getChild(lastBaseChild) );
+          addMatchingIfSameType(n, baseMatch.getChild(lastBaseChild) );
           continue;
         }
         if( i > 0 ) {
@@ -158,7 +158,7 @@ public class Matching {
           // Branch  pn        => match y and n
           BaseNode x = branch.getChild(i-1).getBaseMatch();
           if( x != null && x.hasRightSibling() && !isMatched((BaseNode) x.getRightSibling())) {
-            addMatching(n,(BaseNode) x.getRightSibling() );
+            addMatchingIfSameType(n,(BaseNode) x.getRightSibling() );
             continue;
           }
         }
@@ -168,7 +168,7 @@ public class Matching {
           // Branch  np        => match y and n
           BaseNode x = branch.getChild(i+1).getBaseMatch();
           if( x != null && x.hasLeftSibling() && !isMatched((BaseNode) x.getLeftSibling())) {
-            addMatching(n,(BaseNode) x.getLeftSibling() );
+            addMatchingIfSameType(n,(BaseNode) x.getLeftSibling() );
             continue;
           }
         }
@@ -442,6 +442,14 @@ public class Matching {
       return measure.getDistance(a.getRightSibling(), b.getRightSibling() );
     } else
       return END_MATCH;
+  }
+
+  // Only adds the matching if types match (i.e. both text or element)
+  protected void addMatchingIfSameType( BranchNode a, BaseNode b ) {
+    if( (a.getContent() instanceof XMLTextNode && b.getContent() instanceof XMLTextNode) ||
+        (a.getContent() instanceof XMLElementNode && b.getContent() instanceof XMLElementNode)) {
+      addMatching(a,b);
+    }
   }
 
   protected void addMatching( BranchNode a, BaseNode b ) {

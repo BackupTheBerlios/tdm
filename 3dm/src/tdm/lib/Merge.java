@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.34 2001/06/25 14:53:53 ctl Exp $
+// $Id: Merge.java,v 1.35 2001/07/29 17:12:09 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -72,16 +72,19 @@ public class Merge {
       else
         System.out.println("--none--");
       debug =0;
-    }*/
+    }
+*/
     // Generate merge pair List
     if( mlistA != null && mlistB != null )
       merged = makeMergePairList( mlistA, mlistB ); // Merge lists
     else
       merged = mergeListToPairList( mlistA == null ? mlistB : mlistA, null );
-/*    if( debug>=0) {
+/*
+    if( debug>=0) {
       System.out.println("#########################################MERGED LIST");
       merged.print();
-    }*/
+    }
+*/
     // Now, the merged list is in merged
     // Handle updates & Recurse
     for( int i=0;i<merged.getPairCount();i++) {
@@ -90,6 +93,8 @@ public class Merge {
       if( mergedNode instanceof XMLTextNode ) {
         XMLTextNode text = (XMLTextNode) mergedNode;
         ch.characters(text.getText(),0,text.getText().length);
+        // COMMENT: Theoretically, if we have matched text and element nodes we need to recurse here
+        // but, the current matching algo never matches across types, so there's no need for recursion
       } else {
         // It's an element node
         XMLElementNode mergedElement = (XMLElementNode) mergedNode;
@@ -122,15 +127,17 @@ public class Merge {
     if( n1 == null || n2==null )
       return (n1==null ? n2 : n1).getContent();
     else if( n1.isMatch(BranchNode.MATCH_CONTENT) ) {
-      if( !n2.isMatch(BranchNode.MATCH_CONTENT) )
+      if( !n2.isMatch(BranchNode.MATCH_CONTENT) ) {
+        logUpdateOperation(n2);
         return n2.getContent();
-      else
+      } else
         return cmerge( n1, n2 );
     } else {
-       // n doesn't match content
-      if( n2.isMatch(BranchNode.MATCH_CONTENT) )
+       // n1 doesn't match content
+      if( n2.isMatch(BranchNode.MATCH_CONTENT) ) {
+        logUpdateOperation(n1);
         return n1.getContent();
-      else // Neither matches content => forced merge
+      } else // Neither matches content => forced merge
         return cmerge( n1, n2 );
     }
   }
@@ -303,6 +310,12 @@ public class Merge {
                                         // (it wouldn't hurt, but just to be nice)
         }
         ml.lockNeighborhood(0,1);
+     /* NOT USED, POSSIBLY FOR LOCK-OF-SRC conflict detect } else if ( (current.isLeftTree() && match.getLeft().getMatchCount() > 1 ) ||
+                  (!current.isLeftTree() && match.getRight().getMatchCount() > 1 )  ) { // Lock all copy sources!
+          System.err.println(">>>>>>> LOCKING " + current.getContent().toString() );
+          ml.add( current,  !matches( match, current) );
+          ml.lockNeighborhood(1,1);
+          */
       } else {
         // Found in base, check for moves
         ml.add( current,  !matches( match, current) );
@@ -377,7 +390,8 @@ public class Merge {
     public void print() {
       for(int i=0;i<list.size();i++) {
         MergePair mp = (MergePair) list.elementAt(i);
-        System.out.println("<"+mp.first.getContent().toString()+","+mp.second.getContent().toString()+">");
+        System.out.println("<"+(mp.first != null ? mp.first.getContent().toString() : "." )+","+
+        (mp.second != null ? mp.second.getContent().toString() : "." ) +">");
       }
     }
   }

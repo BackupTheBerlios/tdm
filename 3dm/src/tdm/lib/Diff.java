@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.2 2001/06/12 15:33:57 ctl Exp $
+// $Id: Diff.java,v 1.3 2001/07/29 17:12:09 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.helpers.AttributesImpl;
@@ -84,9 +84,14 @@ public class Diff {
       if( escape ) ch.endElement("","",DIFF_NS+"esc");
       for( int i=0;i<branch.getChildCount();i++) {
         BranchNode child = branch.getChild(i);
-        if( child.hasBaseMatch() )
-          copy(child.getBaseMatch(),child,ch);
-        else
+        if( child.hasBaseMatch() ) {
+          // !!! added for t3
+          AttributesImpl copyAtts = new AttributesImpl();
+          copyAtts.addAttribute("","","src","CDATA",getId(child.getBaseMatch()));
+          ch.startElement("","",DIFF_NS+"copy",copyAtts);
+          copy( child.getBaseMatch(), child, ch );
+          ch.endElement("","",DIFF_NS+"copy");
+        } else
           insert( child, ch );
       }
       if( escape ) ch.startElement("","",DIFF_NS+"esc",EMPTY_ATTS);

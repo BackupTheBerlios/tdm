@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.31 2001/06/25 14:53:53 ctl Exp $
+//$Id: TreeDM.java,v 1.32 2001/07/29 17:12:09 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -37,8 +37,8 @@ public class TreeDM {
     String[] argset = {"../../usecases/review/gmergeb123.xml","../../usecases/review/edit.log"};
 //    String[] argset = {"rm.xml","edit.log"};
 //    (new TreeDM()).runOOMarkup( argset );
-//    (new TreeDM()).runBM( args );
-    (new TreeDM()).runHarness( args );
+    (new TreeDM()).runBM( args );
+//    (new TreeDM()).runHarness( args );
   }
 
   public void runHarness( String[] args ) {
@@ -243,7 +243,7 @@ public class TreeDM {
   public void runBM( String[] args ) {
    BranchNode docA=null,docB=null;
    BaseNode docBase=null;
-   final String OTHER = "1";
+   final String OTHER = "2";
     if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
       System.exit(0);
@@ -419,6 +419,7 @@ public class TreeDM {
     }
 
   }
+
   private void markAffected( Node n, Map otherops, boolean recurse ) {
     XMLNode c = n.getContent();
     if( c instanceof XMLElementNode  && (((XMLElementNode) c).getQName().equals("text:p") ||
