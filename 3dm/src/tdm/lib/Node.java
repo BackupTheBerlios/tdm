@@ -1,4 +1,4 @@
-// $Id: Node.java,v 1.7 2001/04/27 16:59:10 ctl Exp $
+// $Id: Node.java,v 1.8 2001/06/06 21:44:18 ctl Exp $
 
 import java.util.Vector;
 
@@ -19,6 +19,10 @@ public abstract class Node {
     n.parent=this;
     n.childPos=children.size();
     children.add(n);
+  }
+
+  public Node getParentAsNode() {
+    return parent;
   }
 
   public int getChildCount() {

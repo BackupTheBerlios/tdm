@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.20 2001/05/04 12:59:22 ctl Exp $
+//$Id: TreeDM.java,v 1.21 2001/06/06 21:44:18 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -111,8 +111,6 @@ public class TreeDM {
     PrintStream sink = new PrintStream( new ByteArrayOutputStream() );
     PrintStream oldout = System.out;
 
-    Merge merge1 = new Merge( new TriMatching( docA, docBase, docB ) );
-    Merge merge2 = new Merge( new TriMatching( docB, docBase, docA ) );
     PrintWriter p1 = null, p2=null;
     try {
       p1 = new PrintWriter( new FileOutputStream( "m1.xml" ) );
@@ -121,14 +119,22 @@ public class TreeDM {
       System.out.println("ERROR: Can't write merged files");
       return;
     }
+    Merge merge1=null,merge2=null;
     try {
+      merge1 = new Merge( new TriMatching( docA, docBase, docB ) );
       merge1.merge( new MergePrinter(p1) );
-      System.setOut(sink); // keep symmtry merge quiet..
+      PrintWriter cw = new PrintWriter( System.out );
+      merge1.getConflictLog().writeConflicts(new MergePrinter( cw));
+//      cw.close();
+//      System.setOut(sink); // keep symmtry merge quiet..
+      merge2 = new Merge( new TriMatching( docB, docBase, docA ) );
       merge2.merge( new MergePrinter(p2) );
-      System.setOut(oldout);
+//      System.setOut(oldout);
+      merge2.getConflictLog().writeConflicts(new MergePrinter( cw));
+ cw.flush();
     } catch ( org.xml.sax.SAXException e ) {
       System.setOut(oldout);
-      System.out.println("SAXException while merging.. and it was yoyr lousy content handler that threw it");
+      System.out.println("SAXException while merging.. and it was your lousy content handler that threw it");
     }
     p1.close();p2.close();
     System.out.print("Checking merges... " );

@@ -1,6 +1,7 @@
-// $Id: MatchedNodes.java,v 1.3 2001/04/21 18:00:26 ctl Exp $
+// $Id: MatchedNodes.java,v 1.4 2001/06/06 21:44:18 ctl Exp $
 import java.util.Set;
 import java.util.HashSet;
+import java.util.Iterator;
 
 public class MatchedNodes {
 
@@ -21,6 +22,15 @@ public class MatchedNodes {
 
   public Set getMatches() {
     return matches;
+  }
+
+  public BranchNode getFullMatch() {
+    for( Iterator i=matches.iterator();i.hasNext();) {
+      BranchNode fmatch = (BranchNode) i.next();
+      if( fmatch.isMatch(BranchNode.MATCH_FULL))
+        return fmatch;
+    }
+    return null;
   }
 
   public void debug( java.io.PrintWriter pw, int indent ) {
