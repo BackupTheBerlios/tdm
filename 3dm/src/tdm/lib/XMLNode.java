@@ -1,10 +1,16 @@
-// $Id: XMLNode.java,v 1.3 2001/04/19 13:59:04 ctl Exp $
+// $Id: XMLNode.java,v 1.4 2001/04/20 14:47:50 ctl Exp $
 
 import java.security.MessageDigest;
 
 public abstract class XMLNode {
 
+  protected int infoSize = 0;
+
   public XMLNode() {
+  }
+
+  public int getInfoSize() {
+    return infoSize;
   }
 
   protected MessageDigest getMD() {

@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.15 2001/04/19 20:45:50 ctl Exp $
+//$Id: TreeDM.java,v 1.16 2001/04/20 14:47:50 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -199,7 +199,8 @@ public class TreeDM {
 
   // Run Best Matcher
   public void runBM( String[] args ) {
-   Node docA=null, docBase=null;
+   BranchNode docA=null;
+   BaseNode docBase=null;
    final String OTHER = "2";
     if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
@@ -208,14 +209,14 @@ public class TreeDM {
    try {
       XMLParser p = new XMLParser();
       System.out.println("Parsing " + args [0]);
-      docBase = p.parse(args[0] + PSEP + "b.xml",
+      docBase = (BaseNode) p.parse(args[0] + PSEP + "b.xml",
         new NodeFactory() {
           public Node makeNode( Node parent, int childPos, XMLNode content ) {
             return new BaseNode( parent, childPos, content  );
           }
         });
       System.out.println("Parsing " + OTHER + ".xml");
-      docA = p.parse(args[0] + PSEP+ OTHER+".xml",
+      docA =  (BranchNode) p.parse(args[0] + PSEP+ OTHER+".xml",
         new NodeFactory() {
           public Node makeNode( Node parent, int childPos, XMLNode content ) {
             return new BranchNode( parent, childPos, content  );
@@ -227,7 +228,7 @@ public class TreeDM {
     System.exit(0);
    }
 //   System.exit(0);
-//   ProtoBestMatching m1 = new ProtoBestMatching( docBase, docA, args[0] );
+   Matching m1 = new Matching( docBase, docA );
    java.io.File mf = new java.io.File( args[0] + PSEP+ "match"+OTHER );
    if( mf.exists() ) {
     System.out.println("Additional matchings from match"+OTHER);

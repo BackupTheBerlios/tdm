@@ -1,4 +1,4 @@
-// $Id: XMLTextNode.java,v 1.4 2001/04/19 20:45:50 ctl Exp $
+// $Id: XMLTextNode.java,v 1.5 2001/04/20 14:47:50 ctl Exp $
 
 import java.security.MessageDigest;
 
@@ -20,6 +20,7 @@ public class XMLTextNode extends XMLNode {
     System.arraycopy(srctext,first,text,0,length);
 //    System.out.println("NEW TN:"+new String(text));
     cHash = calculateHash(text);
+    infoSize = text.length > Measure.TEXT_THRESHOLD ? text.length - Measure.TEXT_THRESHOLD : 1;
   }
 
   public boolean contentEquals( Object a ) {

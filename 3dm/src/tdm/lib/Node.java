@@ -1,4 +1,4 @@
-// $Id: Node.java,v 1.3 2001/04/19 20:45:50 ctl Exp $
+// $Id: Node.java,v 1.4 2001/04/20 14:47:50 ctl Exp $
 
 import java.util.Vector;
 
@@ -7,7 +7,7 @@ public abstract class Node {
   protected Vector children = new Vector();
   protected XMLNode content = null;
   protected Node parent = null;
-  protected int childPos=-1;
+  protected int childPos=-1; // zero-based, i.e. first child = 0
 
   public Node( Node aParent, int achildPos ) {
     parent = aParent;

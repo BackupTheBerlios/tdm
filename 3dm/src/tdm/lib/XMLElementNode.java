@@ -1,4 +1,4 @@
-// $Id: XMLElementNode.java,v 1.4 2001/04/19 13:59:04 ctl Exp $
+// $Id: XMLElementNode.java,v 1.5 2001/04/20 14:47:50 ctl Exp $
 
 import org.xml.sax.Attributes;
 import java.util.Vector;
@@ -28,6 +28,7 @@ public class XMLElementNode extends XMLNode {
       String key = (String) iter.next();
       attributes.addAttribute("","",key,"",(String) attr.get(key));
     }
+    makeHash();
   }
 //PROTO CODE ENDS
   public XMLElementNode( String aname, Attributes attr ) {
@@ -38,13 +39,18 @@ public class XMLElementNode extends XMLNode {
 
   private void makeHash() {
     nHashCode = name.hashCode();
+    infoSize = Measure.ELEMENT_NAME_INFO;
     MessageDigest md = getMD();
     for( int i=0;i<attributes.getLength();i++) {
+      int vsize = attributes.getValue(i).length();
+      infoSize += Measure.ATTR_INFO + (vsize > Measure.ATTR_VALUE_THRESHOLD ? vsize -
+         Measure.ATTR_VALUE_THRESHOLD : 1 );
       md.update( calculateHash( attributes.getQName(i) ) );
       md.update( calculateHash( attributes.getValue(i) ) );
     }
     attrHash = md.digest();
   }
+
 
   //DUMMY!
   public String getNamespaceURI() {
@@ -83,14 +89,13 @@ public class XMLElementNode extends XMLNode {
 
   public boolean contentEquals( Object a ) {
     if( a instanceof XMLElementNode )
-      return ((XMLElementNode) a).name.equals(name) &&
-//             ((XMLElementNode) a).nameSpace.equals(nameSpace) &&
-             compareAttributes( ((XMLElementNode) a).attributes, attributes
-             );
+      return ((XMLElementNode) a).nHashCode == nHashCode &&
+       MessageDigest.isEqual(((XMLElementNode) a).attrHash,attrHash);
     else
       return false;
   }
 
+//POSSIBLY NOT NEEDED---
   public boolean compareAttributes( Attributes a, Attributes b ) {
     if( a==b )
       return true; // Either both are null, or point to same obj
@@ -108,5 +113,6 @@ public class XMLElementNode extends XMLNode {
     }
     return true;
   }
+//ENDPOSSIBLY
 
 }
