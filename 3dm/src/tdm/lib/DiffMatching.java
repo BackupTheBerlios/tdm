@@ -1,4 +1,4 @@
-// $Id: DiffMatching.java,v 1.4 2001/09/26 19:36:44 ctl Exp $ D
+// $Id: DiffMatching.java,v 1.5 2002/10/25 11:35:06 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -25,18 +25,21 @@ import java.util.Iterator;
 
 /** Tree matching suitable for producing diffs. Compared to the standard
  *  matching, DiffMatching does not match nodes with similar content (there's
- *  no point to that), and tries to find matches that form uninterrupted runs
+ *  no point to do that), and tries to find matches that form uninterrupted runs
  *  of src attributes => more efficient encoding of the diff.
  */
 
-public class DiffMatching extends Matching {
+public class DiffMatching extends HeuristicMatching {
 
+  public DiffMatching() {}
   /** Construct a matching between a base and branch tree. */
   public DiffMatching(BaseNode abase, BranchNode abranch ) {
-    super( abase, abranch );
+    buildMatching( abase, abranch );
   }
 
-  protected void buildMatching( BaseNode base, BranchNode branch ) {
+  public void buildMatching( BaseNode base, BranchNode branch ) {
+    baseRoot = base;
+    branchRoot = branch;
     matchSubtrees( base, branch );
   }
 
@@ -70,5 +73,14 @@ public class DiffMatching extends Matching {
       return null;
     else
       return (CandidateEntry) bestCandidates.elementAt(0);
+  }
+
+  // DiffMatching has public getAreaStopNodes
+  public void getAreaStopNodes( Vector stopNodes, BranchNode n ) {
+    super.getAreaStopNodes(stopNodes,n);
+  }
+
+  public BranchNode getBranchRoot() {
+    return branchRoot;
   }
 }

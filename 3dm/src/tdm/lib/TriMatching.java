@@ -1,4 +1,4 @@
-// $Id: TriMatching.java,v 1.12 2001/09/26 19:36:46 ctl Exp $ D
+// $Id: TriMatching.java,v 1.13 2002/10/25 11:35:06 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -20,22 +20,32 @@
 //
 
 /** Matching between a base and two branch trees. */
-public class TriMatching extends Matching {
+public class TriMatching  {
 
   private BranchNode leftRoot = null;
   private BranchNode rightRoot = null;
+  private BaseNode baseRoot = null;
 
+  public TriMatching( BranchNode left, BaseNode base, BranchNode right) {
+    this(left,base,right,HeuristicMatching.class);
+  }
   /** Create matching */
-  public TriMatching( BranchNode left, BaseNode base, BranchNode right ) {
-    super( base, right );
+  public TriMatching( BranchNode left, BaseNode base, BranchNode right, Class matchType  ) {
+    Matching m = null;
+    try {
+      m = (Matching) matchType.newInstance();
+    } catch (Exception e) {
+      throw new RuntimeException("Fatal Error instantiating matching class "+matchType.getName());
+    }
+    m.buildMatching( base, right );
     leftRoot =left;
     rightRoot = right;
+    baseRoot = base;
     swapLeftRight( base );
-    buildMatching( base, left );
+    m.buildMatching( base, left );
     setPartners( left, false );
     setPartners( right, true );
   }
-
 
   // Swap left and right matching fields in base nodes. The superclass
   // always fills in left matchings, so we need to call this when making
@@ -67,4 +77,9 @@ public class TriMatching extends Matching {
   public BranchNode getRightRoot() {
     return rightRoot;
   }
+
+  public BaseNode getBaseRoot() {
+    return baseRoot;
+  }
+
 }

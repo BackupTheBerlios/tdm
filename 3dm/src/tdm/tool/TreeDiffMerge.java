@@ -1,4 +1,4 @@
-// $Id: TreeDiffMerge.java,v 1.5 2001/09/26 19:36:46 ctl Exp $ D
+// $Id: TreeDiffMerge.java,v 1.6 2002/10/25 11:35:06 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -31,9 +31,10 @@ import org.xml.sax.Attributes;
  *  algorithms.
  */
 public class TreeDiffMerge {
+
   public static void main(String[] args) throws java.io.IOException {
     System.err.println(
-    "3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.5 $" );
+    "3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.6 $" );
     // Get command line options
     int firstFileIx = parseOpts( args );
     if( op == MERGE && (args.length - firstFileIx) == 3 )
@@ -63,23 +64,9 @@ public class TreeDiffMerge {
       System.err.println("-c, --copythreshold=bytes");
       System.err.println("   Threshold for considering a duplicate structure "+
                           "to be a copy. Default value is " +
-                          Matching.COPY_THRESHOLD + " bytes");
+                          HeuristicMatching.COPY_THRESHOLD + " bytes");
     }
   }
-
-  // Factory for BaseNode:s
-  private static NodeFactory baseNodeFactory =  new NodeFactory() {
-            public Node makeNode(  XMLNode content ) {
-              return new BaseNode( content  );
-            }
-        };
-
-  // Factory for BranchNode:s
-  private static NodeFactory branchNodeFactory =  new NodeFactory() {
-            public Node makeNode(  XMLNode content ) {
-              return new BranchNode(  content  );
-            }
-        };
 
   /** Runs merge algorithm.
    *  @param ix Index in args of first file
@@ -88,14 +75,15 @@ public class TreeDiffMerge {
     BaseNode docBase=null;
     BranchNode docA=null,docB=null;
     String currentFile = "";
+    Matching m = getMatcherInstance( HeuristicMatching.class );
     try {
       XMLParser p = new XMLParser();
       currentFile = args[ix+0];
-      docBase = (BaseNode) p.parse( currentFile,baseNodeFactory);
+      docBase = (BaseNode) p.parse( currentFile, m.getBaseNodeFactory());
       currentFile = args[ix+1];
-      docA = (BranchNode) p.parse( currentFile, branchNodeFactory);
+      docA = (BranchNode) p.parse( currentFile, m.getBranchNodeFactory());
       currentFile = args[ix+2];
-      docB = (BranchNode) p.parse( currentFile,branchNodeFactory);
+      docB = (BranchNode) p.parse( currentFile, m.getBranchNodeFactory());
     } catch ( Exception e ) {
       System.err.println("XML Parse error in " + currentFile +
                             ". Detailed exception info is:" );
@@ -104,7 +92,7 @@ public class TreeDiffMerge {
       return;
     }
     try {
-      Merge merge = new Merge( new TriMatching( docA, docBase, docB ) );
+      Merge merge = new Merge( new TriMatching( docA, docBase, docB, m.getClass() ) );
 //$CUT
 /*      PrintWriter pw = new PrintWriter( new FileOutputStream("m.log"));
       dumpMatch(docA,pw);
@@ -113,12 +101,12 @@ public class TreeDiffMerge {
       pw.close();
 */
 //$CUT
-      merge.merge( new XMLPrinter( new PrintWriter( out)  ) );
+      merge.merge( new XMLPrinter( out  ) );
       merge.getConflictLog().writeConflicts(new XMLPrinter(
-        new PrintWriter( new FileOutputStream( conflictLogName ))));
+         new FileOutputStream( conflictLogName )));
       if( editLog )
         merge.getEditLog().writeEdits( new XMLPrinter(
-          new PrintWriter( new FileOutputStream( editLogName ))));
+           new FileOutputStream( editLogName )));
     } catch ( Exception e ) {
       System.err.println("Exception while merging.. trace follows:");
       System.err.println( e.toString() );
@@ -134,12 +122,13 @@ public class TreeDiffMerge {
     BaseNode docBase=null;
     BranchNode docA=null;
     String currentFile = "";
+    DiffMatching m = (DiffMatching) getMatcherInstance(DiffMatching.class);
     try {
       XMLParser p = new XMLParser();
       currentFile = args[ix+0];
-      docBase = (BaseNode) p.parse( currentFile,baseNodeFactory);
+      docBase = (BaseNode) p.parse( currentFile,m.getBaseNodeFactory());
       currentFile = args[ix+1];
-      docA = (BranchNode) p.parse( currentFile, branchNodeFactory);
+      docA = (BranchNode) p.parse( currentFile, m.getBranchNodeFactory());
     } catch ( Exception e ) {
       System.err.println("XML Parse error in " + currentFile +
                           ". Detailed exception info is:" );
@@ -148,9 +137,9 @@ public class TreeDiffMerge {
       return;
     }
     try {
-      Matching m = new DiffMatching( docBase, docA );
+      m.buildMatching(docBase,docA);
       Diff diff = new Diff( m );
-      diff.diff(new XMLPrinter( new PrintWriter(out) ));
+      diff.diff(new XMLPrinter( out ));
     } catch ( Exception e ) {
       System.err.println("Exception while diffing.. trace follows:");
       System.err.println( e.toString() );
@@ -164,12 +153,13 @@ public class TreeDiffMerge {
     BaseNode docBase=null;
     BranchNode docPatch=null;
     String currentFile = "";
+    Matching m = getMatcherInstance(DiffMatching.class);
     try {
       XMLParser p = new XMLParser();
       currentFile = args[ix+0];
-      docBase = (BaseNode) p.parse( currentFile,baseNodeFactory);
+      docBase = (BaseNode) p.parse( currentFile,m.getBaseNodeFactory());
       currentFile = args[ix+1];
-      docPatch = (BranchNode) p.parse( currentFile, branchNodeFactory);
+      docPatch = (BranchNode) p.parse( currentFile, m.getBranchNodeFactory());
     } catch ( Exception e ) {
       System.err.println("XML Parse error in " + currentFile +
                         ". Detailed exception info is:" );
@@ -179,9 +169,9 @@ public class TreeDiffMerge {
     }
     try {
       Patch patch = new Patch();
-      patch.patch(docBase,docPatch, new XMLPrinter( new PrintWriter( out  ) ) );
+      patch.patch(docBase,docPatch, new XMLPrinter( out ) );
     } catch ( Exception e ) {
-      System.err.println("Exception while diffing.. trace follows:");
+      System.err.println("Exception while patching.. trace follows:");
       System.err.println( e.toString() );
       e.printStackTrace();
     }
@@ -190,6 +180,7 @@ public class TreeDiffMerge {
   // Default files
   public static final String EDITLOG = "edit.log";
   public static final String CONFLICTLOG = "conflict.log";
+
   // operation codes, returned by parseOpts()
   public static final int MERGE = 0;
   public static final int DIFF = 1;
@@ -199,6 +190,7 @@ public class TreeDiffMerge {
   protected static String editLogName = EDITLOG;
   protected static String conflictLogName = CONFLICTLOG;
   protected static int op = -1;
+  public static String CUSTOM_MATCHER = null;
 
   // Parse command line options.
   private static int parseOpts( String args[] ) {
@@ -208,6 +200,7 @@ public class TreeDiffMerge {
       new LongOpt("merge",LongOpt.NO_ARGUMENT,null,'m'),
       new LongOpt("diff",LongOpt.NO_ARGUMENT,null,'d'),
       new LongOpt("patch",LongOpt.NO_ARGUMENT,null,'p'),
+      new LongOpt("Xmatcher",LongOpt.REQUIRED_ARGUMENT,null,'\u0001')
     };
     Getopt g = new Getopt("3DM", args, "e::c:mdp", lopts);
     int c;
@@ -219,7 +212,7 @@ public class TreeDiffMerge {
             editLogName = getStringArg(g,EDITLOG);
             break;
           case 'c':
-            Matching.COPY_THRESHOLD = getIntArg(g,Matching.COPY_THRESHOLD);
+            HeuristicMatching.COPY_THRESHOLD = getIntArg(g,HeuristicMatching.COPY_THRESHOLD);
 ///           //System.err.println("COPY_THRESHOLD=" + Matching.COPY_THRESHOLD);
             break;
           case 'm':
@@ -231,6 +224,11 @@ public class TreeDiffMerge {
           case 'd':
             op = DIFF;
             break;
+          // Xtra-args
+          case '\u0001':
+            CUSTOM_MATCHER = getStringArg(g,null);
+          break;
+
       }
     }
     return g.getOptind();
@@ -257,6 +255,17 @@ public class TreeDiffMerge {
     }
   }
 
+  private static Matching getMatcherInstance( Class defaultClass ) {
+    try {
+      Class matcher = CUSTOM_MATCHER != null ? Class.forName(CUSTOM_MATCHER) : defaultClass;
+      return (Matching) matcher.newInstance();
+    } catch (Exception e ) {
+      System.err.println("Failed to instantiate matcher: class "+
+      (CUSTOM_MATCHER != null ? CUSTOM_MATCHER : defaultClass.getName())+
+      " unknown");
+    }
+    return null;
+  }
 //$CUT
   // DEBUg code
   private static void dumpMatch(BranchNode n, PrintWriter pw ) {

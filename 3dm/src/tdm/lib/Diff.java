@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.5 2001/09/26 19:36:44 ctl Exp $ D
+// $Id: Diff.java,v 1.6 2002/10/25 11:35:06 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -38,7 +38,7 @@ import java.util.Iterator;
 
 public class Diff {
 
-  private Matching m = null;
+  private DiffMatching m = null;
   private static final Attributes EMPTY_ATTS = new AttributesImpl();
   private static final Set RESERVED;
   private static final String DIFF_NS ="diff:";
@@ -53,7 +53,7 @@ public class Diff {
    *  Note that the matching contains pointers to the base and new trees.
    *  @param am Matching between trees to diff
    */
-  public Diff(Matching am) {
+  public Diff(DiffMatching am) {
     m=am;
   }
 
