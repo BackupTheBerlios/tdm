@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.3 2001/03/15 13:09:14 ctl Exp $
+// $Id: Merge.java,v 1.4 2001/03/21 19:15:13 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -25,6 +25,9 @@ public class Merge {
   }
 
   public void mergeNode( BranchNode a, BranchNode b, ContentHandler ch ) throws SAXException {
+    if( ((a.getBaseMatchType() | BranchNode.MATCH_CHILDREN) == 0 ) ||
+        ((a.getBaseMatchType() | BranchNode.MATCH_CHILDREN) == 0 ) )
+      throw new RuntimeException("mergeNode: match type should be match children, otherwise the node should be null!");
     MergeList mlistA = a != null ? makeMergeList( a ) : null;
     MergeList mlistB = b != null ? makeMergeList( b ) : null;
     System.out.println("Merge A list");
@@ -94,7 +97,7 @@ public class Merge {
   }
 
   private MergeList makeMergeList( BranchNode parent ) {
-    MergeList ml = new MergeList();
+    MergeList ml = new MergeList(parent);
 //--
     Set baseMatches = new HashSet();
 /**    Node parentPartner = getFirstMapping( parent );
@@ -142,7 +145,7 @@ public class Merge {
 // May modify mlistA by adding hangons from mlistB
     public MergeList mergeLists( MergeList mlistA, MergeList mlistB ) {
       MergeList merged = new MergeList();
-
+      mergeDeletedOrMoved( mlistA, mlistB );
 
 // LATER      mergeDeletedOrMovedOut( docA, docB, mlistA, mlistB, docBMatching );
 /*
@@ -213,6 +216,19 @@ public class Merge {
       return merged;
     }
 
+    private void mergeDeletedOrMoved( MergeList mlistA, MergeList mlistB ) {
+      BaseNode baseParent = mlistA.getEntryParent().getBaseMatch();
+      for( int i=0;i<baseParent.getChildCount();i++) {
+        BaseNode bn = baseParent.getChild(i);
+        boolean inListA = mlistA.matchInList(bn), inListB = mlistB.matchInList(bn);
+        boolean deletedFromA = false, deletedFromB = false; // some code!!!!!! !inListA && bn.
+        if( inListA && inListB )
+          continue; // Present in both, everything OKi
+        else if( deletedFromA && deletedFromB )
+          continue; // Deleted in both, everything OK
+        else if(
+      }
+    }
 
 
 
@@ -278,6 +294,15 @@ public class Merge {
     private Vector list = new Vector();
     private Map index = new HashMap(); // looks up Entry index based on base partner
     int tailPos = -1; // current tail pos
+    private BrancgNode entryParent = null; // Common parent of all entries
+
+    public MergeList( BranchNode anEntryParent ) {
+      entryParent = anEntryParent;
+    }
+
+    public BranchNode getEntryParent() {
+      return entryParent;
+    }
 
     void add( MergeEntry n ) {
       tailPos++;
@@ -332,6 +357,10 @@ public class Merge {
       else if( b.node == END )
         return getEntryCount() - 1; // Assuming the other list is equally long
       return ((Integer) index.get( b.node.getBaseMatch() )).intValue();
+    }
+
+    public boolean matchInList( BaseNode n ) {
+      return index.get( n ) != null;
     }
 
     class ExpandingIterator implements Iterator {
