@@ -1,4 +1,4 @@
-// $Id: TriMatching.java,v 1.2 2001/03/14 14:03:44 ctl Exp $
+// $Id: TriMatching.java,v 1.3 2001/03/15 13:09:14 ctl Exp $
 
 public class TriMatching {
 
@@ -47,7 +47,7 @@ public class TriMatching {
      BranchNode n2 = (BranchNode) XMLn2n.get(match);
      base.getLeft().addMatch( n2 );
      n2.setPartners( base.getRight() );
-     n2.setBaseMatch( base );
+     n2.setBaseMatch( base, BranchNode.MATCH_FULL );
     } while( (match = ml.getNextMapping() ) != null );
     //Saftey check- no glus?
     ml.getFirstMapping(match);
@@ -58,7 +58,7 @@ public class TriMatching {
      BranchNode n2 = (BranchNode) XMLn2n.get(match);
      base.getRight().addMatch( n2 );
      n2.setPartners( base.getLeft() );
-     n2.setBaseMatch( base );
+     n2.setBaseMatch( base, BranchNode.MATCH_FULL );
     } while( (match = mr.getNextMapping() ) != null );
     //Saftey check- no glus?
     mr.getFirstMapping(match);

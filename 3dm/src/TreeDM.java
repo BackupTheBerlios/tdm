@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.2 2001/03/14 14:03:43 ctl Exp $
+//$Id: TreeDM.java,v 1.3 2001/03/15 13:09:14 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -90,11 +90,17 @@ public class TreeDM {
   //m1.merge2( docA, docB, m2 );
    System.out.println("Should look like this:");
    Merge merge = new Merge( new TriMatching( docA, m1, docBase, m2, docB ) );
-   java.io.PrintWriter pw = new java.io.PrintWriter( System.out );
-
+   java.io.ByteArrayOutputStream result = new java.io.ByteArrayOutputStream();
+   java.io.PrintWriter pw = new java.io.PrintWriter( result );
+    try {
    merge.merge( new MergePrinter(pw) );
+    } catch ( org.xml.sax.SAXException e ) {
+     System.out.println("SAXException while merging.. and it was yoyr lousy content handler that threw it");
+    }
   pw.flush();
-
+  try {result.close(); } catch (Exception e ) {}
+  System.out.println("Merged XML:");
+  System.out.print(result.toString());
     /*
 
    MapNode merged = 1==0 ? m1.merge(m2) : m1.mapRoot;
@@ -284,11 +290,13 @@ public class TreeDM {
 //      else
 //        tagopen.append('>');
       pw.print(IND.substring(0,indent)  + tagopen.toString());
+      indent ++;
      }
 
 
      public void endElement (String uri, String name, String qName)
      {
+        indent--;
           if( childcounter == null )
             pw.println(" />");
           else

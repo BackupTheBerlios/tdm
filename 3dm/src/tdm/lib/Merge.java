@@ -1,6 +1,7 @@
-// $Id: Merge.java,v 1.2 2001/03/14 14:03:43 ctl Exp $
+// $Id: Merge.java,v 1.3 2001/03/15 13:09:14 ctl Exp $
 
 import org.xml.sax.ContentHandler;
+import org.xml.sax.SAXException;
 import java.util.Vector;
 import java.util.Set;
 import java.util.HashSet;
@@ -17,15 +18,20 @@ public class Merge {
     m = am;
   }
 
-  public void merge( ContentHandler ch ) {
+  public void merge( ContentHandler ch ) throws SAXException {
+    ch.startDocument();
     mergeNode( m.leftRoot, m.rightRoot, ch );
+    ch.endDocument();
   }
 
-  public void mergeNode( BranchNode a, BranchNode b, ContentHandler ch ) {
+  public void mergeNode( BranchNode a, BranchNode b, ContentHandler ch ) throws SAXException {
     MergeList mlistA = a != null ? makeMergeList( a ) : null;
     MergeList mlistB = b != null ? makeMergeList( b ) : null;
+    System.out.println("Merge A list");
     mlistA.print();
+    System.out.println("Merge B list");
     mlistB.print();
+
     if( mlistA != null && mlistB != null ) {
       mlistA = mergeLists( mlistA, mlistB ); // Merge lists
     } else if( mlistA == null ) {
@@ -33,15 +39,59 @@ public class Merge {
       mlistB = null; // safety precaution
     }
     // Now, the merged list is in mlistA
-    // Handle updates
-    Iterator i = mlistA.getExpandingIterator();
-    while( i.hasNext() ) {
+    // Handle updates & Recurse
+    for( Iterator i = mlistA.getExpandingIterator();i.hasNext();) {
       BranchNode n = (BranchNode) i.next();
-      System.out.println(n.toString());
+      BranchNode nPartner = n.getFirstPartner( BranchNode.MATCH_CONTENT );
+      // Merge contents of node and partner (but only if there's partner)
+      XMLNode mergedNode = nPartner != null ? mergeNodeContent( n, nPartner ) : n.getContent();
+      if( mergedNode instanceof XMLTextNode ) {
+        String text = ((XMLTextNode) mergedNode).getText();
+        ch.characters(text.toCharArray(),0,text.length());
+      } else {
+        // It's an element node
+        XMLElementNode mergedElement = (XMLElementNode) mergedNode;
+        ch.startElement(mergedElement.getNamespaceURI(),mergedElement.getLocalName(),mergedElement.getQName(),mergedElement.getAttributes());
+        // Figure out partners for recurse
+        BranchNode ca = (n.getBaseMatchType() & BranchNode.MATCH_CHILDREN ) != 0 ? n : null;
+        BranchNode cb = n.getFirstPartner( BranchNode.MATCH_CHILDREN );
+        // Recurse!
+        mergeNode(ca,cb,ch);
+        ch.endElement(mergedElement.getNamespaceURI(),mergedElement.getLocalName(),mergedElement.getQName());
+      }
+
     }
 
   }
 
+
+  private XMLNode mergeNodeContent( BranchNode a, BranchNode b ) {
+/*    // First check if either is null
+    if( a == null )
+      return b.getContent();
+    else if ( b == null )
+      return a.getContent();
+*/
+    boolean aUpdated = !matches( a, a.getBaseMatch() ),
+            bUpdated = !matches( b, b.getBaseMatch() );
+    if( aUpdated && bUpdated ) {
+      if( matches( a, b ) ) {
+        System.out.println("CONFLICTW; Node updated in both branches, but updates are equal");
+        return a.getContent();
+      } else {
+        //
+        // CONFLICTCODE here
+        // if XMLElementNode try merging attributes if XMLTextnode give up
+        System.out.println("CONFLICT; Node updated in both branches, picking first one:");
+        System.out.println(a.toString());
+        System.out.println(b.toString());
+        return a.getContent();
+      }
+    } else if ( bUpdated )
+      return b.getContent();
+    else
+      return a.getContent(); // A modified, or none modified, a is ok in both cases
+  }
 
   private MergeList makeMergeList( BranchNode parent ) {
     MergeList ml = new MergeList();
@@ -118,8 +168,8 @@ public class Merge {
 //        MergeEntry chosenEn=ea,otherEn=eb;
         merged.add( ea );
         // Hangon nodes
-        if( ea.inserts.size() > 0 ) {
-          if( eb.inserts.size() > 0 ) {
+        if( eb.inserts.size() > 0 ) {
+          if( ea.inserts.size() > 0 ) {
             // Both have hangons,
             // add CONFLICTCODE here
             // for now, chain A and B hangons
@@ -221,8 +271,9 @@ public class Merge {
   // Merge list start and end markers. Cleaner if they were in MergeList, but
   // Java doesn't allow statics in nested classes
   static BranchNode START = new BranchNode(null,-1,new XMLTextNode("__START__"));
-  static BranchNode END = new BranchNode(null,-1001,new XMLTextNode("__END__"));
+  static BranchNode END = new BranchNode(null,-1,new XMLTextNode("__END__"));
 
+  // TODO: START end END markers should be completely hidden if possible
   class MergeList {
     private Vector list = new Vector();
     private Map index = new HashMap(); // looks up Entry index based on base partner
@@ -276,6 +327,10 @@ public class Merge {
     }
 
     public int findPartner( MergeEntry b ) {
+      if( b.node == START )
+        return 0;
+      else if( b.node == END )
+        return getEntryCount() - 1; // Assuming the other list is equally long
       return ((Integer) index.get( b.node.getBaseMatch() )).intValue();
     }
 
@@ -284,7 +339,12 @@ public class Merge {
           hangonPos = -1;
 
       ExpandingIterator() {
-        mainPos = getEntryCount() > 0 ? 0 : -1;
+        // !!! NOTE: Set up so as to start from node succeeding START
+        mainPos = getEntryCount() > 2 ? 0 : -1; // 2 is the minimum entry count = START,END
+        if( mainPos != -1 && getEntry(0).getHangonCount() == 0)
+          mainPos = getEntryCount() > 1 ? 1 : -1;
+        else
+          hangonPos = 0;
       }
 
       public boolean hasNext() {
@@ -313,7 +373,7 @@ public class Merge {
           hangonPos = -1;
           mainPos++;
         }
-        if( mainPos >= getEntryCount() )
+        if( mainPos >= getEntryCount() -1 ) // -1 to stop when we get to END marker
           mainPos=-1;
       }
     }
@@ -345,9 +405,11 @@ public class Merge {
   // Utility functions
   //
   protected boolean matches( Node a, Node b ) {
-    if( a== null )
+    if( a== null || b==null)
       return false;
-    return a.getContent(). contentEquals(b.getContent());
+/*    if( a.getContent() == null )
+      throw new RuntimeException("NULL content?");*/
+    return a.getContent().contentEquals(b.getContent());
   }
 
 }

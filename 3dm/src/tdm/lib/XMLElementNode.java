@@ -1,4 +1,4 @@
-// $Id: XMLElementNode.java,v 1.2 2001/03/14 14:03:44 ctl Exp $
+// $Id: XMLElementNode.java,v 1.3 2001/03/15 13:09:14 ctl Exp $
 
 import org.xml.sax.Attributes;
 import java.util.Vector;
@@ -41,6 +41,24 @@ public class XMLElementNode extends XMLNode {
       }
     }
 */
+  }
+
+  //DUMMY!
+  public String getNamespaceURI() {
+    return "";
+  }
+
+  //DUMMY!
+  public String getLocalName() {
+    return "";
+  }
+
+  public String getQName() {
+    return name;
+  }
+
+  public Attributes getAttributes() {
+    return attributes;
   }
 
   public String toString() {

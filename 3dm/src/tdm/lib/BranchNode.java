@@ -1,9 +1,17 @@
 // $Id
 
+import java.util.Iterator;
+
 public class BranchNode extends Node {
+
+  public static final int MATCH_FULL = 3;
+  public static final int MATCH_CONTENT = 1;
+  public static final int MATCH_CHILDREN = 2;
 
   private MatchedNodes partners = null;
   private BaseNode baseMatch = null;
+  private int matchType = 0;
+
 
   public BranchNode( Node aParent, int achildPos, XMLNode aContent ) {
     super( aParent,achildPos);
@@ -28,16 +36,33 @@ public class BranchNode extends Node {
     return partners;
   }
 
-  // Possibly not needed in final version!
-  public void setBaseMatch(BaseNode p) {
+  // Possibly not needed in final version! (move to constructor?)
+  public void setBaseMatch(BaseNode p, int amatchType) {
+    if( amatchType < MATCH_CONTENT || amatchType > MATCH_FULL )
+      throw new IllegalArgumentException();
     baseMatch = p;
+    matchType = amatchType;
+  }
+
+  public int getBaseMatchType() {
+    return matchType;
   }
 
   public BaseNode getBaseMatch() {
     return baseMatch;
   }
 
-
+  public BranchNode getFirstPartner( int typeFlags ) {
+    MatchedNodes m= getPartners();
+    if( m == null )
+      return null;
+    for( Iterator i = m.getMatches().iterator();i.hasNext();) {
+      BranchNode candidate = (BranchNode) i.next();
+      if((candidate.matchType & typeFlags) != 0)
+        return candidate;
+    }
+    return null;
+  }
   public void debug( java.io.PrintWriter pw, int indent ) {
     super.debug(pw, indent);
     String ind = "                                                   ".substring(0,indent+1);
