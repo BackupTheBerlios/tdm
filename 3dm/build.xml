@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!-- $Id: build.xml,v 1.1 2003/01/09 14:47:04 ctl Exp $ -->
+<project name="3dm" default="3dm" basedir=".">
+    <description>
+        3DM build file
+    </description>
+
+
+  <!-- set global properties for this build -->
+  <property name="src" location="src"/>
+  <property name="build" location="classes"/>
+  <property name="tmpdir" location="tmp"/>
+  <property name="javalib" location="lib"/>
+
+  <!-- Library path -->
+  <path id="libpath">
+    <fileset dir="${javalib}">
+      <include name="*.jar" />
+    </fileset>
+  </path>
+
+  <target name="init">
+    <!-- Create the time stamp -->
+    <tstamp/>
+    <!-- Create the build directory structure used by compile -->
+    <mkdir dir="${build}"/>
+    <mkdir dir="${tmpdir}"/>
+  </target>
+
+  <target name="compile-lib" depends="init"
+        description="compile the source " >
+    <javac srcdir="${src}" destdir="${build}"
+     includes="tdm/lib/**" >
+    <classpath>
+      <path refid="libpath" />
+    </classpath>
+    </javac> 
+  </target>
+
+  <target name="compile-tool" depends="init"
+        description="compile the source " >
+    <javac srcdir="${src}" destdir="${build}"
+	    includes="tdm/tool/**">
+    <classpath>
+      <path refid="libpath" />
+      <pathelement path="${build}" /> 
+    </classpath>
+    </javac> 
+  </target>
+
+  <target name="3dm" depends="compile-lib,compile-tool"
+        description="generate 3dm" >
+  </target>
+</project>
