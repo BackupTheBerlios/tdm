@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.7 2001/03/29 14:51:48 ctl Exp $
+//$Id: TreeDM.java,v 1.8 2001/03/31 15:32:09 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -183,7 +183,7 @@ public class TreeDM {
   // Run Best Matcher
   public void runBM( String[] args ) {
    ElementNode docA=null, docBase=null;
-   final String OTHER = "1";
+   final String OTHER = "2";
     if( args.length < 2 ) {
       System.out.println("Usage: TreeDM base.xml deriv.xml");
       System.exit(0);
@@ -305,6 +305,7 @@ public class TreeDM {
       xr.setErrorHandler(this);
       try {
        xr.setFeature("http://xml.org/sax/features/namespaces",false);
+       xr.setFeature("http://xml.org/sax/features/validation",false);
       } catch (SAXException e) {
        System.out.println("Error setting features:" + e.getMessage());
       }

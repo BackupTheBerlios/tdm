@@ -1,4 +1,4 @@
-// $Id: ProtoBestMatching.java,v 1.8 2001/03/30 13:49:41 ctl Exp $
+// $Id: ProtoBestMatching.java,v 1.9 2001/03/31 15:32:08 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 //import TreeMatching;
@@ -77,7 +77,7 @@ public class ProtoBestMatching  {
     resolveAmbiguities( atRoot, base, derived );
     nodeMap.clear(); // Free all mappings
     makeMap( atRoot );
-//    matchSamePosUnmatched( base, derived);
+    matchSamePosUnmatched( derived, base.getChild(0));
     //
   }
 
@@ -85,11 +85,11 @@ public class ProtoBestMatching  {
     if( n.getCandidateCount() == 0)
       ; // Unmapped
     else if( n.getCandidateCount() < 2)
-      dfsExactMatch( n.getNode(), n.getCandidate(0), true, 0, null );
+      dfsExactMatch( n.getNode(), n.getCandidate(0), true, 0, null,null );
     else {
       System.out.println("makeMap: leaving ambiguity...:" + n.getNode().toString() );
       for(int i=0;i<n.getCandidateCount();i++)
-        dfsExactMatch( n.getNode(), n.getCandidate(i), true, 0, null );
+        dfsExactMatch( n.getNode(), n.getCandidate(i), true, 0, null,null );
     }
     for( int i=0;i<n.getChildCount();i++)
       makeMap( n.getChild(i) );
@@ -116,10 +116,11 @@ public class ProtoBestMatching  {
           areaTree.getChild(stopPos+1).getNode().parent == parent; stopPos++)
           ;
         resolveAmbiguitiesCommonRoot( areaTree, baseDoc, destDoc, startPos, stopPos );
+        fuzzResolveAmbiguitiesCommonRoot( areaTree, baseDoc, destDoc, startPos, stopPos );
         startPos = stopPos + 1;
       }
-    } else
-      ; //System.out.println(areaTree.getNode().toString() + " is ambigious, cannot solve immediate children.");
+    } else if ( areaTree.getChildCount() > 0 )
+      System.out.println(areaTree.getNode().toString() + " is ambigious, cannot solve immediate children.");
     // Recurse
     for( int i = 0; i<areaTree.getChildCount(); i ++ )
       resolveAmbiguities( areaTree.getChild(i), baseDoc, destDoc );
@@ -237,16 +238,122 @@ public class ProtoBestMatching  {
     }
   }
 
+  class AreaBottomNode{
+    public ONode src=null, dst=null;
+    AreaBottomNode( ONode asrc, ONode adst ) {
+      src=asrc;dst=adst;
+    }
+  }
+
+  class MatchNumbers implements Comparable {
+    double[] unums =new double[4];
+    double[] nums = new double[4];
+    final double EPSILON = 1e-09;
+    ONode node = null;
+    public int compareTo( Object o ) {
+      MatchNumbers m = (MatchNumbers) o;
+      for( int i=0;i<nums.length;i++) {
+        if( Math.abs(nums[i]-m.nums[i]) > EPSILON )
+          return nums[i]-m.nums[i] < 0 ? -1:1;
+      }
+      return 0; // No differences encounted...
+    }
+
+    public String toString() {
+      return "Nums=[" + unums[0] +","+ unums[1] +","+ unums[2] +","+ unums[3] +"]";
+    }
+  }
+
+  private MatchNumbers getBestMatch(ONode src, ONode dstTree,MatchNumbers m) {
+    MatchNumbers m2 = getMatchNumbers(null,src,dstTree,true);
+    m2.node = dstTree;
+    if( m2.compareTo(m) < 0 )
+      m= m2; // new minimum found
+    for(int i=0;i<dstTree.getChildCount();i++) {
+      MatchNumbers m3 = getBestMatch( src, dstTree.getChild(i), m);
+      if( m3.compareTo(m) < 0 )
+        m= m3; // new minimum found
+    }
+    return m;
+  }
+
+  private MatchNumbers getMatchNumbers(AreaNode an, ONode src, ONode dst, boolean useDstChild ) {
+    MatchNumbers mn = new MatchNumbers();
+    mn.node = dst;
+    // Left...
+    if( src.childNo > 0 && dst.childNo > 0 ) {
+        mn.nums[0] = (new MisCorrelation()).correlate(src.parent.getChild(src.childNo-1),
+                                                 dst.parent.getChild(dst.childNo-1) ).getValue();
+    } else // Maybe we should give end matches some points, I dunno?
+        mn.nums[0] = 1.0;
+    // Right ...
+    if( src.parent == null ) {
+     System.out.println("IMPOSSIBLE: parent is null of " + src.toString() );
+     mn.nums[0]=1.0; mn.nums[1]=1.0;mn.nums[2]=1.0;mn.nums[3]=1.0;
+      return mn;
+    }
+    if( src.childNo < src.parent.getChildCount() -1 && dst.childNo < dst.parent.getChildCount() -1 ) {
+        mn.nums[1] = (new MisCorrelation()).correlate(src.parent.getChild(src.childNo+1),
+                                                 dst.parent.getChild(dst.childNo+1) ).getValue();
+    } else // Maybe we should give end matches some points, I dunno?
+      mn.nums[1] = 1.0;
+    // Top...
+    mn.nums[2] = 1.0; // (new MisCorrelation()).correlate(src.parent,dst.parent ).getValue();
+    // Children
+    if( !useDstChild ) {
+      mn.nums[3]=1.0;
+      for( int i=0;i<an.bottomNodes.size();i++) {
+        AreaBottomNode ab = (AreaBottomNode) an.bottomNodes.elementAt(i);
+        double childmatch = childListDist(ab.src,ab.dst);
+        mn.nums[3]= childmatch < mn.nums[3] ? childmatch : mn.nums[3];
+      }
+    } else {
+      mn.nums[3] = childListDist(src,dst);
+    }
+    System.arraycopy(mn.nums,0,mn.unums,0,4);
+    Arrays.sort(mn.nums); // Best match (smallest number) first
+    return mn;
+  }
+
+  private void fuzzResolveAmbiguitiesCommonRoot( AreaNode areaTree, ONode baseDoc, ONode destDoc,
+    int startPos, int stopPos ) {
+//    System.out.println("Fuzz Solving ambiguities under " + areaTree.getNode().toString() + " pos " + startPos + "-" + stopPos );
+    // Scan for runs of ambigious children, having at least one candidate with
+    // areaTree.getNode() as root
+    ONode srcParent =  getFirstMapping(null, areaTree.getChild(startPos).getNode().parent );
+    int runStart = startPos, runStop = stopPos;
+    for( runStart = startPos;runStart <= stopPos; runStart++ ) {
+      // Scan for ambigous node
+      AreaNode ch = areaTree.getChild(runStart);
+      if( ch.getCandidateCount() <= 1 ) {
+        continue;
+      }
+      // We have an ambigous node
+      // Look-ee up,left,right and down, and see which one has the best ratio
+      double leftr=1.0, rightr=1.0, upr=1.0, downr=1.0;
+      MatchNumbers[] cands = new MatchNumbers[ ch.getCandidateCount() ];
+      for( int i=0;i<ch.getCandidateCount();i++)
+        cands[i]=getMatchNumbers( ch, ch.getNode(), ch.getCandidate(i) , false);
+      // Sort so that best candidate is in ix 0
+      Arrays.sort(cands);
+      ch.clearCandidates();
+      ch.addCandidate(cands[0].node);
+    }
+
+  }
+
+
   private void buildAreaTree( ONode dstTreeNode, AreaNode atNode, ONode baseDoc ) {
     HashSet candidates = new HashSet();
     Vector bestCandidates = new Vector();
     double bestCount = 0;
     findCandidates( candidates, dstTreeNode, baseDoc ); // candidates in baseDoc
     if( candidates.isEmpty() ) {
-      System.out.println("!!!!: No exact candidate for " + dstTreeNode.toString());
+//      System.out.println("!!!!: No exact candidate for " + dstTreeNode.toString());
       // No exact candidates, try fuzzy search
       double minmc = fuzzyFindCandidates( candidates, dstTreeNode, baseDoc, 1e+99 ); // candidates in baseDoc
-      if( minmc > 0.2 )
+// FUZZY CAND SEARCH -- currently disabled...
+     if( minmc > 0.0 )
         candidates.clear(); // All candidates bad
       else {
         Set c2= candidates;
@@ -255,7 +362,7 @@ public class ProtoBestMatching  {
           Candidate c = (Candidate) i2.next();
           if( c.mc < 2*minmc ) {
             candidates.add(c.node);
-            System.out.println("!!!!: Fuzzy candidate (mc="+ c.mc + "):" + c.node.toString());
+            System.out.println("!!!!: Fuzzy candidate (mc="+ c.mc + "):");// + c.node.toString());
           }
         }
       }
@@ -263,7 +370,7 @@ public class ProtoBestMatching  {
 
     for( Iterator i = candidates.iterator(); i.hasNext(); ) {
       ONode candidate = (ONode) i.next();
-      double thisCount = dfsExactMatch( dstTreeNode, candidate , false, 0, null );
+      double thisCount = dfsExactMatch( dstTreeNode, candidate , false, 0, null, null );
       if( thisCount == bestCount )
         bestCandidates.add( candidate );
       else if( thisCount > bestCount ) {
@@ -282,11 +389,11 @@ public class ProtoBestMatching  {
       atNode.matchCount=bestCount; // Just for info purposes, not used
       for( int i=0;i<bestCandidates.size();i++)
         atNode.addCandidate((ONode) bestCandidates.elementAt(i));
-      dfsExactMatch( dstTreeNode, (ONode) bestCandidates.elementAt(0), false, 0, stopNodes );
+      dfsExactMatch( dstTreeNode, (ONode) bestCandidates.elementAt(0), false, 0, stopNodes, atNode.bottomNodes );
     // KLUDGE!!! Add mappings for unambigious areas at this point, they're needed when running
     // resolveambiguities
     if( bestCandidates.size() == 1)
-        dfsExactMatch( dstTreeNode, (ONode) bestCandidates.elementAt(0), true, 0, null );
+        dfsExactMatch( dstTreeNode, (ONode) bestCandidates.elementAt(0), true, 0, null, null );
 
     } else {
       // No matching node in baseDoc
@@ -308,7 +415,7 @@ public class ProtoBestMatching  {
   //  stopnodes in docA
   // Only recurses if ALL children of docA and docB match
   private double dfsExactMatch(ONode docA, ONode docB, boolean addMatchings, double count,
-    Vector stopNodes ) {
+    Vector stopNodes, Vector bottomNodes ) {
 /*DEBUG to get breakpoint   if( docA instanceof ElementNode && ((ElementNode) docA).name.endsWith("text:p") )
       count = count + 0.00001;*/
 /*    double matchGoodness = matchGoodness(docA,docB);
@@ -328,6 +435,7 @@ public class ProtoBestMatching  {
       for( int i=0; childrenMatch && i<children.size(); i ++ ) {
         childrenMatch = matches(docA.getChild(i),docB.getChild(i));
         if( !childrenMatch ) {
+//          double bestCorrelation = bestCorrelation( docA.getChild(i),
           double mc = (new MisCorrelation()).correlate( (ONode) ((ElementNode) docA).children.elementAt(i),
                                 (ONode) ((ElementNode) docB).children.elementAt(i) ).getValue();
 
@@ -343,13 +451,15 @@ public class ProtoBestMatching  {
       childrenMatch = false;
     if( !childrenMatch ) {
       // Mark all children as stopnodes
+      if( bottomNodes != null )
+        bottomNodes.add( new AreaBottomNode( docA, docB ));
       for( int i=0; stopNodes!=null && i<children.size(); i ++ )
         stopNodes.add( children.elementAt(i) );
     } else {
       // All children match
       for( int i=0; i<children.size(); i ++ )
       count += dfsExactMatch( (ONode) ((ElementNode) docA).children.elementAt(i),
-                                (ONode) ((ElementNode) docB).children.elementAt(i), addMatchings, 0, stopNodes );
+                                (ONode) ((ElementNode) docB).children.elementAt(i), addMatchings, 0, stopNodes, bottomNodes );
 
     }
   return count + 1; // +1 because docA and docB match
@@ -408,7 +518,21 @@ public class ProtoBestMatching  {
   public void matchSamePosUnmatched( ONode a, ONode rootB) {
     if( getFirstMapping(null,a) == null ) {
       // Unmapped...
-//      System.out.println("Umapped="+ a.toString());
+      System.out.println("Umapped="+ a.toString());
+      /*
+      AreaNode senitel = new AreaNode(a);
+      if( a instanceof ElementNode ) {
+        senitel.bottomNodes.addAll( new AreaBottomNode( a,  )
+      }*/
+      MatchNumbers m = new MatchNumbers();
+      m.nums[0]=1.0;  m.nums[1]=1.0;m.nums[2]=1.0;m.nums[3]=1.0;
+      m=getBestMatch(a,rootB,m);
+      if( m.nums[0] < 0.2 ) { // Threshold val when insert = match
+        System.out.println("Fuzzed with :"+ m.node.toString());
+        addMatching( a, m.node );
+        addMatching( m.node, a );
+      }
+/*
       Vector p = TreePath.buildNodePath(a);
       ONode b = rootB;
       try {
@@ -421,6 +545,7 @@ public class ProtoBestMatching  {
          addMatching( a,b );
          addMatching( b,a );
       }
+  */
     }
     if( a instanceof ElementNode ) {
       // process children
@@ -549,8 +674,10 @@ public class ProtoBestMatching  {
               mismatched += v1.equals(v2) ? 0 : 2;
               total+=2;
             }
-          } else
+          } else {
             total += 2; // A missing attribute costs 2 bytes
+            mismatched +=2;
+          }
         }
         // Penalties for missing attributes in ea
         for( Iterator i=eb.attributes.keySet().iterator();i.hasNext();) {
@@ -570,12 +697,16 @@ public class ProtoBestMatching  {
     }
 
     double getValue() {
-      return ((double) (mismatched + C))/((double) total);
+      double penalty = Math.max(0.0,1.0-((double) total)/((double) C));
+      return penalty+(1.0-penalty)*((double) (mismatched))/((double) total);
     }
   }
 
   public void printCorr( ONode a, ONode b) {
-    System.out.println("MC= " + (new MisCorrelation()).correlate(a,b).getValue() );
+    MisCorrelation m = new MisCorrelation();
+    m.correlate(a,b);
+    System.out.println("MC= " + m.getValue() );
+    System.out.println("MNs= " + getMatchNumbers(null,a,b,true).toString() );
   }
 
   //
@@ -604,6 +735,36 @@ public class ProtoBestMatching  {
 //    System.out.println("Distance is " + distance  );
 //    System.out.println("Lengths " + s2.length() + " and " + s1.length() );
     return distance + s2.length()-s1.length();
+  }
+
+  // 1.0 total mismatch
+  // % of nodes below a not found below b
+
+  private double childListDist( ONode a, ONode b) {
+    // Make child lists representing children on a & b
+    StringBuffer ac = new StringBuffer();
+    StringBuffer bc = new StringBuffer();
+    for( int i=0;i<a.getChildCount();i++) {
+      int hash = a.getChild(i).toString().hashCode();
+//      ac.append((char) (hash >> 16));
+      ac.append((char) (hash & 0xffff));
+    }
+    for( int i=0;i<b.getChildCount();i++) {
+      int hash = b.getChild(i).toString().hashCode();
+//      bc.append((char) (hash >> 16));
+      bc.append((char) (hash & 0xffff));
+    }
+    String as=ac.toString(), bs=bc.toString();
+    int matches=0;
+    if( as.length()==0)
+      return 1.0;
+    else if( as.length()==1)
+      return bs.indexOf(as) == -1 ? 1.0 : 0.0;
+    for( int i=0;i<as.length()-1;i++) {
+      if( bs.indexOf(as.substring(0,i+2)) != -1 )
+        matches++;
+    }
+    return 1.0 - ((double) matches)/((double) as.length()-1);
   }
 
 }

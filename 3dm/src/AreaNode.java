@@ -1,4 +1,4 @@
-// $Id: AreaNode.java,v 1.1 2001/03/14 08:23:53 ctl Exp $
+// $Id: AreaNode.java,v 1.2 2001/03/31 15:32:08 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 import Node;
@@ -7,6 +7,7 @@ import java.util.*;
 public class AreaNode /* extends Node*/ {
 
   public Vector children = new Vector();
+  public Vector bottomNodes = new Vector();
   Vector candidates = new Vector();
   public double matchCount=0;
   private ONode srcNode;
