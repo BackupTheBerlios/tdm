@@ -7,3 +7,19 @@
 3dm --merge L0.xml L3.xml L2.xml g4.xml
 # check
 3dm --diff g4.xml L4.xml
+
+# =2=
+# Update the combined human list (l4) to the suggested list (l1) => l5
+#
+3dm --merge L0.xml L4.xml L1.xml g5.xml
+# check
+3dm --diff g5.xml L5.xml
+
+# =3=
+# Presenting the changes between the human list (L4) and the compulist (L6)
+# We want to generate an ed script to see what the compu has changed.
+#
+3dm -e --merge L4.xml L6.xml L4.xml > /dev/null
+
+# current stat: The edits scripts has too many inserts because of 
+# removeSmallCopies..I guess it needs fixing  
