@@ -1,4 +1,4 @@
-// $Id: TreeDiffMerge.java,v 1.6 2002/10/25 11:35:06 ctl Exp $ D
+// $Id: TreeDiffMerge.java,v 1.7 2003/01/09 13:38:46 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -18,6 +18,10 @@
 // along with 3DM; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
+package tdm.tool;
+
+// 3DM lib
+import tdm.lib.*;
 
 import gnu.getopt.*;
 import java.io.FileOutputStream;
@@ -34,7 +38,7 @@ public class TreeDiffMerge {
 
   public static void main(String[] args) throws java.io.IOException {
     System.err.println(
-    "3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.6 $" );
+    "3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.7 $" );
     // Get command line options
     int firstFileIx = parseOpts( args );
     if( op == MERGE && (args.length - firstFileIx) == 3 )

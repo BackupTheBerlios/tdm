@@ -1,5 +1,5 @@
-// $Id: Main.java,v 1.1 2002/10/30 15:12:26 ctl Exp $
-package editgen;
+// $Id: Main.java,v 1.2 2003/01/09 13:38:45 ctl Exp $
+package tdm.editgen;
 import gnu.getopt.*;
 
 public class Main {
@@ -7,7 +7,7 @@ public class Main {
   private static Editgen gen = new Editgen();
 
   public static void main(String[] args) {
-    System.err.println("Editgen $Revision: 1.1 $" );
+    System.err.println("Editgen $Revision: 1.2 $" );
     // Get command line options
     int firstFileIx = parseOpts( args );
     if( args.length - firstFileIx >= 3 ) {

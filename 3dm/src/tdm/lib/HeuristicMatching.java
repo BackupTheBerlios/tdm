@@ -1,4 +1,4 @@
-// $Id: HeuristicMatching.java,v 1.1 2002/10/25 11:35:06 ctl Exp $ D
+// $Id: HeuristicMatching.java,v 1.2 2003/01/09 13:38:45 ctl Exp $ D
 // Renamed 2002/10/21, before that
 //   Id: Matching.java,v 1.20 2001/09/26 19:36:45 ctl Exp
 //
@@ -20,6 +20,7 @@
 // along with 3DM; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
+package tdm.lib;
 
 import java.util.Vector;
 import java.util.Iterator;

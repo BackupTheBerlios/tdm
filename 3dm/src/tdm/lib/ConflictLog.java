@@ -1,4 +1,4 @@
-// $Id: ConflictLog.java,v 1.7 2001/09/26 19:36:44 ctl Exp $ D
+// $Id: ConflictLog.java,v 1.8 2003/01/09 13:38:45 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -18,6 +18,7 @@
 // along with 3DM; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
+package tdm.lib;
 
 import java.util.List;
 import java.util.LinkedList;

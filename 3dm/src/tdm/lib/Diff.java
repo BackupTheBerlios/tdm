@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.6 2002/10/25 11:35:06 ctl Exp $ D
+// $Id: Diff.java,v 1.7 2003/01/09 13:38:45 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -18,6 +18,7 @@
 // along with 3DM; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
+package tdm.lib;
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.helpers.AttributesImpl;

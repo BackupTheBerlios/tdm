@@ -1,8 +1,8 @@
-// $Id: MarkableBaseNode.java,v 1.4 2002/10/31 12:35:18 ctl Exp $
-package editgen;
+// $Id: MarkableBaseNode.java,v 1.5 2003/01/09 13:38:45 ctl Exp $
+package tdm.editgen;
 
-import BaseNode;
-import XMLNode;
+import tdm.lib.BaseNode;
+import tdm.lib.XMLNode;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Iterator;

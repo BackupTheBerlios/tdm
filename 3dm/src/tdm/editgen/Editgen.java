@@ -1,18 +1,18 @@
-// $Id: Editgen.java,v 1.9 2003/01/09 13:01:43 ctl Exp $
-package editgen;
+// $Id: Editgen.java,v 1.10 2003/01/09 13:38:45 ctl Exp $
+package tdm.editgen;
 
-import XMLNode;
-import XMLElementNode;
-import XMLTextNode;
-import Node;
-import NodeFactory;
-import BaseNode;
-import BranchNode;
-import MatchedNodes;
-import XMLParser;
-import XMLNode;
-import XMLPrinter;
-import EditLog;
+import tdm.lib.XMLNode;
+import tdm.lib.XMLElementNode;
+import tdm.lib.XMLTextNode;
+import tdm.lib.Node;
+import tdm.lib.NodeFactory;
+import tdm.lib.BaseNode;
+import tdm.lib.BranchNode;
+import tdm.lib.MatchedNodes;
+import tdm.lib.XMLParser;
+import tdm.lib.XMLNode;
+import tdm.lib.XMLPrinter;
+import tdm.lib.EditLog;
 import java.util.Iterator;
 
 public class Editgen {

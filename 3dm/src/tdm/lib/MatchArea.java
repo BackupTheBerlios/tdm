@@ -1,4 +1,4 @@
-//$Id: MatchArea.java,v 1.4 2001/09/26 19:36:44 ctl Exp $ D
+//$Id: MatchArea.java,v 1.5 2003/01/09 13:38:45 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -18,6 +18,7 @@
 // along with 3DM; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
+package tdm.lib;
 
 /** Class used to tag nodes in the same matched subtree. The class also
  *  contains fields for the root and information size of the subtree. */

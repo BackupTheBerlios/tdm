@@ -1,4 +1,4 @@
-// $Id: NodeFactory.java,v 1.8 2002/10/25 11:37:09 ctl Exp $ D
+// $Id: NodeFactory.java,v 1.9 2003/01/09 13:38:45 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -18,6 +18,7 @@
 // along with 3DM; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
+package tdm.lib;
 
 /** Node factory. Used to build trees, whose node type is not known at
  *  compile time.

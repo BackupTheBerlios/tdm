@@ -1,4 +1,4 @@
-// $Id: BaseNode.java,v 1.8 2001/09/26 19:36:43 ctl Exp $ D
+// $Id: BaseNode.java,v 1.9 2003/01/09 13:38:45 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -26,6 +26,7 @@
  *  left and right branches are accesed with the {@link #getLeft() getLeft} and
  *  {@link #getRight() getRight} methods.
  */
+package tdm.lib;
 
 public class BaseNode extends Node {
 

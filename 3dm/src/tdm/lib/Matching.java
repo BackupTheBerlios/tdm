@@ -1,4 +1,5 @@
-// $Id: Matching.java,v 1.21 2002/10/25 11:35:06 ctl Exp $
+// $Id: Matching.java,v 1.22 2003/01/09 13:38:45 ctl Exp $
+package tdm.lib;
 
 public interface Matching {
 

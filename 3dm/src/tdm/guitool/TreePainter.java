@@ -1,4 +1,7 @@
-// $Id: TreePainter.java,v 1.2 2001/09/05 13:21:27 ctl Exp $
+// $Id: TreePainter.java,v 1.3 2003/01/09 13:38:45 ctl Exp $
+package tdm.guitool;
+// 3dm lib
+import tdm.lib.*;
 
 import java.awt.*;
 import java.awt.print.*;

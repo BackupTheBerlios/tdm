@@ -1,4 +1,4 @@
-// $Id: XMLTextNode.java,v 1.11 2002/10/30 15:11:57 ctl Exp $
+// $Id: XMLTextNode.java,v 1.12 2003/01/09 13:38:46 ctl Exp $
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -18,6 +18,7 @@
 // along with 3DM; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
+package tdm.lib;
 
 import java.security.MessageDigest;
 

@@ -1,4 +1,4 @@
-// $Id: XMLElementNode.java,v 1.10 2002/10/30 15:11:57 ctl Exp $ D
+// $Id: XMLElementNode.java,v 1.11 2003/01/09 13:38:46 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -18,6 +18,7 @@
 // along with 3DM; if not, write to the Free Software
 // Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 //
+package tdm.lib;
 
 import org.xml.sax.Attributes;
 import java.util.Vector;
