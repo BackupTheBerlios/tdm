@@ -1,4 +1,4 @@
-// $Id: Matching.java,v 1.7 2001/05/16 10:31:41 ctl Exp $
+// $Id: Matching.java,v 1.8 2001/05/16 12:46:35 ctl Exp $
 
 import java.util.Vector;
 import java.util.Iterator;
@@ -22,6 +22,8 @@ public class Matching {
     baseRoot = abase;
     branchRoot = abranch;
     buildMatching( baseRoot, branchRoot );
+    // Artificial roots always match (otherwise BranchNode.isLeft may fail!)
+    branchRoot.setBaseMatch(baseRoot,BranchNode.MATCH_FULL);
   }
 
   protected void buildMatching( BaseNode base, BranchNode branch ) {
@@ -85,6 +87,17 @@ public class Matching {
     //System.out.println("Resolving amb");
     // Resolve ambiguities if any exist...
     if( bestCandidates.size() > 1 ) {
+      // Check if left neighbor of candidate is matched to left of base,
+      // in that case we have a clear winner!
+      for( Iterator i = bestCandidates.iterator(); i.hasNext(); ) {
+        CandidateEntry candidate = (CandidateEntry) i.next();
+        BranchNode left = (BranchNode) branch.getLeftSibling();
+        if( left != null && left.hasBaseMatch() && left.getBaseMatch() ==
+          candidate.candidate.getLeftSibling() ) {
+          return candidate;
+        }
+      }
+      // Didn't work..now we've try to make a judgement based on context
       // Ambiguities - we need to find out which one is the best...
       // First calc all missing left-right correlations
       for( Iterator i = bestCandidates.iterator(); i.hasNext(); ) {
@@ -221,17 +234,22 @@ public class Matching {
     return true;
   }
 
-  static final int COPY_THRESHOLD = 0;
+  static final int COPY_THRESHOLD = 32;
   static final int EDGE_BYTES = 8;
 
   private void removeSmallCopies( BranchNode root ) {
     BaseNode base = root.getBaseMatch();
     if( base != null && base.getLeft().getMatches().size() > 1 ) {
       // Itreate over the matches, and discard any that too small
+      Set deletia = new HashSet();
       for( Iterator i = base.getLeft().getMatches().iterator();i.hasNext();) {
         BranchNode copy = (BranchNode) i.next();
         if( copy.getMatchArea().getInfoBytes() < COPY_THRESHOLD )
-          delMatching(copy,base);
+          deletia.add(copy);
+      }
+      if( !deletia.isEmpty() ) {
+        for( Iterator i = deletia.iterator();i.hasNext();)
+          delMatching((BranchNode) i.next(),base);
       }
     }
     for(int i=0;i<root.getChildCount();i++)
