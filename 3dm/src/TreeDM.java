@@ -1,4 +1,4 @@
-//$Id: TreeDM.java,v 1.1 2001/03/14 08:23:54 ctl Exp $
+//$Id: TreeDM.java,v 1.2 2001/03/14 14:03:43 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 /**
@@ -90,6 +90,11 @@ public class TreeDM {
   //m1.merge2( docA, docB, m2 );
    System.out.println("Should look like this:");
    Merge merge = new Merge( new TriMatching( docA, m1, docBase, m2, docB ) );
+   java.io.PrintWriter pw = new java.io.PrintWriter( System.out );
+
+   merge.merge( new MergePrinter(pw) );
+  pw.flush();
+
     /*
 
    MapNode merged = 1==0 ? m1.merge(m2) : m1.mapRoot;
@@ -219,5 +224,93 @@ public class TreeDM {
 
 
   }
+
+
+
+  class MergePrinter extends DefaultHandler {
+
+
+    int indent = 0;
+    private static final String IND = "                                                      ";
+    private java.io.PrintWriter pw = null;
+
+    MergePrinter( java.io.PrintWriter apw ) {
+      pw=apw;
+    }
+     ////////////////////////////////////////////////////////////////////
+     // Event handlers.
+     ////////////////////////////////////////////////////////////////////
+
+
+     public void startDocument ()
+     {
+        childcounter =HAS_CONTENT;
+     }
+
+
+     public void endDocument ()
+     {
+         //System.out.println("End document");
+     }
+
+      java.util.Stack csstack = new java.util.Stack();
+     Integer childcounter = null;
+     public void startElement (String uri, String name,
+                               String qName, Attributes atts)
+
+     {
+      if( childcounter == null ) {
+         pw.println(">");
+        childcounter =HAS_CONTENT;
+      }
+      StringBuffer tagopen = new StringBuffer();
+      tagopen.append('<');
+      tagopen.append( qName );
+    //    tagopen.append(' ');
+      if( atts != null && atts.getLength() != 0 ) {
+        for( int i = 0;i<atts.getLength();i++ ) {
+          tagopen.append(' ');
+          tagopen.append(atts.getQName(i));
+          tagopen.append('=');
+          tagopen.append('"');
+          tagopen.append(atts.getValue(i));
+          tagopen.append('"');
+        }
+      }
+      csstack.push( childcounter );
+      childcounter = null;
+//      if( assumeNoChildren )
+//        tagopen.append("/>");
+//      else
+//        tagopen.append('>');
+      pw.print(IND.substring(0,indent)  + tagopen.toString());
+     }
+
+
+     public void endElement (String uri, String name, String qName)
+     {
+          if( childcounter == null )
+            pw.println(" />");
+          else
+            pw.println(IND.substring(0,indent)+ "</"+qName+">");
+        childcounter = (Integer) csstack.pop();
+     }
+
+     final Integer HAS_CONTENT = new Integer(0);
+
+     public void characters (char ch[], int start, int length)
+     {
+        pw.println(">");
+        childcounter = HAS_CONTENT;
+        String chars = new String( ch, start, length ).trim();
+        if( chars.length() == 0 )
+          return;
+        pw.print(chars);
+     }
+
+
+  }
+
+
 
 }

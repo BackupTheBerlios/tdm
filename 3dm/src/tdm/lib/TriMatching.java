@@ -1,4 +1,4 @@
-// $Id: TriMatching.java,v 1.1 2001/03/14 08:23:55 ctl Exp $
+// $Id: TriMatching.java,v 1.2 2001/03/14 14:03:44 ctl Exp $
 
 public class TriMatching {
 
@@ -12,31 +12,31 @@ public class TriMatching {
 
   class NodeFactory {
     NodeFactory() { }
-    Node makeNode(Node p,int c) { return null; }
+    Node makeNode(Node p,int c, XMLNode cont) { return null; }
   }
 
   public TriMatching( ONode left, ProtoBestMatching ml, ONode base, ProtoBestMatching mr, ONode right) {
      XMLn2n = new java.util.HashMap();
     leftRoot=(BranchNode) buildTree(null,-1,left, new NodeFactory() {
-        Node makeNode(Node p,int c) {
-          return new BranchNode(p,c);
+        Node makeNode(Node p,int c, XMLNode cont) {
+          return new BranchNode(p,c,cont);
         }});
     baseRoot=(BaseNode) buildTree(null,-1,base, new NodeFactory() {
-        Node makeNode(Node p,int c) {
-          return new BaseNode(p,c);
+        Node makeNode(Node p,int c, XMLNode cont) {
+          return new BaseNode(p,c,cont);
         }});
     rightRoot=(BranchNode) buildTree(null,-1,right, new NodeFactory() {
-        Node makeNode(Node p,int c) {
-          return new BranchNode(p,c);
+        Node makeNode(Node p,int c, XMLNode cont) {
+          return new BranchNode(p,c,cont);
         }});
 
     addMappings( baseRoot, ml,mr );
     XMLn2n = null; // Free some memory...
-    java.io.PrintWriter pw = new java.io.PrintWriter(System.out );
+/*    java.io.PrintWriter pw = new java.io.PrintWriter(System.out );
     leftRoot.debugTree(pw,0);
     pw.println("<<-----------------");
     rightRoot.debugTree(pw,0);
-    pw.flush();
+    pw.flush();*/
   }
 
   void addMappings( BaseNode base, ProtoBestMatching ml, ProtoBestMatching mr ) {
@@ -47,13 +47,23 @@ public class TriMatching {
      BranchNode n2 = (BranchNode) XMLn2n.get(match);
      base.getLeft().addMatch( n2 );
      n2.setPartners( base.getRight() );
+     n2.setBaseMatch( base );
     } while( (match = ml.getNextMapping() ) != null );
+    //Saftey check- no glus?
+    ml.getFirstMapping(match);
+    if( ml.getNextMapping() != null )
+      throw new RuntimeException("FATAL: GLU mappings encounted!");
     match = mr.getFirstMapping(_base);
     do {
      BranchNode n2 = (BranchNode) XMLn2n.get(match);
      base.getRight().addMatch( n2 );
      n2.setPartners( base.getLeft() );
+     n2.setBaseMatch( base );
     } while( (match = mr.getNextMapping() ) != null );
+    //Saftey check- no glus?
+    mr.getFirstMapping(match);
+    if( mr.getNextMapping() != null )
+      throw new RuntimeException("FATAL: GLU mappings encounted!");
     // Recurse
     for(int i=0;i<base.getChildCount();i++)
       addMappings(base.getChild(i),ml,mr);
@@ -62,14 +72,13 @@ public class TriMatching {
 
 
   Node buildTree(Node parent, int childno, ONode n, NodeFactory f ) {
-    Node root = f.makeNode(parent,childno);
     XMLNode content = null;
     if( n instanceof ElementNode ) {
       content = new XMLElementNode(((ElementNode) n).name,((ElementNode) n).attributes );
     } else {
       content = new XMLTextNode(((TextNode) n).text );
     }
-    root.setContent(content);
+    Node root = f.makeNode(parent,childno,content);
     XMLn2n.put(root,n);
     XMLn2n.put(n,root);
     for( int i = 0;i<n.getChildCount();i++) {

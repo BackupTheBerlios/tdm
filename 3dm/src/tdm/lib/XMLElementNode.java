@@ -1,20 +1,30 @@
-// $Id: XMLElementNode.java,v 1.1 2001/03/14 08:23:55 ctl Exp $
+// $Id: XMLElementNode.java,v 1.2 2001/03/14 14:03:44 ctl Exp $
 
 import org.xml.sax.Attributes;
 import java.util.Vector;
 import java.util.Hashtable;
 import java.util.Map;
+import org.xml.sax.helpers.AttributesImpl;
+import org.xml.sax.Attributes;
 //import java.io.PrintWriter;
 
 public class XMLElementNode extends XMLNode {
 
 //Probably not needed  public String nameSpace = null;
   public String name = null;
-  public Map attributes = null;
+//  public Map attributes = null;
+  public AttributesImpl attributes = null;
 //PROTO CODE
-  public XMLElementNode( String aname, Map attr ) {
+  public XMLElementNode( String aname,  Map attr ) {
     name = aname;
-    attributes = attr;
+    attributes = new AttributesImpl();
+    if( attr ==null )
+      return;
+    java.util.Iterator iter = attr.keySet().iterator();
+    while( iter.hasNext() ) {
+      String key = (String) iter.next();
+      attributes.addAttribute("","",key,"",(String) attr.get(key));
+    }
   }
 //PROTO CODE ENDS
   public XMLElementNode( String aname, Attributes attr ) {
@@ -22,28 +32,27 @@ public class XMLElementNode extends XMLNode {
 
 //    nameSpace = ns;
     name = aname;
-
+    attributes = new AttributesImpl( attr );
+/*
     if( attr != null ) {
       attributes = new java.util.Hashtable();
       for( int i=0;i<attr.getLength();i++) {
-        attributes.put(attr.getQName(i) /*.getLocalName(i)*/,attr.getValue(i));
+        attributes.put(attr.getQName(i) /*.getLocalName(i),attr.getValue(i));
       }
     }
-
+*/
   }
 
   public String toString() {
     StringBuffer sb = new StringBuffer();
     sb.append(name);
     sb.append(" {");
-    if( attributes != null && !attributes.isEmpty() ) {
-      java.util.Iterator iter = attributes.keySet().iterator();
-      while( iter.hasNext() ) {
+    if( attributes != null && attributes.getLength() > 0) {
+      for( int i = 0;i<attributes.getLength();i++) {
         sb.append(' ');
-        Object key = iter.next();
-        sb.append(key.toString());
+        sb.append(attributes.getQName(i) );
         sb.append('=');
-        sb.append(attributes.get(key).toString());
+        sb.append(attributes.getValue(i));
       }
 
     }
@@ -61,12 +70,22 @@ public class XMLElementNode extends XMLNode {
       return false;
   }
 
-  public boolean compareAttributes( Map a, Map b ) {
+  public boolean compareAttributes( Attributes a, Attributes b ) {
     if( a==b )
       return true; // Either both are null, or point to same obj
     if( a==null || b== null)
       return false; // either is null, the other not
-    return a.equals(b);
+    if( a.getLength() != b.getLength() )
+      return false; // Not equally many
+    for( int i = 0; i<a.getLength(); i ++ ) {
+      if( !a.getURI(i).equals(b.getURI(i)) ||
+          !a.getLocalName(i).equals(b.getLocalName(i)) ||
+          !a.getQName(i).equals(b.getQName(i)) ||
+          !a.getType(i).equals(b.getType(i)) ||
+          !a.getValue(i).equals(b.getValue(i)) )
+        return false;
+    }
+    return true;
   }
 
 /*

@@ -1,4 +1,4 @@
-// $Id: ProtoBestMatching.java,v 1.1 2001/03/14 08:23:54 ctl Exp $
+// $Id: ProtoBestMatching.java,v 1.2 2001/03/14 14:03:43 ctl Exp $
 // PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE PROTO CODE
 
 //import TreeMatching;
@@ -285,7 +285,8 @@ public class ProtoBestMatching  {
       ElementNode ea = (ElementNode ) a, eb = (ElementNode ) b;
       if( ea.name.equalsIgnoreCase(eb.name) )
         value += 0.5;
-      if( ea.compareAttributes( ea.attributes, eb.attributes ) )
+      // don't get 0.5 free if 0 attributes match!
+      if( ea.attributes != null && ea.attributes.size() > 0 && ea.compareAttributes( ea.attributes, eb.attributes ) )
         value += 0.5;
       //return value;
     }*/
