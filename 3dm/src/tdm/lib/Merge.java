@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.8 2001/03/28 07:01:38 ctl Exp $
+// $Id: Merge.java,v 1.9 2001/03/28 10:41:38 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -30,7 +30,6 @@ public class Merge {
       throw new RuntimeException("mergeNode: match type should be match children, otherwise the node should be null!");
     MergeList mlistA = a != null ? makeMergeList( a ) : null;
     MergeList mlistB = b != null ? makeMergeList( b ) : null;
-/*
     System.out.println("Merge A list");
     if( mlistA != null )
       mlistA.print();
@@ -41,7 +40,7 @@ public class Merge {
       mlistB.print();
     else
       System.out.println("--none--");
-*/
+
     if( mlistA != null && mlistB != null ) {
       mlistA = mergeLists( mlistA, mlistB ); // Merge lists
       //System.out.println("Merged list:");
@@ -58,7 +57,7 @@ public class Merge {
       HangonEntry me = (HangonEntry) i.next();
       BranchNode n = me.getNode();
       BranchNode nPartner = n.getFirstPartner( BranchNode.MATCH_CONTENT );
-      // Merge contents of node and partner (but only if there's partner)
+      // Merge contents of node and partner (but only if there's a partner)
       XMLNode mergedNode = nPartner != null ? mergeNodeContent( n, nPartner ) : n.getContent();
       if( mergedNode instanceof XMLTextNode ) {
         String text = ((XMLTextNode) mergedNode).getText();
@@ -69,7 +68,8 @@ public class Merge {
         ch.startElement(mergedElement.getNamespaceURI(),mergedElement.getLocalName(),mergedElement.getQName(),mergedElement.getAttributes());
         // Figure out partners for recurse
         BranchNode ca = null, cb = null;
-        if( me instanceof MergeEntry && mlistB != null ) {
+        if( me instanceof MergeEntry  ) { // && mlistB != null: Earlier this cond, but it's not true- insert childs can have matches
+                                          // besides, all insert lists should be hangons only
           // The node was merged, MUST have a partner in the list
           MergeEntry me2 = (MergeEntry) me;
           if( (me2.getNode().getBaseMatchType() & BranchNode.MATCH_CHILDREN) == 0 ) {
@@ -161,20 +161,14 @@ public class Merge {
       ml.add( END, false );
       return ml;
     }
-//--
     Set baseMatches = new HashSet();
-/**    Node parentPartner = getFirstMapping( parent );
-    int parentPartnerChildCount = parentPartner instanceof ElementNode ?
-      ((ElementNode) parentPartner).getChildCount() : -1000;
-*/
     int prevChildPos = -1; // Next is always prevChildPos + 1, so the first should be 0 =>
-                           // init to -1
+                           // init to -1, -2 means not found in base
+    int childPos = -1;
     ml.add( START, false );
     for( int i = 0;i<parent.getChildCount();i++) {
       BranchNode current = parent.getChild(i);
       BaseNode match = current.getBaseMatch();
-/// xlat: partners = match
-///      int childPos = partnerChildPos( parentPartner, partner  );
       if( match == null ) {
         // It's an insert node
         ml.addHangOn( current, true );
@@ -188,13 +182,37 @@ public class Merge {
         ml.addHangOn( current, !matches( match, current) );
         ml.lockNeighborhood(0,1);
       } else {
+        // Found in base, check for moves
         ml.add( current,  !matches( match, current) );
         baseMatches.add( match );
-        if( (prevChildPos + 1) != match.getChildPos() )  ///childPos ) // Out of sequence, lock previous and this
-                                             // e.g. -1 0 1 3 4 5 => 1 & 3 locked
-          ml.lockNeighborhood(1,0);
-        prevChildPos = match.getChildPos(); ///childPos;
-      }
+        childPos = match.getChildPos();
+        childPos = childPos == -1 ? -2 : childPos; // Remember to set not found to -2
+        if( (prevChildPos + 1) != childPos ) { // Out of sequence, lock previous and this
+                                                          // e.g. -1 0 1 3 4 5 => 1 & 3 locked
+
+
+          boolean moved = false;
+          // Possibly out of sequence.. check of nodes between prev
+          if( prevChildPos != -2 && childPos != -2 && prevChildPos < childPos ) {
+            // Not moved if every node between prevChildPos+1 and childPos-1 (ends included) is
+            // deleted
+
+            for(int j=0;!moved && j<parent.getChildCount();j++) {
+              BaseNode aBase = parent.getChild(j).getBaseMatch();
+              int basePos = aBase == null ? -1 : aBase.getChildPos();
+              if( basePos != -1 && basePos > prevChildPos && basePos < childPos )
+                moved = true;
+            }
+          } else
+            moved = true;
+          if( moved ) {
+            ml.lockNeighborhood(1,0);
+            ml.setMoved(true);
+          } else
+            ml.setMoved(false);
+        }
+        prevChildPos = childPos;
+      } // end if found in base
     }
     ml.add( END, false );
     if( (prevChildPos + 1 )!= parent.getBaseMatch().getChildCount() )  ///parentPartnerChildCount )
@@ -467,6 +485,7 @@ public class Merge {
     Vector inserts = new Vector();
     boolean locked = false;
     private BranchNode mergePartner = null;
+    private boolean moved = false;
 
 ///    boolean updated = false; // XXX will probably be obsolete
 
@@ -480,6 +499,15 @@ public class Merge {
     MergeEntry() {
     }
 
+
+    public boolean isMoved() {
+      return moved;
+    }
+
+    public void setMoved(boolean amoved ) {
+      moved=amoved;
+    }
+
     public void setMergePartner(BranchNode n) {
       mergePartner = n;
     }
@@ -487,14 +515,10 @@ public class Merge {
     public BranchNode getMergePartner() {
       return mergePartner;
     }
-    // FIXFIX: now a node is considered moved just beacuse it's locked.
-    public boolean isMoved() {
-      return locked;
-    }
 
     void print() {
-      System.out.print(updated ? 'x' : ' ');
-      System.out.print(locked ? '*' : ' ');
+      System.out.print(isMoved() ? 'm' : '-');
+      System.out.print(locked ? '*' : '-');
       System.out.print(' ' + node.getContent().toString() + ' ');
       System.out.println( inserts.toString() );
     }
@@ -528,7 +552,7 @@ public class Merge {
     private Map index = new HashMap(); // looks up Entry index based on base partner
     int tailPos = -1; // current tail pos
     private BranchNode entryParent = null; // Common parent of all entries
-
+    private MergeEntry currentEntry = null;
 
     public MergeList( BranchNode anEntryParent ) {
       entryParent = anEntryParent;
@@ -545,6 +569,7 @@ public class Merge {
         n.locked = ((MergeEntry) list.elementAt(tailPos)).locked;
       list.setElementAt(n,tailPos);
       index.put( n.node.getBaseMatch(), new Integer(tailPos));
+      currentEntry = n;
     }
 
     void add( BranchNode n, boolean updated ) {
@@ -559,8 +584,13 @@ public class Merge {
 
     void addHangOn( BranchNode n, boolean updated ) {
       getEntry(tailPos).addHangon(n, updated);
+      currentEntry = null;
     }
 
+
+    public void setMoved( boolean moved ) {
+      currentEntry.setMoved( moved );
+    }
 
     int getEntryCount() {
       return tailPos + 1;
