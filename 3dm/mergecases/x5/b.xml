@@ -1,0 +1,13 @@
+<!-- $Id: b.xml,v 1.1 2001/03/26 08:47:39 ctl Exp $ -->
+<!-- Conflicts in deleted subtree. (e-> e_ )
+<R>
+	<a/>
+	<b/>
+	<c>
+		<d>
+			<f/>
+			<g/>
+		</d>
+		<e/>
+	</c>	
+</R>
