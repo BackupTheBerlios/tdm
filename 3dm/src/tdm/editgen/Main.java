@@ -1,4 +1,4 @@
-// $Id: Main.java,v 1.2 2003/01/09 13:38:45 ctl Exp $
+// $Id: Main.java,v 1.3 2003/01/16 10:50:14 ctl Exp $
 package tdm.editgen;
 import gnu.getopt.*;
 
@@ -7,7 +7,7 @@ public class Main {
   private static Editgen gen = new Editgen();
 
   public static void main(String[] args) {
-    System.err.println("Editgen $Revision: 1.2 $" );
+    System.err.println("Editgen $Revision: 1.3 $" );
     // Get command line options
     int firstFileIx = parseOpts( args );
     if( args.length - firstFileIx >= 3 ) {
@@ -25,9 +25,10 @@ public class Main {
       new LongOpt("editlog",LongOpt.OPTIONAL_ARGUMENT,null,'e'),
       new LongOpt("edits",LongOpt.REQUIRED_ARGUMENT,null,'n'),
       new LongOpt("probability",LongOpt.NO_ARGUMENT,null,'p'),
-      new LongOpt("operations",LongOpt.NO_ARGUMENT,null,'o'),
+      new LongOpt("operations",LongOpt.REQUIRED_ARGUMENT,null,'o'),
+      new LongOpt("seed",LongOpt.REQUIRED_ARGUMENT,null,'s'),
     };
-    Getopt g = new Getopt("editgen", args, "n:p:o:e::", lopts);
+    Getopt g = new Getopt("editgen", args, "n:p:o:e::s:", lopts);
     int c;
     String arg;
     while ((c = g.getopt()) != -1) {
@@ -44,6 +45,9 @@ public class Main {
             break;
           case 'o':
             gen.setOperations(getStringArg(g,""));
+            break;
+          case 's':
+            gen.setRandomGenerator(new java.util.Random((long) getStringArg(g,"").hashCode() ) );
             break;
         }
       } catch (IllegalArgumentException x ) {

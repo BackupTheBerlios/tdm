@@ -1,4 +1,4 @@
-// $Id: Editgen.java,v 1.10 2003/01/09 13:38:45 ctl Exp $
+// $Id: Editgen.java,v 1.11 2003/01/16 10:50:14 ctl Exp $
 package tdm.editgen;
 
 import tdm.lib.XMLNode;
@@ -471,6 +471,10 @@ public class Editgen {
       throw new IllegalArgumentException("Illegal probability");
     useEditCount = false;
     probability = p;
+  }
+
+  public void setRandomGenerator( java.util.Random aRndGen ) {
+    rnd = aRndGen;
   }
 
   // null means no log
