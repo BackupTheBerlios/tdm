@@ -1,4 +1,4 @@
-//$Id: Measure.java,v 1.3 2001/04/21 18:00:26 ctl Exp $
+//$Id: Measure.java,v 1.4 2001/04/24 10:00:42 ctl Exp $
 
 import org.xml.sax.Attributes;
 
@@ -11,13 +11,15 @@ public class Measure {
   public static final int ATTR_VALUE_THRESHOLD = 5;
   public static final int TEXT_THRESHOLD = 5;
 
+  public static final int DISTBUF_SIZE = 8192;
+  public final int[] DISTBUF = new int[DISTBUF_SIZE];
   // Tester
   public static void main(String[] args) {
     String a = "return stringDist( a, b, a.length()+b.length() );";
     String b = "rezurn stringDist( a,b, a.length()+b.length() );";
     System.out.println("a="+a);
     System.out.println("b="+b);
-    System.out.println("Dist = " + stringDist(a,b));
+    //System.out.println("Dist = " + stringDist(a,b));
   }
 
   public Measure() {
@@ -92,28 +94,78 @@ public class Measure {
       totalMismatch = true;
   }
 
+
+
+  private  TokenComparator stringComp = new TokenComparator() {
+      int getLength( Object o ) {
+        return ((String) o).length();
+      }
+      boolean equals( Object a, int ia, Object b, int ib ) {
+        return ((String) a).charAt(ia)==((String) b).charAt(ib);
+      }
+    };
+
+  private TokenComparator charArrayComp = new TokenComparator() {
+      int getLength( Object o ) {
+        return ((char[] ) o).length;
+      }
+      boolean equals( Object a, int ia, Object b, int ib ) {
+        return ((char[]) a)[ia] ==((char[]) b)[ib];
+      }
+    };
+
+  private TokenComparator nodeChildComp = new TokenComparator() {
+      int getLength( Object o ) {
+        return ((Node ) o).getChildCount();
+      }
+      boolean equals( Object a, int ia, Object b, int ib ) {
+        return ((Node) a).getChildAsNode(ia).getContent().contentEquals(
+          ((Node) b).getChildAsNode(ib).getContent());
+      }
+    };
+
+  private TokenComparator matchedNodeChildComp = new TokenComparator() {
+      int getLength( Object o ) {
+        return ((Node ) o).getChildCount();
+      }
+      boolean equals( Object a, int ia, Object b, int ib ) {
+        return ((BaseNode) a).getChild(ia) == ((BranchNode) b).getBaseMatch();
+      }
+    };
+
+  public int stringDist( String a, String b ) {
+    return stringDist( a, b, a.length()+b.length(), stringComp);
+  }
+
+  public int stringDist( char[] a, char[] b ) {
+    return stringDist( a, b, a.length+b.length, charArrayComp );
+  }
+
   public double childListDistance( Node a, Node b ) {
     if( a.getChildCount()== 0 && b.getChildCount() == 0)
       return ZERO_CHILDREN_MATCH; // Zero children is also a match!
     else
-      return ((double) clistDistance(a,b)) / ((double) a.getChildCount() + b.getChildCount());
+      return ((double) stringDist(a,b,a.getChildCount()+b.getChildCount(),nodeChildComp))
+                       / ((double) a.getChildCount() + b.getChildCount());
   }
 
-  static int stringDist( String a, String b ) {
-    return stringDist( a, b, a.length()+b.length() );
-  }
-
-  static int stringDist( char[] a, char[] b ) {
-    return stringDist( a, b, a.length+b.length );
+  public int matchedChildListDistance( BaseNode a, BranchNode b ) {
+    return stringDist(a,b,a.getChildCount()+b.getChildCount(),matchedNodeChildComp);
   }
 
   // Directly adapted from [Myers86]
 
-  static int stringDist( String a, String b, int max ) {
+  private int stringDist( Object a, Object b, int max, TokenComparator tc ) {
 //DBG    if( 1==1 ) return max/2;
-    int v[] = new int[2*max+1];
+    int arraySize = 2*max+1;
+    int v[] = null;
+    if( arraySize <= DISTBUF_SIZE )
+      v = DISTBUF; // Use preallocated buffer (speedup!)
+    else
+      v = new int[2*max+1];
     int x=0,y=0;
-    final int VBIAS = max, N = a.length(), M=b.length();
+    final int VBIAS = max, N = tc.getLength(a), M=tc.getLength(b);
+    v[VBIAS+1]=0;
     for(int d=0;d<=max;d++) {
       for( int k=-d;k<=d;k+=2 ) {
         if( k==-d || ( k!=d && v[k-1+VBIAS] < v[k+1+VBIAS] ) )
@@ -121,7 +173,7 @@ public class Measure {
         else
           x = v[k-1+VBIAS]+1;
         y=x-k;
-        while( x < N && y < M && a.charAt(x)==b.charAt(y) ) {
+        while( x < N && y < M && tc.equals(a,x,b,y)  ) {
           x++;
           y++;
         }
@@ -133,59 +185,9 @@ public class Measure {
   return Integer.MAX_VALUE; // D > max
   }
 
-  static int stringDist( char[] a, char[] b, int max ) {
-//DBG    if( 1==1 ) return max/2;
 
-    int v[] = new int[2*max+1];
-    int x=0,y=0;
-    final int VBIAS = max, N = a.length, M=b.length;
-    for(int d=0;d<=max;d++) {
-      for( int k=-d;k<=d;k+=2 ) {
-        if( k==-d || ( k!=d && v[k-1+VBIAS] < v[k+1+VBIAS] ) )
-          x = v[k+1+VBIAS];
-        else
-          x = v[k-1+VBIAS]+1;
-        y=x-k;
-        while( x < N && y < M && a[x]==b[y] ) {
-          x++;
-          y++;
-        }
-        v[k+VBIAS]=x;
-        if( x >= N && y>= M )
-          return d;
-      }
-    }
-  return Integer.MAX_VALUE; // D > max
+  abstract class TokenComparator {
+    abstract int getLength( Object o );
+    abstract boolean equals( Object a, int ia, Object b, int ib );
   }
-
-  static int clistDistance( Node a, Node b ) {
-    return clistDistance(a,b,a.getChildCount()+b.getChildCount());
-  }
-
-  static int clistDistance( Node a, Node b, int max ) {
-//DBG    if( 1==1 ) return max/2;
-
-    int v[] = new int[2*max+1];
-    int x=0,y=0;
-    final int VBIAS = max, N = a.getChildCount(), M=b.getChildCount();
-    for(int d=0;d<=max;d++) {
-      for( int k=-d;k<=d;k+=2 ) {
-        if( k==-d || ( k!=d && v[k-1+VBIAS] < v[k+1+VBIAS] ) )
-          x = v[k+1+VBIAS];
-        else
-          x = v[k-1+VBIAS]+1;
-        y=x-k;
-        while( x < N && y < M &&
-          a.getChildAsNode(x).getContent().contentEquals(b.getChildAsNode(y).getContent())) {
-          x++;
-          y++;
-        }
-        v[k+VBIAS]=x;
-        if( x >= N && y>= M )
-          return d;
-      }
-    }
-  return Integer.MAX_VALUE; // D > max
-  }
-
 }

@@ -44,6 +44,12 @@ public class BranchNode extends Node {
     matchType = amatchType;
   }
 
+  public void setMatchType( int amatchType ) {
+    if( amatchType < MATCH_CONTENT || amatchType > MATCH_FULL )
+      throw new IllegalArgumentException();
+    matchType = amatchType;
+  }
+
   public void delBaseMatch() {
     baseMatch = null;
     matchType = 0;

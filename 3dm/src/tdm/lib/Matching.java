@@ -1,9 +1,11 @@
-// $Id: Matching.java,v 1.3 2001/04/21 18:00:26 ctl Exp $
+// $Id: Matching.java,v 1.4 2001/04/24 10:00:42 ctl Exp $
 
 import java.util.Vector;
 import java.util.Iterator;
 import java.util.SortedSet;
 import java.util.TreeSet;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.Comparator;
 import java.util.Collections;
 
@@ -26,6 +28,7 @@ public class Matching {
     match( base, branch );
     matchSamePosUnmatched( base, branch );
     removeSmallCopies(branch);
+    setMatchTypes(base);
   }
 
   private void match( BaseNode base, BranchNode branch ) {
@@ -120,6 +123,66 @@ public class Matching {
     } // endif
   }
 
+  private Set removedMatchings = new HashSet();
+
+  private void setMatchTypes( BaseNode base ) {
+    // Postorder traversal, because we use the child mappings to orient us
+    // therefore, this better change child mappings first!
+    for(int i=0;i<base.getChildCount();i++)
+      setMatchTypes(base.getChild(i));
+    if( base.getLeft().getMatches().size() > 1 ) {
+      // Has multiple matches, need to deterime type of each copy
+      // Scan for primary copy...
+      int minDist = Integer.MAX_VALUE;
+      double minContentDist = Double.MAX_VALUE;
+      BranchNode master = null;
+      for( Iterator i=base.getLeft().getMatches().iterator();i.hasNext();) {
+        BranchNode cand = (BranchNode) i.next();
+        int dist = exactChildListMatch(base,cand) ? 0 : measure.matchedChildListDistance( base, cand );
+        if( dist < minDist ) {
+          minDist = dist;
+          master = cand;
+        } else if( dist == minDist ) {
+          double cDist = measure.getDistance( base, cand );
+          if( cDist < minContentDist ) {
+            minContentDist = cDist;
+            master = cand;
+          }
+        }
+      }
+      removedMatchings.clear();
+      // Master is now the best match, which will be assigned as MATCH_FULL
+      for( Iterator i=base.getLeft().getMatches().iterator();i.hasNext();) {
+      BranchNode cand = (BranchNode) i.next();
+      if( cand == master )
+        continue;
+      boolean structMatch = exactChildListMatch(base,cand);
+      boolean contMatch = cand.getContent().contentEquals(base.getContent());
+      if( !structMatch && !contMatch )
+        removedMatchings.add( cand );
+      else
+        cand.setMatchType( (contMatch ? BranchNode.MATCH_CONTENT : 0) +
+                          (structMatch ? BranchNode.MATCH_CHILDREN : 0) );
+      }
+      // Delete any removed matchings
+      for( Iterator i = removedMatchings.iterator();i.hasNext();) {
+        BranchNode cand = (BranchNode) i.next();
+        delMatching( cand, cand.getBaseMatch() );
+      }
+    } // If node copied
+
+  }
+
+  private boolean exactChildListMatch( BaseNode base, BranchNode a) {
+    if( a.getChildCount() != base.getChildCount() )
+      return false;
+    for(int i=0;i<a.getChildCount();i++) {
+      if( base.getChild(i) != a.getChild(i).getBaseMatch() )
+        return false;
+    }
+    return true;
+  }
+
   static final int COPY_THRESHOLD = 18;
   static final int EDGE_BYTES = 8;
 
@@ -175,10 +238,10 @@ public class Matching {
     if( a.getChildCount() == b.getChildCount() ) {
       // Only match children, if there are equally many
       for( int i=0; childrenMatch && i<a.getChildCount(); i ++ ) {
-        childrenMatch = a.getContent().contentEquals(b.getContent());
+        childrenMatch = a.getChild(i).getContent().contentEquals(b.getChild(i).getContent());
         if( !childrenMatch ) {
           // Try fuzzy mathcing
-          double distance = measure.getDistance( a, b );
+          double distance = measure.getDistance( a.getChild(i), b.getChild(i) );
           childrenMatch =  distance < DFS_MATCH_THRESHOLD;
         }
       }
