@@ -1,4 +1,4 @@
-// $Id: Editgen.java,v 1.8 2002/10/31 12:35:18 ctl Exp $
+// $Id: Editgen.java,v 1.9 2003/01/09 13:01:43 ctl Exp $
 package editgen;
 
 import XMLNode;
@@ -157,7 +157,7 @@ public class Editgen {
         insCount++; // System.err.println("INS");
         org.xml.sax.helpers.AttributesImpl atts = new org.xml.sax.helpers.AttributesImpl();
         atts.addAttribute("","","id","CDATA",
-                          ""+(idCounter++) ); //  rnd.nextLong()+"@"+ System.currentTimeMillis());
+                          ""+newId() ); //  rnd.nextLong()+"@"+ System.currentTimeMillis());
         XMLElementNode content = new XMLElementNode("editgen:insert",atts);
         after = rnd.nextDouble() > 0.5;
         base.lock(!after,after,MarkableBaseNode.MARK_STRUCTURE);

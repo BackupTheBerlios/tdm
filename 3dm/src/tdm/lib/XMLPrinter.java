@@ -1,4 +1,4 @@
-// $Id: XMLPrinter.java,v 1.4 2002/10/25 11:39:11 ctl Exp $
+// $Id: XMLPrinter.java,v 1.5 2003/01/09 13:01:43 ctl Exp $
 
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.Attributes;
@@ -8,7 +8,7 @@ import org.xml.sax.Attributes;
  * mode it indents tags and contents according to level, most likely introducing
  * additional whitespace in content. In no-prettyprint no new whitespace is introduced in
  * the content, but the output is still quite readable (i.e. not a single line).
- * The algorithm is to not ouput any linebreaks if there is any content between tags (open as
+ * The algorithm is to not introduce any linebreaks if there is any content between tags (open as
  * well as close).
  */
 public class XMLPrinter extends DefaultHandler {
