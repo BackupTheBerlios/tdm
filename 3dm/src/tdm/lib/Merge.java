@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.18 2001/05/04 12:59:21 ctl Exp $
+// $Id: Merge.java,v 1.19 2001/05/24 12:35:52 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -32,7 +32,7 @@ public class Merge {
       throw new RuntimeException("mergeNode: match type should be match children, otherwise the node should be null!");
     MergeList mlistA = a != null ? makeMergeList( a ) : null;
     MergeList mlistB = b != null ? makeMergeList( b ) : null;
-
+    MergePairList merged = null;
 //    System.out.println("A = " + a ==null ? "-" : a.getContent().toString());
 //    System.out.println("B = " + b ==null ? "-" : b.getContent().toString());
 //    System.out.println("--------------------------");
@@ -55,67 +55,22 @@ public class Merge {
       System.out.println("--none--");
     }
     if( mlistA != null && mlistB != null ) {
-      mlistA = mergeLists( mlistA, mlistB ); // Merge lists
+      try {
+        merged = mergeLists( mlistA, mlistB ); // Merge lists
+      } catch (SequencingConflict e ) {
+        // CONFLICTCODE--- choose first arg,
+        merged = mergeListToPairList( mlistA );
+      }
       if(debug>0) {System.out.println("Merged list:");mlistA.print();}
 
-    } else if( mlistA == null ) {
-      mlistA = mlistB;
-      mlistB = null; // safety precaution
-    }
-    // Now, the merged list is in mlistA
+    } else
+      merged = mergeListToPairList( mlistA == null ? mlistB : mlistA );
+
+    // Now, the merged list is in merged
     // Handle updates & Recurse
-/*DEBUG    if( mlistA == null )
-      System.out.flush();*/
-    int _count1=0,_count2=mlistA.getEntryCount()-2;
-    for( int j=0;j<mlistA.getEntryCount();j++)
-      _count2+=mlistA.getEntry(j).getHangonCount();
-    for( Iterator i = mlistA.getExpandingIterator();i.hasNext();) {
-      _count1++;
-      HangonEntry me = (HangonEntry) i.next();
-      BranchNode n = me.getNode();
-//      BranchNode nPartner = n.getFirstPartner( BranchNode.MATCH_FULL );
-      // Merge contents of node and partner (but only if there's a partner)
-//-------------------
-// Table
-// n1    n2     Merge
-// any   null   n1
-// cont  cont   merge(n1,n2)
-// cont  str    n2
-// cont  full   merge(n1,n2)
-// str   str    FORCED content merge
-// str   full   n1 cont
-// full  full   merge(n1,n2)
-
-    BranchNode nPartner = null;
-    if( me instanceof MergeEntry )
-        nPartner = ((MergeEntry) me).getMergePartner();
-    else
-        nPartner = n.getFirstPartner(BranchNode.MATCH_FULL);
-/*    if( n.getContent().toString().indexOf("778l8") != -1 ) {
-      debug = 2;
-      System.out.println("???: " + n.getContent().toString() );
-    }
-*/
-    XMLNode mergedNode = null;
-    if( nPartner == null )
-      mergedNode = n.getContent();
-    else if( n.isMatch(BranchNode.MATCH_CONTENT) ) {
-      if( !nPartner.isMatch(BranchNode.MATCH_CONTENT) )
-        mergedNode = nPartner.getContent();
-      else
-        mergedNode = mergeNodeContent( n, nPartner );
-    } else {
-       // n doesn't match content
-      if( nPartner.isMatch(BranchNode.MATCH_CONTENT) )
-        mergedNode = n.getContent();
-      else // Neither matches content => forced merge
-        mergedNode = mergeNodeContent( n, nPartner );
-    }
-
-    if(debug>1) {
-      System.out.println("???:"+mergedNode.toString());
-    }
-//    XMLNode mergedNode = nPartner != null ? mergeNodeContent( n, nPartner ) : n.getContent();
+    for( int i=0;i<merged.getPairCount();i++) {
+      MergePair mergePair = merged.getPair(i);
+      XMLNode mergedNode = cmerge( mergePair );
       if( mergedNode instanceof XMLTextNode ) {
         XMLTextNode text = (XMLTextNode) mergedNode;
         ch.characters(text.getText(),0,text.getText().length);
@@ -124,83 +79,69 @@ public class Merge {
         XMLElementNode mergedElement = (XMLElementNode) mergedNode;
         ch.startElement(mergedElement.getNamespaceURI(),mergedElement.getLocalName(),mergedElement.getQName(),mergedElement.getAttributes());
         // Figure out partners for recurse
-        BranchNode ca = null, cb = null;
-        if( me instanceof MergeEntry && mlistB != null){ //: Earlier this cond, but it's not true- insert childs can have matches
-                                          // besides, all insert lists should be hangons only
-          // The node was merged, MUST have a partner in the list
-          MergeEntry me2 = (MergeEntry) me;
-          if( me2.getMergePartner() == null ) {
-            System.out.println("WARNING: I had to explicitly set mergePartner (should result only from sequencing conflict)");
-//             mlistA.print();
-  //          debug = 1;
-            BranchNode nn = me2.getNode().getFirstPartner(BranchNode.MATCH_CHILDREN);
-            if( nn== null) {
-              nn = me2.getNode().getFirstPartner(BranchNode.MATCH_CONTENT);
-              if( nn == null ) {
-                System.out.println("!!!!SERIOUS ERROR: Node has no partner!");
-                throw new RuntimeException();
-              }
-            }
-            me2.setMergePartner(nn);
-          }
-          if( (me2.getNode().getBaseMatchType() & BranchNode.MATCH_CHILDREN) == 0 ) {
-            ca=me2.getNode(); // Was content match, so we must use this one
-            if( (me2.getMergePartner().getBaseMatchType() & BranchNode.MATCH_CHILDREN) == 0 ) {
-              // CONFLICTCODE
-              System.out.println("CONFLICTW: I have to try to merge nonrelated childlists; nodes=");
-              try {
-                System.out.println(me2.getNode().getContent().toString());
-                System.out.println("  "+me2.getNode().getChild(0).getContent().toString());
-                System.out.println(me2.getMergePartner().getContent().toString());
-                System.out.println("  "+me2.getMergePartner().getChild(0).getContent().toString());
-              } catch (Exception e ) {} //Catch nullptrs
-              //System.out.println("CONFLICTW: Currently bailing out by arbitrarly choosing no 1");
-              cb=me2.getMergePartner();
-            } else
-              cb = null;
-          } else {
-            // me is structmatched
-            if( (me2.getMergePartner().getBaseMatchType() & BranchNode.MATCH_CHILDREN) == 0 ) {
-              ca=me2.getMergePartner();
-              cb=null;
-            } else {
-              ca=me2.getNode();
-              cb=me2.getMergePartner();
-            }
-          }
-        } else {
-          // me is a hangon entry
-          if( me.getNode().getBaseMatch() == null ) {
-            ca=me.getNode();
-            cb=null;
-          } else if ( (me.getNode().getBaseMatchType() & BranchNode.MATCH_CHILDREN) == 0 ) {
-            ca=me.getNode();
-            cb=null;
-          } else {
-            ca = me.getNode();
-            cb = me.getNode().getFirstPartner( BranchNode.MATCH_CHILDREN );
-            if( cb== null)
-              // Conflict processing can maybe mess this up by not deleting me
-//              throw new RuntimeException("No struct partner, but it MUST exist here. Otherwise me would"+
-;//                                         "have been deleted whe merging the lists");
-          }
-        }
-
-/*        BranchNode ca = (n.getBaseMatch() == null)  || // if insert, or match children
-                        (n.getBaseMatchType() & BranchNode.MATCH_CHILDREN ) != 0 ? n : null;
-        BranchNode cb = n.getFirstPartner( BranchNode.MATCH_CHILDREN );
-*/
+        MergePair recursionPartners = getRecursionPartners( mergePair );
         // Recurse!
-        mergeNode(ca,cb,ch);
+        mergeNode(recursionPartners.getFirstNode(),recursionPartners.getSecondNode(),ch);
         ch.endElement(mergedElement.getNamespaceURI(),mergedElement.getLocalName(),mergedElement.getQName());
       }
-
     }
-      if(_count1!=_count2)
-        System.out.println("????COUNTS="+_count1+","+_count2);
-
   }
 
+  private XMLNode cmerge( MergePair mp ) {
+    // Merge contents of node and partner (but only if there's a partner)
+    //-------------------
+    // Table
+    // n1    n2     Merge
+    // any   null   n1
+    // cont  cont   merge(n1,n2)
+    // cont  str    n2
+    // cont  full   merge(n1,n2)
+    // str   str    FORCED content merge
+    // str   full   n1 cont
+    // full  full   merge(n1,n2)
+
+    BranchNode n1 = mp.getFirstNode(), n2 = mp.getSecondNode();
+    if( n1 == null || n2==null )
+      return (n1==null ? n2 : n1).getContent();
+    else if( n1.isMatch(BranchNode.MATCH_CONTENT) ) {
+      if( !n2.isMatch(BranchNode.MATCH_CONTENT) )
+        return n2.getContent();
+      else
+        return mergeNodeContent( n1, n2 );
+    } else {
+       // n doesn't match content
+      if( n2.isMatch(BranchNode.MATCH_CONTENT) )
+        return n1.getContent();
+      else // Neither matches content => forced merge
+        return mergeNodeContent( n1, n2 );
+    }
+  }
+
+  private MergePair getRecursionPartners(MergePair mp) {
+    BranchNode n1 = mp.getFirstNode(), n2 = mp.getSecondNode();
+    if( n1 == null || n2 == null ) {
+      // No pair, so just go on!
+      return mp;
+    } else {
+      // We have a pair, do as the table in the thesis says:
+      // n1    n2     Merge
+      // any   -      n1,-
+      // -     any    -,n2
+      // str   str    n1,n2
+      // str   cont   -,n2
+      // cont  str    n1,-
+      // cont  cont   n1,n2 (FORCED)
+      if( n1.isMatch(BranchNode.MATCH_CHILDREN) && n2.isMatch(BranchNode.MATCH_CHILDREN) )
+        return mp;
+      else if( n1.isMatch(BranchNode.MATCH_CHILDREN) && n2.isMatch(BranchNode.MATCH_CONTENT) )
+        return new MergePair(n2,null);
+      else if( n1.isMatch(BranchNode.MATCH_CONTENT) && n2.isMatch(BranchNode.MATCH_CHILDREN) )
+        return new MergePair(n1,null);
+      else // Both content matches --> forced merge
+        return mp;
+
+    }
+  }
 
   private XMLNode mergeNodeContent( BranchNode a, BranchNode b ) {
 /*    // First check if either is null
@@ -308,18 +249,57 @@ public class Merge {
     return ml;
   }
 
+  class SequencingConflict extends Exception {}
 
+  class MergePair {
+    BranchNode first,second;
+    MergePair( BranchNode aFirst, BranchNode aSecond ) {
+      first = aFirst;
+      second = aSecond;
+    }
 
-//-------- merging mergelists: this & other
-// May modify mlistA by adding hangons from mlistB
-  public MergeList mergeLists( MergeList mlistA, MergeList mlistB ) {
-    boolean __followAonly = false; // Special var, that when set causes merge to only follow A
-                                    // used for quick'n'dirty conflict resolution
-    Set __visitedInA = new HashSet();
-    MergeList merged = new MergeList(mlistA.getEntryParent());
+    public BranchNode getFirstNode() {
+      return first;
+    }
+
+    public BranchNode getSecondNode() {
+      return second;
+    }
+
+  }
+
+  class MergePairList {
+    Vector list = new Vector();
+    public void append( BranchNode a, BranchNode b ) {
+      list.add(new MergePair(a,b));
+    }
+
+    public int getPairCount() {
+      return list.size();
+    }
+
+    public MergePair getPair(int ix){
+      return (MergePair) list.elementAt(ix);
+    }
+  }
+
+  public MergePairList mergeListToPairList( MergeList mlistA) {
+    MergePairList merged = new MergePairList();
+    for( int i=0;i<mlistA.getEntryCount()-1;i++) { // -1 due to end symbol
+      MergeEntry me = mlistA.getEntry(i);
+      if( i > 0) // Don't append __START__
+        merged.append(me.getNode(),me.getNode().getFirstPartner(BranchNode.MATCH_FULL));
+      for( int ih=0;ih<me.getHangonCount();ih++) {
+        BranchNode hangon=me.getHangon(ih).getNode();
+        merged.append(hangon,hangon.getFirstPartner(BranchNode.MATCH_FULL));
+      }
+    }
+    return merged;
+  }
+
+  public MergePairList mergeLists( MergeList mlistA, MergeList mlistB ) throws SequencingConflict {
+    MergePairList merged = new MergePairList();
     mergeDeletedOrMoved( mlistA, mlistB );
-
-// LATER      mergeDeletedOrMovedOut( docA, docB, mlistA, mlistB, docBMatching );
 /*
     System.out.println("A list (after delormove):");
     mlistA.print();
@@ -331,20 +311,15 @@ public class Merge {
     if( mlistA.getEntryCount() != mlistB.getEntryCount() )
         throw new RuntimeException("ASSERTION FAILED: MergeList.merge(): lists different lengths!");
 
-    // So let's do the merge
-    // Some things to prove:
-    // No node can get "skipped" (deleted)
-    // No node gets extra copies
-    // Sequencing isn't violated if merge is successful
-    int posA = 0, posB = 0, nextA=-1,nextB=-1;
+    int posA = 0, posB = 0;
+    MergeEntry ea = mlistA.getEntry(posA), eb= mlistB.getEntry(posB);
     while(true) {
-      // pos is set up so that ea and eb are merge-partners
-      MergeEntry ea = mlistA.getEntry(posA), eb= mlistB.getEntry(posB);
-      __visitedInA.add(ea);
-//        MergeEntry chosenEn=ea,otherEn=eb;
-      merged.add( ea );
-      ea.setMergePartner(eb.getNode());
-      // Hangon nodes
+      // Dump hangons from ea... (we do this first as __START__ may have hangons)
+      for(int i=0;i<ea.getHangonCount();i++) {
+        BranchNode na = ea.getHangon(i).getNode();
+        merged.append(na,na.getFirstPartner(BranchNode.MATCH_FULL));
+      }
+      // And then from eb..
       if( eb.getHangonCount() > 0 ) {
         boolean hangonsAreEqual = false;
         if( ea.getHangonCount() > 0 ) {
@@ -364,73 +339,54 @@ public class Merge {
           else
             System.out.println("CONFLICTW; both nodes have hangons; sequencing them"); // as updated(or A if no update)-Other");
 
-/*          System.out.println("First list:");
+/*        System.out.println("First list:");
           mlistA.print();
           System.out.println("Second list:");
           mlistB.print();*/
         }
+        // Append b hangons (unless they were equal to the hangons of ea)
         if( !hangonsAreEqual ) {
-          for( int i=0;i<eb.inserts.size();i++)
-            ea.inserts.add( eb.inserts.elementAt(i) );
+          for(int i=0;i<eb.getHangonCount();i++) {
+            BranchNode nb = eb.getHangon(i).getNode();
+            merged.append(nb,nb.getFirstPartner(BranchNode.MATCH_FULL));
+          }
         }
       }
+      // --end hangon dump
+      int nextA=-1,nextB=-1;
+      // figure out the next one
+      nextA = ea.locked && mlistA.getEntry(posA+1).locked ? posA + 1 : -1; // -1 means free
+      nextB = eb.locked && mlistB.getEntry(posB+1).locked ? posB + 1 : -1;
+      if( nextA == -1 && nextB == -1 ) { // No locking, just let both go forward
+        nextA = posA + 1;
+        nextB = posB + 1;
+      }
+      // Handle free positions
+      if( nextB == -1 )
+        nextB = mlistB.findPartner(mlistA.getEntry(nextA));
+      else if (nextA == -1 )
+        nextA = mlistA.findPartner(mlistB.getEntry(nextB));
+      else if (nextB != mlistB.findPartner(mlistA.getEntry(nextA))) {
+        // add CONFLICTCODE here
+        // This part is especially troublesome, as just using the sequencing of A may get us into
+        // and infinite loop! (m5 rev 1.1!)
+        // for now, follow sequencing of mlist A
+        System.out.println("CONFLICT: Sequencing conflict, using only one list's sequencing");
+        throw new SequencingConflict();
+      }
+      posA = nextA;
+      posB = nextB;
+      ea = mlistA.getEntry(posA);
+      eb = mlistB.getEntry(posB);
       // See if we're done
       if( ea.node == END || eb.node == END ) {
         if( ea.node != eb.node )
           throw new RuntimeException("ASSERTION FAILED: Merge.mergeLists(). Both cursors not at end");
         break;
       }
-      // figure out the next one
-      nextA = ea.locked && mlistA.getEntry(posA+1).locked ? posA + 1 : -1; // -1 means free
-      if( __followAonly )
-        nextB = -1;
-      else
-        nextB = eb.locked && mlistB.getEntry(posB+1).locked ? posB + 1 : -1;
-      if( nextA == -1 && nextB == -1 ) { // No locking, just let both go forward
-        nextA = posA + 1;
-        nextB = posB + 1;
-      }
-      if( nextB == -1 )
-        nextB = mlistB.findPartner(mlistA.getEntry(nextA));   /// getPartnerPos( mlistA.getEntry(nextA), mlistB, docB, docBMatching );
-      else if (nextA == -1 )
-        nextA = mlistA.findPartner(mlistB.getEntry(nextB)); ///getPartnerPos( mlistB.getEntry(nextB), mlistA, docA, this );
-      else if (nextB != mlistB.findPartner(mlistA.getEntry(nextA))) { //           getPartnerPos( mlistA.getEntry(nextA), mlistB, docB, docBMatching ) ) {
-        // add CONFLICTCODE here
-        // This part is especially troublesome, as just using the sequencing of A may get us into
-        // and infinite loop! (m5 rev 1.1!)
-        // for now, follow sequencing of mlist A
-        System.out.println("CONFLICT: Sequencing conflict, using only one list's sequencing");
-        __followAonly = true;
-        nextB = mlistB.findPartner(mlistA.getEntry(nextA)); ///getPartnerPos( mlistA.getEntry(nextA), mlistB, docB, docBMatching);
-        // CONFLICT CODE
-        // Fixup hangons from mlistB
-
-        for( int i=1;i<mlistA.getEntryCount()-1;i++) {
-          MergeEntry a = mlistA.getEntry(i);
-          if( __visitedInA.contains(a) )
-            continue;
-          int bix = mlistB.findPartner( a );
-          MergeEntry b = bix < 0 ? null : mlistB.getEntry(bix);
-          if( b!= null && b.getHangonCount() > 0 ) {
-            for(int ih=0;ih<b.getHangonCount();ih++)
-              a.addHangon(b.getHangon(ih));
-          }
-        }
-        // END CONFLICT CODE
-//        return mlistA;
-        System.out.println("posA="+posA+",posB="+posB);
-          System.out.println("First list:");
-          mlistA.print();
-          System.out.println("Second list:");
-          mlistB.print();
-
-         return mlistA;
-      }
-      posA = nextA;
-      posB = nextB;
+      // pos is set up so that ea and eb are merge-partners
+      merged.append(ea.getNode(),eb.getNode());
     }
-/*    System.out.println("Merged list:");
-    merged.print();*/
     return merged;
   }
 
@@ -773,6 +729,7 @@ public class Merge {
         return i.intValue();
     }
 
+/*
     class ExpandingIterator implements Iterator {
       int mainPos = -1, // -1 here means no next pos
           hangonPos = -1;
@@ -822,7 +779,7 @@ public class Merge {
       return new ExpandingIterator();
     }
 
-
+*/
     private void ensureCapacity( int size, boolean fill ) {
       for( int i = list.size(); i < size; i ++ )
         list.add( fill ? new MergeEntry() : null);
