@@ -1,4 +1,4 @@
-// $Id: XMLTextNode.java,v 1.10 2002/10/25 11:39:47 ctl Exp $
+// $Id: XMLTextNode.java,v 1.11 2002/10/30 15:11:57 ctl Exp $
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -65,6 +65,10 @@ public class XMLTextNode extends XMLNode {
 
   public int getContentHash() {
     return cHash[0]+cHash[1]<<8+cHash[2]<<16+cHash[3]<<24;
+  }
+
+  public Object clone() {
+    return super.clone();
   }
 
 }

@@ -1,4 +1,4 @@
-// $Id: XMLElementNode.java,v 1.9 2001/09/26 19:36:46 ctl Exp $ D
+// $Id: XMLElementNode.java,v 1.10 2002/10/30 15:11:57 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -87,6 +87,10 @@ public class XMLElementNode extends XMLNode {
     return name;
   }
 
+  public void setQName(String aName) {
+    name=aName;
+  }
+
   public Attributes getAttributes() {
     return attributes;
   }
@@ -146,5 +150,11 @@ public class XMLElementNode extends XMLNode {
 
   public int getContentHash() {
   return (attrHash[0]+attrHash[1]<<8+attrHash[2]<<16+attrHash[3]<<24)^nHashCode;
+  }
+
+  public Object clone() {
+    XMLElementNode clone = (XMLElementNode) super.clone();
+    clone.attributes =  new AttributesImpl(attributes);
+    return clone;
   }
 }

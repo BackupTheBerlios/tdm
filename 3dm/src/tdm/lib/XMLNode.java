@@ -1,4 +1,4 @@
-// $Id: XMLNode.java,v 1.8 2001/09/26 19:36:47 ctl Exp $ D
+// $Id: XMLNode.java,v 1.9 2002/10/30 15:11:57 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -24,7 +24,7 @@ import java.security.MessageDigest;
 /** Class for storing content of XML nodes. Supports fast equality comparison
  *  using MD5 hash codes, and automatic calculation of node infoSize. */
 
-public abstract class XMLNode {
+public abstract class XMLNode implements Cloneable {
 
   protected int infoSize = 0;
 
@@ -67,5 +67,13 @@ public abstract class XMLNode {
       contentHash.update((byte) (data.charAt(i)>>8));
     }
     return contentHash.digest();
+  }
+
+  public Object clone() {
+    try {
+      return super.clone();
+    } catch (CloneNotSupportedException x ) {
+      return null;
+    }
   }
 }
