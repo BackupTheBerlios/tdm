@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.23 2001/06/07 08:35:48 ctl Exp $
+// $Id: Merge.java,v 1.24 2001/06/07 09:26:16 ctl Exp $
 
 import org.xml.sax.ContentHandler;
 import org.xml.sax.SAXException;
@@ -309,6 +309,40 @@ public class Merge {
     return merged;
   }
 
+  protected int logOperation(BranchNode a,MergeEntry ma, BranchNode b,MergeEntry mb, int childPos) {
+    if( !a.hasBaseMatch() )
+      op_insert(a,childPos);
+    else if ( !b.hasBaseMatch() )
+      op_insert(b,childPos);
+    else {
+      opa = getStructOperation(a,ma);
+      opb = getStructOperation(a,ma);
+      // MOVE overrides copy (as the unmoved pair is then the "original"), and if both are copied only
+      if( opa == MOVE)
+        op_move(a,childPos);
+      else if ( opb == MOVE)
+        op_move(b,childPos);
+      else if (opa==COPY || opb == COPY )
+        op_copy( opa==COPY ? a : b, childPos );
+    }
+
+    // Check if copy operation
+
+    //if( ma.moved
+  }
+
+  protected int getStructOperation( BranchNode n, MergeEntry m ) {
+    if( !n.hasBaseMatch() )
+      return INSERT;
+    BaseNode b = n.getBaseMatch();
+    if( (b.getLeft().getMatches().contains(n) && b.getLeft().getMatches().size() > 1 )||
+      (b.getRight().getMatches().size() > 1 ) )
+      return COPY;
+    if( m==null || m.moved ) // m=null & basematch (prev condition) => far move!
+      return MOVE;
+    return NOP;
+  }
+
   public MergePairList mergeLists( MergeList mlistA, MergeList mlistB ) {
     MergePairList merged = new MergePairList();
     mergeDeletedOrMoved( mlistA, mlistB );
@@ -418,6 +452,9 @@ public class Merge {
   private static final int MOVE_I = 2;
   private static final int MOVE_F = 3;
   private static final int DELETE = 4;
+  private static final int INSERT = 5;
+  private static final int COPY = 6;
+  private static final int MOVE = 7;
 
   // Tells what happens to bn in ml
 
