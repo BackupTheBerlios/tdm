@@ -1,0 +1,59 @@
+$Id: results,v 1.1 2001/06/19 11:28:40 ctl Exp $
+ 
+=1=
+
+Results: A-OK!
+
+"Random" tags inserted by OpenOffice made life slightly harder. (Random=
+changes that occured without any editing). 
+
+Natural conflicts also occured from tags giving modify date, edit cycles
+and document statistics.
+
+Random edits: 
+
+In merged: <text:span /> near kppd (no purpose) (Tree comp fails)
+ as this facit file was made by hand, it was ok to remove <text:span />
+
+letter-spacing="normal" in base version. WHere did it come from?
+Well, at least I got to test attr-by-attr merging!
+
+Also, the para styles of the last list changed to "P3" 
+
+=> Conclusion: DOM Changes happening without the user doing anything can cause 
+false conflicts (not in this case) and "stealth" edits in the output.
+
+Conflicts:
+
+1) =  <dc:date>2001-04-02T11:35:12</dc:date>
+2) =  <meta:document-statistic meta:table-count="0" me
+3) = <meta:editing-cycles>6</meta:editing-cycles>
+
+<?xml version="1.0" encoding="UTF-8"?>
+<conflictlist>
+ <conflicts>
+  <update>
+Node updated in both branches, using branch 1
+   <node tree="merged" path="/0/0/3/0" />
+   <node tree="base" path="/0/0/3/0" />
+   <node tree="branch1" path="/0/0/3/0" />
+   <node tree="branch2" path="/0/0/3/0" />
+  </update>
+  <update>
+Node updated in both branches, using branch 1
+   <node tree="merged" path="/0/0/10" />
+   <node tree="base" path="/0/0/10" />
+   <node tree="branch1" path="/0/0/10" />
+   <node tree="branch2" path="/0/0/10" />
+  </update>
+ </conflicts>
+ <warnings>
+  <update>
+Node updated in both branches, but updates are equal
+   <node tree="merged" path="/0/0/4/0" />
+   <node tree="base" path="/0/0/4/0" />
+   <node tree="branch1" path="/0/0/4/0" />
+   <node tree="branch2" path="/0/0/4/0" />
+  </update>
+ </warnings>
+</conflictlist>

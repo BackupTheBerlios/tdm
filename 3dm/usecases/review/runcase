@@ -1,0 +1,8 @@
+#!/bin/sh
+# $Id: runcase,v 1.1 2001/06/19 11:28:40 ctl Exp $
+#
+3dm --merge base.xml branch1.xml branch2.xml gmergeb12.xml
+# check
+echo "3 Diffs: 1) dc:date = 2001-04-02T11:35:12"
+echo "2) edit-cycles=6 and 3) document-statistics"
+3dm --diff gmergeb12.xml mergeb12.xml
