@@ -1,4 +1,4 @@
-// $Id: MarkableBaseNode.java,v 1.1 2002/10/25 11:44:47 ctl Exp $
+// $Id: MarkableBaseNode.java,v 1.2 2002/10/28 14:07:09 ctl Exp $
 package editgen;
 
 import BaseNode;
@@ -6,7 +6,7 @@ import XMLNode;
 
 public class MarkableBaseNode extends BaseNode {
 
-  protected boolean isMarked = false;
+  protected int markCount = 0;
   protected int subtreeSize = 0;
 
   MarkableBaseNode(XMLNode aContent) {
@@ -14,11 +14,17 @@ public class MarkableBaseNode extends BaseNode {
   }
 
   public void mark() {
-    isMarked = true;
+    markCount++;
   }
 
   public boolean isMarked() {
-    return isMarked;
+    return markCount > 0;
+  }
+
+  public void unmark() {
+    if(markCount==0)
+      throw new IllegalStateException("Too many unmarks");
+    markCount--;
   }
 
 /*  public boolean isLocked() {

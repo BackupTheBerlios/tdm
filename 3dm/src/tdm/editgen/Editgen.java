@@ -1,4 +1,4 @@
-// $Id: Editgen.java,v 1.2 2002/10/25 14:51:54 ctl Exp $
+// $Id: Editgen.java,v 1.3 2002/10/28 14:07:09 ctl Exp $
 package editgen;
 
 import XMLNode;
@@ -44,6 +44,7 @@ public class Editgen {
    docMerged = clonedAndMatchedTree( docBase, true, true );
    // Make variants
    for( int iFile = 0; iFile < outfiles.length; iFile++ ) {
+     System.err.println("Making "+outfiles[iFile]+"...");
      BranchNode outRoot = clonedAndMatchedTree( docBase, false, true );
      ((MarkableBaseNode) docBase.getChild(0)).mark(); // Never edit root elem
      transform( (MarkableBaseNode) docBase.getChild(0), outRoot.getChild(0), docMerged.getChild(0),
@@ -71,13 +72,13 @@ public class Editgen {
     // Decide if node should be edited
     if( ! base.isMarked() ) {
       _visitCount++;
-      editNode = rnd.nextDouble() > 0.91;
+      editNode = rnd.nextDouble() > 0.65;
     }
     BranchNode n = null; // used by edit ops
     boolean after = false;
     MarkableBaseNode dest = null;
     if( editNode ) {
-      int op = 4;// (int) (rnd.nextDouble() *5.0);
+      int op = 3;// (int) (rnd.nextDouble() *5.0);
       switch(op) {
         case 0: // Delete node
           System.err.println("DEL");
@@ -118,9 +119,28 @@ public class Editgen {
           System.err.println("MOV");
           // Delete from base (src of move) (=delete code block)
           base.lock();
-          dest = getRandomNode( baseRoot, true ); // NOTE! Dest must be fetched AFTER src is locked!
+          dest = getRandomNode( baseRoot, true, base ); // NOTE! Dest must be fetched AFTER src is locked!
           after = rnd.nextDouble() > 0.5;
+          dest.lock(!after,after);
+          // Text node move check
+          n = dest.getLeft().getFullMatch();
+          Node n2 = after ? n.getRightSibling() : n.getLeftSibling();
+          if( base.getContent() instanceof XMLTextNode &&
+              ( (n.getContent() instanceof XMLTextNode) ||
+               ( n2 != null && n2.getContent() instanceof XMLTextNode ))) {
+            // NOTE: Unfortunately we have locked the dst and src, so they are no
+            // longer eligable for other ops after the abort :( (unlocking is not trivial)
+            System.err.println("-- Abort: copying text node adjacent to other text node not possible");
+            break;
+          }
+
           editTrees(base,dest,null,after,true);
+
+          //DEBUG
+          java.util.Set s = new java.util.HashSet();
+          _getByIds(total,"olasdu8ahj",s);
+          if( s.size() > 1 )
+            System.err.println("DUP!");
           /*
           BranchNode l = base.getLeft().getFullMatch();
           l.getParent().removeChild(l.getChildPos());
@@ -142,11 +162,11 @@ public class Editgen {
           // Lock src of copy
           base.lock();
           // Insert at dest (=insert code block)
-          dest = getRandomNode( baseRoot, true ); // NOTE! Dest must be fetched AFTER src is locked!
+          dest = getRandomNode( baseRoot, true, base ); // NOTE! Dest must be fetched AFTER src is locked!
           after = rnd.nextDouble() > 0.5;
           dest.lock(!after,after);
           n = dest.getLeft().getFullMatch();
-          Node n2 = after ? n.getRightSibling() : n.getLeftSibling();
+          n2 = after ? n.getRightSibling() : n.getLeftSibling();
           if( base.getContent() instanceof XMLTextNode &&
               ( (n.getContent() instanceof XMLTextNode) ||
                ( n2 != null && n2.getContent() instanceof XMLTextNode ))) {
@@ -171,29 +191,41 @@ public class Editgen {
       transform((MarkableBaseNode) base.getChild(i),variant,total,baseRoot);
   }
 
-  public MarkableBaseNode getRandomNode( MarkableBaseNode root, boolean isUnmarked ) {
-    int pos = (int) (rnd.nextDouble() * root.getSubteeSize());
-    MarkableBaseNode found = doGetRandomNode( pos, root, isUnmarked );
+  public MarkableBaseNode getRandomNode( MarkableBaseNode root, boolean isUnmarked,
+     MarkableBaseNode forbiddenTree ) {
+    int pos = (int) (rnd.nextDouble() * (root.getSubteeSize() - forbiddenTree.getSubteeSize() ));
+    MarkableBaseNode found = doGetRandomNode( pos, root, isUnmarked, forbiddenTree );
     if( found == null && isUnmarked )
-      found=doGetRandomNode(SCAN_UNMARKED,root,isUnmarked); // Unmarked scann reached end of tree, start from top
+      found=doGetRandomNode(SCAN_UNMARKED,root,isUnmarked, forbiddenTree ); // Unmarked scann reached end of tree, start from top
+// Forbiddentreecheck
+    MarkableBaseNode _n = found;
+    while( _n != null ) {
+      if( _n == forbiddenTree )
+        throw new IllegalStateException("found in forbidden tree");
+      _n = (MarkableBaseNode) _n.getParent();
+    }
+// endcheck
     return found;
   }
 
   protected static final int SCAN_UNMARKED = Integer.MIN_VALUE;
-  protected MarkableBaseNode doGetRandomNode( int pos, MarkableBaseNode n, boolean isUnmarked ) {
+  protected MarkableBaseNode doGetRandomNode( int pos, MarkableBaseNode n, boolean isUnmarked,
+     MarkableBaseNode forbiddenTree ) {
+    if( n == forbiddenTree )
+      return null;
     if( pos == SCAN_UNMARKED ) {
       if( !n.isMarked() )
         return n;
       else {
         MarkableBaseNode found = null;
         for( int i=0;i<n.getChildCount() && found == null;i++)
-          found = doGetRandomNode(pos,(MarkableBaseNode) n.getChild(i),isUnmarked);
+          found = doGetRandomNode(pos,(MarkableBaseNode) n.getChild(i),isUnmarked,forbiddenTree);
         return found;
       }
     }
     if( pos == 0 ) {
       if( isUnmarked && n.isMarked() )
-        return doGetRandomNode(SCAN_UNMARKED,n,isUnmarked);
+        return doGetRandomNode(SCAN_UNMARKED,n,isUnmarked, forbiddenTree);
       else
         return n;
     }
@@ -201,10 +233,10 @@ public class Editgen {
     MarkableBaseNode child= null;
     for( int i=0;i<n.getChildCount() && pos>=0;i++) {
       child = ((MarkableBaseNode) n.getChild(i));
-      stSize = child.getSubteeSize();
+      stSize = child == forbiddenTree ? 0 : child.getSubteeSize();
       pos-= stSize;
     }
-    return doGetRandomNode( pos + stSize, child, isUnmarked );
+    return doGetRandomNode( pos + stSize, child, isUnmarked, forbiddenTree );
   }
 
   // Get root of largest unmarked subtree of n
@@ -251,7 +283,7 @@ public class Editgen {
    MarkableBaseNode dest, boolean after, Node insTree, boolean cloneInsTree,
                            boolean left ) {
     MatchedNodes m = null;
-    BranchNode deletedNode = null;
+    //BranchNode deletedNode = null;
     if( src != null ) {
       // We should detach all matches of src
       // NOTE! for move with multiple matches, assumes all matches are identical!
@@ -259,10 +291,10 @@ public class Editgen {
       m = left ? src.getLeft() : src.getRight();
       for( Iterator i = m.getMatches().iterator();i.hasNext();) {
         BranchNode match = (BranchNode) i.next();
-        deletedNode = match;
-        m.delMatch(match);
+        insTree = match; // DONT USE .getBaseMatch(), as there may be changes in the Branch!
         match.getParent().removeChild(match.getChildPos());
       }
+      m.getMatches().clear();
     }
     if( dest != null ) {
       m = left ? dest.getLeft() : dest.getRight();
@@ -274,22 +306,22 @@ public class Editgen {
           (left ? src.getLeft() : src.getRight()).addMatch((BranchNode)insTree);
           match.getParent().addChild(ix,insTree);
         } else {
-          match.getParent().addChild(ix,clonedAndMatchedTree(
-              (BaseNode) insTree,left,false));
+          match.getParent().addChild(ix,clonedAndMatchedTree(insTree,left,false));
         }
       }
     }
   }
 
-  protected BranchNode clonedAndMatchedTree( BaseNode n, boolean left, boolean resetMatches ) {
+  protected BranchNode clonedAndMatchedTree( Node n, boolean left, boolean resetMatches ) {
+    BaseNode b = n instanceof BaseNode ? (BaseNode) n : ((BranchNode) n).getBaseMatch();
     BranchNode nc = new BranchNode( n.getContent() );
-    nc.setBaseMatch(n,BranchNode.MATCH_FULL);
-    MatchedNodes mn = left ? n.getLeft() : n.getRight();
+    nc.setBaseMatch(b,BranchNode.MATCH_FULL);
+    MatchedNodes mn = left ? b.getLeft() : b.getRight();
     if( resetMatches )
       mn.clearMatches();
     mn.addMatch(nc);
     for( int i=0;i<n.getChildCount();i++)
-      nc.addChild(clonedAndMatchedTree(n.getChild(i),left,resetMatches));
+      nc.addChild(clonedAndMatchedTree(n.getChildAsNode(i),left,resetMatches));
     return nc;
   }
 
@@ -321,6 +353,18 @@ public class Editgen {
     return stSize;
   }
 
+  protected void markSubtree( MarkableBaseNode b )  {
+    b.mark();
+    for(int i=0;i<b.getChildCount();i++)
+      markSubtree((MarkableBaseNode) b.getChild(i));
+  }
+
+  protected void unmarkSubtree( MarkableBaseNode b )  {
+    b.unmark();
+    for(int i=0;i<b.getChildCount();i++)
+      unmarkSubtree((MarkableBaseNode) b.getChild(i));
+  }
+
     // Factory for BaseNode:s
   private static NodeFactory baseNodeFactory =  new NodeFactory() {
             public Node makeNode(  XMLNode content ) {
@@ -334,5 +378,13 @@ public class Editgen {
             }
         };
 
+  private void _getByIds( Node n, String id, java.util.Set nodes ) {
+    XMLNode c = n.getContent();
+    if( c instanceof XMLElementNode &&
+        id.equals( ((XMLElementNode) c).getAttributes().getValue("id") ) )
+        nodes.add(n);
+    for(int i=0;i<n.getChildCount();i++)
+      _getByIds(n.getChildAsNode(i),id,nodes);
+  }
 
 }
