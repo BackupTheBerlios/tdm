@@ -1,4 +1,4 @@
-// $Id: XMLParser.java,v 1.8 2003/01/09 14:15:26 ctl Exp $ D
+// $Id: XMLParser.java,v 1.9 2005/10/13 07:21:57 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -28,8 +28,6 @@ import org.xml.sax.helpers.XMLReaderFactory;
 import org.xml.sax.helpers.DefaultHandler;
 import org.xml.sax.SAXException;
 import java.util.Stack;
-import java.io.FileReader;
-import java.io.FileNotFoundException;
 
 /** 3DM wrapper for a generic XML SAX parser. */
 
@@ -46,9 +44,9 @@ public class XMLParser extends DefaultHandler {
   /** Create new parser using supplied SAX parser class name. */
   public XMLParser( String saxParserName ) throws Exception {
     try {
-      xr = (XMLReader)Class.forName(saxParserName).newInstance();
+      xr = XMLReaderFactory.createXMLReader();
     } catch (Exception e ) {
-      new Exception("Unable to instantiate parser " + saxParserName );
+      xr = XMLReaderFactory.createXMLReader(saxParserName);
     }
     xr.setContentHandler(this);
     xr.setErrorHandler(this);
