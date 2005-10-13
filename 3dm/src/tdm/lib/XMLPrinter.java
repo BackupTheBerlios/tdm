@@ -1,4 +1,4 @@
-// $Id: XMLPrinter.java,v 1.7 2003/01/09 14:15:26 ctl Exp $
+// $Id: XMLPrinter.java,v 1.8 2005/10/13 07:28:47 ctl Exp $
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -110,7 +110,7 @@ public class XMLPrinter extends DefaultHandler {
         tagopen.append(atts.getQName(i));
         tagopen.append('=');
         tagopen.append('"');
-        tagopen.append(atts.getValue(i));
+        tagopen.append(toEntities(atts.getValue(i)));
         tagopen.append('"');
       }
     }
@@ -156,27 +156,10 @@ public class XMLPrinter extends DefaultHandler {
       if(childcounter!=HAS_CONTENT)
          printWithNL(">",prettyPrint);
       childcounter = HAS_CONTENT;
-      StringBuffer sb = new StringBuffer();
-      for(int i=startpos;i<startpos+length;i++) {
-        switch( ch[i] ) {
-          case '<': sb.append("&lt;");
-                break;
-          case '>': sb.append(">");
-                break;
-          case '\'': sb.append("&apos;");
-                break;
-          case '&': sb.append("&amp;");
-                break;
-          case '"': sb.append("&quot;");
-                break;
-          default:
-              sb.append(ch[i]);
-        }
-      }
-      String chars = sb.toString();
-//        String chars = new String( ch, startpos, length ).trim();
-      if( chars.length() == 0 )
-        return;/*
+      if( length == 0 )
+          return;
+      String chars = toEntities(ch, startpos, length);
+      /*
       int start=0,next=-1;
       do {
         next=chars.indexOf("\n",start);
@@ -190,6 +173,37 @@ public class XMLPrinter extends DefaultHandler {
       printWithNL(chars,prettyPrint);
       //System.err.println("OUT:"+chars);
    }
+   
+   private static String toEntities(String str) {
+      if (str.length() == 0) {
+          return ""; // avoid instance for empty strings.
+      }
+      char data[] = str.toCharArray();
+      return toEntities(data, 0, data.length);
+   }
 
-
+   private static String toEntities(char data[], int off, int len) {
+      if (len == 0) {
+          return ""; // avoid instance for empty strings.
+      }
+      StringBuffer b = new StringBuffer();
+      int end = off + len;
+      int scan = off;
+      while (scan < end) {
+         char c = data[scan++];
+         switch (c) {
+         case '&': b.append(data, off, scan - off - 1).append("&amp;"); break;
+         case '<': b.append(data, off, scan - off - 1).append("&lt;"); break;
+         case '>': b.append(data, off, scan - off - 1).append("&gt;"); break;
+         case '\'': b.append(data, off, scan - off - 1).append("&apos;"); break;
+         case '"': b.append(data, off, scan - off - 1).append("&quot;"); break;
+         default: continue;
+         }
+         off = scan;
+      }
+      if (off < scan) {
+         b.append(data, off, scan - off);
+      }
+      return b.toString();
+   }
 }
