@@ -1,4 +1,4 @@
-//$Id: Measure.java,v 1.11 2003/01/09 14:15:26 ctl Exp $ D
+//$Id: Measure.java,v 1.12 2005/10/19 18:22:12 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -74,13 +74,16 @@ public class Measure {
 
   /** Return content distance between nodes. */
   public double getDistance(Node a, Node b ) {
-    if( a!=null && b!= null )
-      includeNodes( a, b );
-    double penalty = Math.max(0.0,1.0-((double) total)/((double) C));
-    double distance= penalty+(1.0-penalty)*((double) (mismatched))/
-                      ((double) total);
-    resetDistance();
-    return totalMismatch ? 1.0 : distance;
+    try {
+      if( a!=null && b!= null )
+        includeNodes( a, b );
+      double penalty = Math.max(0.0,1.0-((double) total)/((double) C));
+      double distance= penalty+(1.0-penalty)*((double) (mismatched))/
+                        ((double) total);
+      return totalMismatch ? 1.0 : distance;
+    } finally {
+      resetDistance();
+    }
   }
 
   // Currently not used. used to read distance without adding more nodes
