@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.39 2003/01/09 14:15:26 ctl Exp $ D
+// $Id: Merge.java,v 1.40 2005/11/29 20:29:34 kre Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -491,7 +491,7 @@ public class Merge {
       if( mlistB != null ) {
         MergeEntry pair = mlistB.getEntry(mlistB.findPartner(me));
         if( pair != null && !checkHangonCombine(me,pair,mlistA,mlistB) ) {
-          for(int ih=0;i<pair.getHangonCount();ih++) {
+          for(int ih=0;ih<pair.getHangonCount();ih++) {
             BranchNode hangon = pair.getHangon(ih).getNode();
             merged.append(hangon,hangon.getFirstPartner(BranchNode.MATCH_FULL));
             logHangonStructOps(hangon,merged.getPairCount()-1);
