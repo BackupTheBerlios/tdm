@@ -1,4 +1,4 @@
-// $Id: Editgen.java,v 1.14 2003/01/17 13:56:53 ctl Exp $
+// $Id: Editgen.java,v 1.15 2006/01/31 19:34:22 ctl Exp $
 package tdm.editgen;
 
 import tdm.lib.XMLNode;
@@ -167,7 +167,7 @@ public class Editgen {
         org.xml.sax.helpers.AttributesImpl atts = new org.xml.sax.helpers.AttributesImpl();
         atts.addAttribute("","","id","CDATA",
                           ""+newId() ); //  rnd.nextLong()+"@"+ System.currentTimeMillis());
-        XMLElementNode content = new XMLElementNode("editgen:insert",atts);
+        XMLElementNode content = new XMLElementNode("editgen-insert",atts);
         after = rnd.nextDouble() > 0.5;
         base.lock(!after,after,MarkableBaseNode.MARK_STRUCTURE);
         editTrees(null,base,new BranchNode( content),after,false,mergeLog,branchLog);
