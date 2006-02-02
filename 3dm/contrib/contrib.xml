@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!-- $Id: contrib.xml,v 1.2 2006/02/02 15:37:53 ctl Exp $ -->
+<!-- $Id: contrib.xml,v 1.3 2006/02/02 16:08:21 ctl Exp $ -->
 <!-- 
 
 Contrib builder
@@ -39,6 +39,8 @@ checking its hash, and then unpacking to ${src}
 
 <project name="3dm-contrib" default="binaries" basedir=".">
 
+  <!-- Default soureforge mirror -->
+  <property name="sf-mirror" value="switch" />
   <property name="lib" value="jar" />
   <property name="sarch" value="src/archives" />
   <property name="csrc" value="src" />
@@ -46,6 +48,8 @@ checking its hash, and then unpacking to ${src}
        contrib modules on a local fs -->
   <property name="contrib.uri.prefix" value="http:/" />
   <property name="proto" value="${contrib.uri.prefix}" />
+  <property name="sforge" 
+    value="${proto}/${sf-mirror}.dl.sourceforge.net/sourceforge" />
   <tempfile property="temp.file" />
   <tempfile property="temp.dir" />
 
@@ -63,7 +67,7 @@ checking its hash, and then unpacking to ${src}
           sha="9000468778bc51f358f5487b2e0c3db0f47af169" />
 
     <wget id="junit"
-          href1="${proto}/dl.sourceforge.net/sourceforge/junit/junit3.8.1.zip"
+          href1="${sforge}/junit/junit3.8.1.zip"
           target="${lib}/junit.jar"
           target.get="${sarch}/junit3.8.1.zip"
           unpack1="unpack-junit"
