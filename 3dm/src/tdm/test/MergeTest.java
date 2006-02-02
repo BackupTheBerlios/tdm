@@ -1,4 +1,4 @@
-// $Id: MergeTest.java,v 1.1 2006/02/02 15:37:53 ctl Exp $ D
+// $Id: MergeTest.java,v 1.2 2006/02/02 17:42:18 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -56,6 +56,7 @@ public class MergeTest extends TestCase {
   }
 
   public void testMerge() throws Exception {
+    System.out.println("Running Merge test...");
     DiffPatch.scanDataSets(dirs, DiffPatch.TEST_ROOT, TEST_SET_DFILTER,
                            TEST_SET_FFILTER);
     int COPY_TRESHOLD_ORIG = HeuristicMatching.COPY_THRESHOLD;
@@ -67,14 +68,16 @@ public class MergeTest extends TestCase {
       File dir = (File) e.getKey();
       File conffile = new File(dir,(String) l.get(0) );
       Properties p = new Properties();
-      p.load(new FileInputStream(conffile));
+      FileInputStream cin = new FileInputStream(conffile);
+      p.load(cin);
+      cin.close();
       for( int test=0;test<Integer.MAX_VALUE;test++) {
         String pfx = test==0 ? "" : String.valueOf(test)+".";
         if( p.getProperty(pfx+"base") == null )
           break;
-        doMerge( dir, p.getProperty(pfx + "base"),
-                 p.getProperty(pfx + "a"),
-                 p.getProperty(pfx + "b"),
+        doMerge( dir, p.getProperty(pfx + "base").trim(),
+                 p.getProperty(pfx + "a").trim(),
+                 p.getProperty(pfx + "b").trim(),
                  p.getProperty(pfx+"facit").split("\\s+"),
                  p.getProperty(pfx+"expect").split("\\s+"),
             dir.getPath().replaceAll("[./]+",".").substring(1)+"."+test,
@@ -94,6 +97,12 @@ public class MergeTest extends TestCase {
     if( fail > 0 )
       Assert.fail("Test failed due to new failures.");
   }
+
+  // Note about the maybe too tricky facit and expected commands
+  // facit lists desired results in descending order of correctness
+  // expected lists accepted results
+  // we detect an improvement if we match a facit better than any expected
+  // we did worse if we match a facit (but not <FAIL>!) worse than any expected
 
   public void doMerge(File dir, String basen, String an, String bn,
                       String[] facitn, String[] expectn, String id,
@@ -134,7 +143,11 @@ public class MergeTest extends TestCase {
       }
       int bestexpect = Integer.MAX_VALUE; // Best expected result
       int worstexpect = -1; // Worst expected result
+      boolean exactmatch = match == Integer.MAX_VALUE;
       for( int i=0;i<expectn.length;i++) {
+        if( match < Integer.MAX_VALUE &&
+            expectn[i].equals( facitn[match] ) )
+          exactmatch = true;
         for( int j=0;j<facitn.length;j++ ) {
           if( expectn[i].equals(facitn[j]) ) {
             bestexpect = Math.min(bestexpect, j);
@@ -146,8 +159,10 @@ public class MergeTest extends TestCase {
         System.out.println("OK + Improved to "+facitn[match]);
         saved.println("GOOD NEWS, EVERYONE: Test "+id+" improved :).");
         improv++;
-      } else if ( worstexpect == -1 ||  match <= worstexpect ) {
-        System.out.println("OK.");
+      } else if ( (worstexpect == -1 ||  match <= worstexpect)
+                  && exactmatch ) {
+        System.out.println("OK (by facit "+(match == Integer.MAX_VALUE ?
+                           "<FAIL>" : facitn[match])+").");
         ok++;
       } else if (match==Integer.MAX_VALUE) {
         System.out.println("Regression to <FAIL>");

@@ -1,4 +1,4 @@
-// $Id: DiffPatch.java,v 1.1 2006/02/02 15:37:53 ctl Exp $ D
+// $Id: DiffPatch.java,v 1.2 2006/02/02 17:42:17 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -66,6 +66,7 @@ public class DiffPatch extends TestCase {
   }
 
   public void testDiffPatch() throws Exception {
+    System.out.println("Running diff+patch test...");
     Assert.assertTrue(TEST_FOLDER_FILE.exists() || TEST_FOLDER_FILE.mkdirs());
     scanDataSets(dirs,TEST_ROOT,TEST_SET_DFILTER,TEST_SET_FFILTER);
     for( Iterator i = dirs.entrySet().iterator(); i.hasNext();) {
