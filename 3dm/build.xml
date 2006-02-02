@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- $Id: build.xml,v 1.7 2006/02/02 16:08:21 ctl Exp $ -->
+<!-- $Id: build.xml,v 1.8 2006/02/02 17:42:58 ctl Exp $ -->
 <project name="3dm" default="3dm" basedir=".">
 
   <description>3DM build file</description>
@@ -166,7 +166,40 @@ message="The test is successful if there are no errors, and the diff below is &l
     <touch file="contrib/.binstamp" />
   </target>
 
+  <target name="test-usecase-review-unzipper">
+    <unzip src="${oodoc}.sxw" dest="${tmpdir}" />
+    <copy file="${tmpdir}/Content.xml" tofile="${oodoc}.xml" />
+    <delete includeemptydirs="true">
+      <fileset dir="${tmpdir}" includes="**/*" excludes="${tmpdir}"/>
+    </delete>
+  </target>
+
+  <target name="test-unzipper" unless="review.unzipped">
+    <antcall target="test-usecase-review-unzipper">
+      <param name="oodoc" value="usecases/review/base" />
+    </antcall>
+    <antcall target="test-usecase-review-unzipper">
+      <param name="oodoc" value="usecases/review/branch1" />
+    </antcall>
+    <antcall target="test-usecase-review-unzipper">
+      <param name="oodoc" value="usecases/review/branch2" />
+    </antcall>
+    <antcall target="test-usecase-review-unzipper">
+      <param name="oodoc" value="usecases/review/branch3" />
+    </antcall>
+    <antcall target="test-usecase-review-unzipper">
+      <param name="oodoc" value="usecases/review/mergeb12" />
+    </antcall>
+    <antcall target="test-usecase-review-unzipper">
+      <param name="oodoc" value="usecases/review/mergeb123" />
+    </antcall>
+  </target>
+
   <target name="test" depends="compile">
+    <!-- This test below is not 100% correct, but what the hey -->
+    <available file="usecases/review/base.xml" 
+               property="review.unzipped" />
+    <antcall target="test-unzipper" />
     <echo message="Running tests, takes a while. (Sample point: 8 min on Athlon 1.3Ghz) "/>
     <echo message="Test run results saved in file test.log"/>
     <condition property="testclass" value="tdm.test.RootSuite" >
@@ -184,6 +217,9 @@ message="The test is successful if there are no errors, and the diff below is &l
         <path refid="libpath" />
         <pathelement path="${build}" /> 
       </classpath>
+      <syspropertyset>
+        <propertyref prefix="tdm.test" />
+      </syspropertyset>
     </java>
   </target>
 
