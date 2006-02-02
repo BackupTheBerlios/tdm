@@ -1,4 +1,4 @@
-// $Id: ConflictLog.java,v 1.9 2003/01/09 14:15:26 ctl Exp $ D
+// $Id: ConflictLog.java,v 1.10 2006/02/02 15:37:53 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -125,9 +125,9 @@ public class ConflictLog {
     }
     ch.endElement("","","conflictlist");
     if( !conflicts.isEmpty() )
-      System.out.println( "MERGE FAILED: " + conflicts.size() + " conflicts.");
+      System.err.println( "MERGE FAILED: " + conflicts.size() + " conflicts.");
     if( !warnings.isEmpty() )
-      System.out.println( "Warning: " + warnings.size() +" conflict warnings.");
+      System.err.println( "Warning: " + warnings.size() +" conflict warnings.");
     ch.endDocument();
   }
 

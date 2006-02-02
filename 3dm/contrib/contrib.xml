@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!-- $Id: contrib.xml,v 1.1 2006/01/31 20:16:14 ctl Exp $ -->
+<!-- $Id: contrib.xml,v 1.2 2006/02/02 15:37:53 ctl Exp $ -->
 <!-- 
 
 Contrib builder
@@ -62,6 +62,13 @@ checking its hash, and then unpacking to ${src}
           target="${lib}/java-getopt-1.0.12.jar"
           sha="9000468778bc51f358f5487b2e0c3db0f47af169" />
 
+    <wget id="junit"
+          href1="${proto}/dl.sourceforge.net/sourceforge/junit/junit3.8.1.zip"
+          target="${lib}/junit.jar"
+          target.get="${sarch}/junit3.8.1.zip"
+          unpack1="unpack-junit"
+          sha="99129f16442844f6a4a11ae22fbbee40b14d774f" />
+
     <!--xercesImpl.jar, xmlParserAPIs.jar-->
     <wget id="xerces-impl"
           href1=
@@ -90,6 +97,12 @@ checking its hash, and then unpacking to ${src}
           overwrite="true" />
     <delete dir="${temp.dir}" />
     <delete file="${target.get}" />
+  </target>
+
+  <target name="unpack-junit" >
+    <unzip src="${target.get}" dest="${csrc}" />
+    <copy file="${csrc}/junit3.8.1/junit.jar" tofile="${lib}/junit.jar" 
+          overwrite="true" />
   </target>
 
   <target name="source" >

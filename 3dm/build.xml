@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- $Id: build.xml,v 1.5 2006/01/31 20:16:14 ctl Exp $ -->
+<!-- $Id: build.xml,v 1.6 2006/02/02 15:37:53 ctl Exp $ -->
 <project name="3dm" default="3dm" basedir=".">
 
   <description>3DM build file</description>
@@ -9,6 +9,7 @@
   <property name="src" location="src"/>
   <property name="build" location="classes"/>
   <property name="tmpdir" location="tmp"/>
+  <property name="build-jar" location="lib"/>
   <property name="javalib" location="contrib/jar"/>
 
   <!-- Library path -->
@@ -36,8 +37,18 @@ ant contrib-ok
     <mkdir dir="${tmpdir}"/>
   </target>
 
-  <target name="compile-lib" depends="init"
+  <target name="compile" depends="init"
         description="compile the source " >
+    <javac srcdir="${src}" destdir="${build}"
+     includes="tdm/**" >
+    <classpath>
+      <path refid="libpath" />
+    </classpath>
+    </javac> 
+  </target>
+
+  <target name="compile-lib" depends="init"
+        description="compile the lib source " >
     <javac srcdir="${src}" destdir="${build}"
      includes="tdm/lib/**" >
     <classpath>
@@ -47,7 +58,7 @@ ant contrib-ok
   </target>
 
   <target name="compile-tool" depends="init"
-        description="compile the source " >
+        description="compile the tool source " >
     <javac srcdir="${src}" destdir="${build}"
 	    includes="tdm/tool/**">
     <classpath>
@@ -63,8 +74,12 @@ ant contrib-ok
 
   <target name="3dm.jar" depends="3dm"
         description="generate 3dm.jar" >
-    <jar jarfile="3dm.jar" basedir="${build}">
+    <jar jarfile="${build-jar}/3dm.jar" basedir="${build}">
       <include name="tdm/**" />
+      <exclude name="tdm/test/**" />
+    </jar>
+    <jar jarfile="${build-jar}/3dm-lib.jar" basedir="${build}">
+      <include name="tdm/lib/**" />
     </jar>
   </target>
 
@@ -149,6 +164,27 @@ message="The test is successful if there are no errors, and the diff below is &l
 
   <target name="contrib-ok" >
     <touch file="contrib/.binstamp" />
+  </target>
+
+  <target name="test" depends="compile">
+    <echo message="Running tests, takes a while. (Sample point: 8 min on Athlon 1.3Ghz) "/>
+    <echo message="Test run results saved in file test.log"/>
+    <condition property="testclass" value="tdm.test.RootSuite" >
+      <not><isset property="testclass" /></not>
+    </condition>
+    <java classname="junit.textui.TestRunner" 
+          output="test.log" 
+          logError="true"
+          failonerror="true"
+          fork="true">
+      <!--jvmarg value="-verbose:class"/-->
+      <jvmarg value="-enableassertions"/>
+      <arg value="${testclass}"/>
+      <classpath>
+        <path refid="libpath" />
+        <pathelement path="${build}" /> 
+      </classpath>
+    </java>
   </target>
 
 </project>
