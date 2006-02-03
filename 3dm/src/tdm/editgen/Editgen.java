@@ -1,4 +1,4 @@
-// $Id: Editgen.java,v 1.15 2006/01/31 19:34:22 ctl Exp $
+// $Id: Editgen.java,v 1.16 2006/02/03 09:05:48 ctl Exp $
 package tdm.editgen;
 
 import tdm.lib.XMLNode;
@@ -23,6 +23,7 @@ public class Editgen {
   public static final String EDIT_PREFIX = "edits-";
   public static final String ALLOWED_OPS = "diumc";
 
+  private boolean prettyPrint = true;
   private String editLogPrefix = null;
   private double probability = 0.01; // Defaultprob
   private int editCount = -1;
@@ -79,24 +80,31 @@ public class Editgen {
      transform( edits, (MarkableBaseNode) docBase.getChild(0),
                 (MarkableBaseNode) docBase.getChild(0), mergeLog, branchLog);
      try {
-       printTree( outRoot, new XMLPrinter( new java.io.FileOutputStream( outfiles[iFile] )));
+       printTree( outRoot, new XMLPrinter( new java.io.FileOutputStream( outfiles[iFile]
+           ), prettyPrint ));
      } catch (java.io.IOException x ) {
        System.err.println("Unable to write outfile "+outfiles[iFile] );
      }
      if( editLogPrefix != null ) {
        String editLogFile = editLogPrefix+outfiles[iFile];
        try {
-         branchLog.writeEdits(new XMLPrinter( new java.io.FileOutputStream( editLogFile )));
+         branchLog.writeEdits(new XMLPrinter( new java.io.FileOutputStream( editLogFile ),
+                                              prettyPrint));
        } catch (Exception x ) {
          System.err.println("Unable to write edit log "+editLogFile );
        }
      }
    }
    // Write merge facit
-   try {
-     printTree( docMerged, new XMLPrinter( new java.io.FileOutputStream( mergeFile )));
-   } catch (java.io.IOException x ) {
-     System.err.println("Unable to write outfile "+mergeFile );
+   if( mergeFile != null ) {
+     try {
+       printTree(docMerged,
+             new XMLPrinter(new java.io.FileOutputStream(mergeFile),
+                            prettyPrint ));
+     }
+     catch (java.io.IOException x) {
+       System.err.println("Unable to write outfile " + mergeFile);
+     }
    }
    // Write combined log
    if( editLogPrefix != null ) {
@@ -536,6 +544,10 @@ public class Editgen {
       unmarkSubtree((MarkableBaseNode) b.getChild(i));
   }
 */
+
+  public void setPrettyPrint( boolean pp) {
+    prettyPrint = pp;
+  }
 
   public void setEditCount( int aCount ) {
     if( aCount < 0  )

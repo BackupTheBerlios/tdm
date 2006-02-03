@@ -1,37 +1,40 @@
-// $Id: Main.java,v 1.4 2003/01/17 13:56:53 ctl Exp $
+// $Id: Main.java,v 1.5 2006/02/03 09:05:48 ctl Exp $
 package tdm.editgen;
 import gnu.getopt.*;
 
 public class Main {
 
   private static Editgen gen = new Editgen();
+  private static String mergeFile = null;
 
   public static void main(String[] args) {
-    System.err.println("Editgen $Revision: 1.4 $" );
+    System.err.println("Editgen $Revision: 1.5 $" );
     // Get command line options
     int firstFileIx = parseOpts( args );
-    if( args.length - firstFileIx >= 3 ) {
-      String branches[] = new String[args.length-(firstFileIx+2)];
+    if( args.length - firstFileIx >= 2 ) {
+      String branches[] = new String[args.length-(firstFileIx+1)];
       System.arraycopy(args,firstFileIx+1,branches,0,branches.length);
-      gen.editGen(args[firstFileIx],args[args.length-1],branches);
+      gen.editGen(args[firstFileIx],mergeFile,branches);
     } else {
-      System.err.println("Usage:");
+      System.err.println("Usage: editgen base edited1 edited2 ...");
     }
 
   }
 
   private static int parseOpts( String args[] ) {
     LongOpt lopts[] = {
+      new LongOpt("merge",LongOpt.REQUIRED_ARGUMENT,null,'m'),
       new LongOpt("editlog",LongOpt.OPTIONAL_ARGUMENT,null,'e'),
       new LongOpt("edits",LongOpt.REQUIRED_ARGUMENT,null,'n'),
       new LongOpt("probability",LongOpt.NO_ARGUMENT,null,'p'),
       new LongOpt("operations",LongOpt.REQUIRED_ARGUMENT,null,'o'),
       new LongOpt("seed",LongOpt.REQUIRED_ARGUMENT,null,'s'),
       new LongOpt("idprefix",LongOpt.REQUIRED_ARGUMENT,null,'i'),
+      new LongOpt("nopretty",LongOpt.NO_ARGUMENT,null,'u'),
       new LongOpt("idoncopy",LongOpt.NO_ARGUMENT,null,'\u0101'),
       new LongOpt("idonupdate",LongOpt.NO_ARGUMENT,null,'\u0100'),
     };
-    Getopt g = new Getopt("editgen", args, "n:p:o:e::s:i:", lopts);
+    Getopt g = new Getopt("editgen", args, "n:p:o:e::s:i:m:P:", lopts);
     int c;
     String arg;
     while ((c = g.getopt()) != -1) {
@@ -43,11 +46,17 @@ public class Main {
           case 'p':
             gen.setProbability( getDoubleArg(g,Double.MAX_VALUE) );
             break;
+          case 'u':
+            gen.setPrettyPrint(false);
+            break;
           case 'n':
             gen.setEditCount(getIntArg(g,-1));
             break;
           case 'o':
             gen.setOperations(getStringArg(g,""));
+            break;
+          case 'm':
+            mergeFile = getStringArg(g,"");
             break;
           case 's':
             gen.setRandomGenerator(new java.util.Random((long) getStringArg(g,"").hashCode() ) );
