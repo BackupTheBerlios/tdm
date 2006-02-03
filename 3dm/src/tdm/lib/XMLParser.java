@@ -1,4 +1,4 @@
-// $Id: XMLParser.java,v 1.9 2005/10/13 07:21:57 ctl Exp $ D
+// $Id: XMLParser.java,v 1.10 2006/02/03 11:26:57 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -112,9 +112,10 @@ public class XMLParser extends DefaultHandler {
 
    public void endElement (String uri, String name, String qName)
    {
-     if( currentText != null )
-       currentNode.addChild( factory.makeNode(
-              new XMLTextNode( currentText.trim().toCharArray() ) ) );
+     if( currentText != null ) {
+       currentNode.addChild(factory.makeNode(
+           new XMLTextNode(currentText.trim().toCharArray())));
+     }
      currentText = null;
      currentNode = (Node) treestack.pop();
    }
@@ -122,30 +123,44 @@ public class XMLParser extends DefaultHandler {
 
    public void characters (char ch[], int start, int length)
    {
-      // The method trims whitespace from start and end of character data
-      boolean lastIsWS = currentText == null || currentText.endsWith(" ");
-      StringBuffer sb = new StringBuffer();
-      for( int i=start;i<start+length;i++) {
-        if( Character.isWhitespace(ch[i]) ){
-          if( lastIsWS )
-            continue;
-          sb.append(" ");
-          lastIsWS = true;
-        } else {
-          sb.append(ch[i]);
-          lastIsWS = false;
-        }
-      }
-      String chars = sb.toString(); //.trim();
-///        String chars = new String( ch, start, length ).trim();
-      if( chars.trim().length() == 0 )
-        return;
-      if( currentText != null )
-        currentText += chars;
-      else {
-        currentText = chars;
-///        //currentNode.addChild( currentText );
-      }
+     // The method trims whitespace from start and end of character data
+     boolean lastIsWS = currentText == null || currentText.endsWith(" ");
+     boolean hasNonWs = false;
+     StringBuffer sb = new StringBuffer();
+     for (int i = start; i < start + length; i++) {
+       if (Character.isWhitespace(ch[i])) {
+         if (lastIsWS)
+           continue;
+         sb.append(" ");
+         lastIsWS = true;
+       }
+       else {
+         sb.append(ch[i]);
+         lastIsWS = false;
+         hasNonWs = true;
+       }
+     }
+     String chars = sb.toString();
+     // BUGFIX060203: Whitespace-only character event may be ignored
+     // The buggy code below ate all ws-only char events inside a
+     // string. Removing it caused currentText to sometimes be  " ", which
+     // we want to appear as currentText=null. The solution to this
+     // is the hasNonWs flag
+     // NOTE: The bug appeared on patching back the diff
+     // usecases/reveiew/branch{1,2}. However, it only appeared on
+     // one of my machines, probably due to different parser implementations
+     // NOTE2: The whole whitespace mangling being done here should be
+     // thrown away; it was originally a hack for handling inconsequent use of
+     // whitespace in the test cases. It will probably just mess up real
+     // cases.
+     /*  BUGGY CODE: if (chars.trim().length() == 0)
+              return;*/
+     if (currentText != null)
+       currentText += chars;
+     else if (hasNonWs) {
+       currentText = chars;
+       // else do nothing, i.e. only ws will cause currentText = null
+     }
    }
 
 }
