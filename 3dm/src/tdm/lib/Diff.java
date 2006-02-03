@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.12 2006/02/03 16:42:23 ctl Exp $ D
+// $Id: Diff.java,v 1.13 2006/02/03 16:46:58 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -229,8 +229,6 @@ public class Diff {
     }
 
     public Node lookup(String id) {
-      if( !(numberToNode.get(id) instanceof BaseNode) )
-        System.err.println("Lookup class failure for "+id+" "+numberToNode.get(id).getClass().getName()); //zzz
       return (Node) numberToNode.get(id);
     }
 
