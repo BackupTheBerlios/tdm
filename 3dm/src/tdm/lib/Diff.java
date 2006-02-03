@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.11 2004/03/09 09:40:56 ctl Exp $ D
+// $Id: Diff.java,v 1.12 2006/02/03 16:42:23 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -31,7 +31,6 @@ import java.util.Map;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Iterator;
-import tdm.lib.Diff.*;
 
 /** Produces the diff between two naturally matched trees.
  *  Collapsing multiple copy-ops using the run attribute is not implemented in
@@ -40,7 +39,11 @@ import tdm.lib.Diff.*;
 
 public class Diff {
 
-  private static final int NO_DST_REQUIRED = Integer.MIN_VALUE;
+  private static final Object NO_DST_REQUIRED = new Object();
+    // Above must not be null; that -> nullptrex in sequence
+
+  private NodeIndex index = null;
+
   private Matching m = null;
   private static final Attributes EMPTY_ATTS = new AttributesImpl();
   static final Set RESERVED;
@@ -59,13 +62,18 @@ public class Diff {
    */
   public Diff(Matching am) {
     m=am;
+    index = new BFSIndex(m.getBaseRoot());
+  }
+
+  public Diff(Matching am, NodeIndex aIndex) {
+    m=am;
+    index = aIndex;
   }
 
   /** Encode the diff between the trees passed to the constructor.
    *  @param ch Output encoder for the diff
    */
   public void diff( ContentHandler ch ) throws SAXException {
-    enumerateNodes(m.getBaseRoot(),nodeNumbers);
     ch.startDocument();
     ch.startElement("","","diff",EMPTY_ATTS);
     Vector stopNodes = new Vector();
@@ -82,7 +90,7 @@ public class Diff {
     Sequence s = new Sequence();
     for (Iterator i = stopNodes.iterator(); i.hasNext(); ) {
       BranchNode stopNode = (BranchNode) i.next();
-      int dst = getDiffId(stopNode.getBaseMatch());
+      Object dst = index.getId(stopNode.getBaseMatch());
       // BUGFIX 030115
       if (stopNode.getChildCount() == 0) {
         AttributesImpl copyAtts = new AttributesImpl();
@@ -125,14 +133,14 @@ public class Diff {
 
 
   private void emitChildList(ContentHandler ch, Sequence s, BranchNode parent,
-                             int dst, boolean insMode ) throws SAXException {
+                             Object dst, boolean insMode ) throws SAXException {
     for (int ic = 0; ic < parent.getChildCount(); ic++) {
       boolean lastStopNode = ic == parent.getChildCount() - 1;
       BranchNode child = parent.getChild(ic);
       if (child.hasBaseMatch()) {
         Vector childStopNodes = new Vector();
         m.getAreaStopNodes(childStopNodes, child);
-        int src = getDiffId(child.getBaseMatch());
+        Object src = index.getId(child.getBaseMatch());
         if (childStopNodes.size() == 0 && !lastStopNode) {
           if (s.isEmpty()) {
             s.init(src, dst);
@@ -192,29 +200,47 @@ public class Diff {
     } // endfor children
   }
 
-  protected Map nodeNumbers = new HashMap();
-
-  // Get BFS number of node
-  protected int getDiffId( Node n ) {
-    return ((Integer) nodeNumbers.get(n)).intValue();
-  }
-
   // BFS Enumeration of nodes. Useful beacuse adjacent nodes have subsequent ids
   // => diff can use the "run" attribute more often
-  protected void enumerateNodes( Node start, Map map ) {
-    int id = 0;
-    LinkedList queue = new LinkedList();
-    queue.add(start);
-    while( !queue.isEmpty() ) {
-      Node n = (Node) queue.removeFirst();
-      map.put(n,new Integer(id));
-      for( int i=0;i<n.getChildCount();i++)
-        queue.add(n.getChildAsNode(i));
-      id++;
+
+  static class BFSIndex implements NodeIndex, IdIndex {
+
+    protected Map nodeToNumber = new HashMap();
+    protected Map numberToNode = new HashMap();
+    private String rootId = null;
+
+    public BFSIndex( Node root ) {
+      int id = 0;
+      LinkedList queue = new LinkedList();
+      queue.add(root);
+      while( !queue.isEmpty() ) {
+        Node n = (Node) queue.removeFirst();
+        nodeToNumber.put(n,new Long(id));
+        numberToNode.put(String.valueOf(id),n);
+        for( int i=0;i<n.getChildCount();i++)
+          queue.add(n.getChildAsNode(i));
+        id++;
+      }
+      rootId=getId(root).toString();
     }
+
+    public Object getId(Node n) {
+      return nodeToNumber.get(n);
+    }
+
+    public Node lookup(String id) {
+      if( !(numberToNode.get(id) instanceof BaseNode) )
+        System.err.println("Lookup class failure for "+id+" "+numberToNode.get(id).getClass().getName()); //zzz
+      return (Node) numberToNode.get(id);
+    }
+
+    public String getRootId() {
+      return rootId;
+    }
+
   }
 
-  protected void openCopy( int src, int dst, int run, ContentHandler ch )
+  protected void openCopy( Object src, Object dst, long run, ContentHandler ch )
       throws SAXException {
     AttributesImpl copyAtts = new AttributesImpl();
     copyAtts.addAttribute("", "", "src", "CDATA", String.valueOf(src));
@@ -230,7 +256,7 @@ public class Diff {
     ch.endElement("", "", DIFF_NS + "copy");
   }
 
-  protected void openInsert( int src, int dst ) {
+  protected void openInsert( Object src, Object dst ) {
 
   }
 
@@ -239,9 +265,11 @@ public class Diff {
   }
 
   class Sequence {
-    int src = -1;
-    int run = -1;
-    int dst = -1;
+    Object src = null;
+    long run = -1;
+    Object dst = null;
+    long nsrc;
+    boolean srcIsNum=false;
 
     void setEmpty() {
       run = -1;
@@ -251,8 +279,12 @@ public class Diff {
       return run == -1;
     }
 
-    void init(int asrc, int adst) {
+    void init(Object asrc, Object adst) {
       src = asrc;
+      if( src instanceof Number ) {
+        srcIsNum = true;
+        nsrc = ((Number) src).longValue();
+      }
       dst = adst;
       run = 1;
     }
@@ -261,8 +293,9 @@ public class Diff {
       run++;
     }
 
-    boolean appends(int asrc, int adst) {
-      return !isEmpty() && adst == dst && asrc == (src + run);
+    boolean appends(Object asrc, Object adst) {
+      return !isEmpty() && adst.equals(dst) && srcIsNum &&
+          asrc instanceof Number && ((Number) asrc).longValue() == (nsrc + run);
     }
   }
 }
