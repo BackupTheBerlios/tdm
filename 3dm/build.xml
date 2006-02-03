@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- $Id: build.xml,v 1.8 2006/02/02 17:42:58 ctl Exp $ -->
+<!-- $Id: build.xml,v 1.9 2006/02/03 11:27:45 ctl Exp $ -->
 <project name="3dm" default="3dm" basedir=".">
 
   <description>3DM build file</description>
@@ -92,6 +92,7 @@ ant contrib-ok
       <arg value="--diff"/>
       <arg file="${base}"/>
       <arg file="${branch}"/>
+      <arg file="${diff}"/>
     </java>
   </target>
 
@@ -103,7 +104,8 @@ ant contrib-ok
       </classpath>
       <arg value="--patch"/>
       <arg file="${base}"/>
-      <arg file="${patch}"/>
+      <arg file="${patch}"/> 
+      <arg file="${patched}"/>
     </java>
   </target>
 
@@ -117,6 +119,7 @@ ant contrib-ok
       <arg file="${base}"/>
       <arg file="${branch1}"/>
       <arg file="${branch2}"/>
+      <arg file="${merge}"/>
     </java>
   </target>
 

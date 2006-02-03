@@ -1,4 +1,4 @@
-// $Id: XMLPrinter.java,v 1.8 2005/10/13 07:28:47 ctl Exp $
+// $Id: XMLPrinter.java,v 1.9 2006/02/03 11:27:45 ctl Exp $
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -150,30 +150,29 @@ public class XMLPrinter extends DefaultHandler {
 
    final Integer HAS_CONTENT = new Integer(0);
 
-   public void characters (char ch[], int startpos, int length)
-   {
+   public void characters (char ch[], int startpos, int length) {
      state = STATE_CHARS;
-      if(childcounter!=HAS_CONTENT)
-         printWithNL(">",prettyPrint);
-      childcounter = HAS_CONTENT;
-      if( length == 0 )
-          return;
-      String chars = toEntities(ch, startpos, length);
-      /*
-      int start=0,next=-1;
-      do {
-        next=chars.indexOf("\n",start);
-        if( next==-1)
-          pw.println(chars.substring(start));
-        else {
-          pw.println(chars.substring(start,next));
-          start=next+1;
-        }
-      } while( next != -1 );*/
-      printWithNL(chars,prettyPrint);
-      //System.err.println("OUT:"+chars);
+     if (childcounter != HAS_CONTENT)
+       printWithNL(">", prettyPrint);
+     childcounter = HAS_CONTENT;
+     if (length == 0)
+       return;
+     String chars = toEntities(ch, startpos, length);
+     /*
+            int start=0,next=-1;
+            do {
+       next=chars.indexOf("\n",start);
+       if( next==-1)
+         pw.println(chars.substring(start));
+       else {
+         pw.println(chars.substring(start,next));
+         start=next+1;
+       }
+            } while( next != -1 );*/
+     printWithNL(chars, prettyPrint);
+     //System.err.println("OUT:"+chars);
    }
-   
+
    private static String toEntities(String str) {
       if (str.length() == 0) {
           return ""; // avoid instance for empty strings.

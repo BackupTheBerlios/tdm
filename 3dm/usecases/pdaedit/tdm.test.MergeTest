@@ -1,4 +1,4 @@
-# $Id: tdm.test.MergeTest,v 1.1 2006/02/02 17:42:58 ctl Exp $
+# $Id: tdm.test.MergeTest,v 1.2 2006/02/03 11:27:45 ctl Exp $
 # =1=
 # Merging updates performed from simple->simple2 into complex
 # Not exactly as facit: chairman & secretary are outside font tags in merge,
