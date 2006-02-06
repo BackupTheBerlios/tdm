@@ -1,4 +1,4 @@
-// $Id: BranchNode.java,v 1.15 2006/02/06 08:50:15 ctl Exp $ D
+// $Id: BranchNode.java,v 1.16 2006/02/06 11:37:04 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -36,9 +36,9 @@ public class BranchNode extends Node {
   public static final int MATCH_CONTENT = 1;
   public static final int MATCH_CHILDREN = 2;
 
-  private MatchedNodes partners = null;
-  private BaseNode baseMatch = null;
-  private int matchType = 0;
+  protected MatchedNodes partners = null;
+  protected BaseNode baseMatch = null;
+  protected int matchType = 0;
 
   protected BranchNode() {
     super();
