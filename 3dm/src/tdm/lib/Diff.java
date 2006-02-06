@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.16 2006/02/06 09:33:54 ctl Exp $ D
+// $Id: Diff.java,v 1.17 2006/02/06 09:44:51 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -34,7 +34,9 @@ import java.util.Iterator;
 
 /** Produces the diff between two naturally matched trees.
  *  Collapsing multiple copy-ops using the run attribute is not implemented in
- *  this version.
+ *  this version. <b>NOTE: Format of diff root tag changed in CVS rev
+ *  1.16</b> Current code reads old diffs, but new diffs are not
+ *  necesarily readable by old code!
  */
 
 public class Diff {
