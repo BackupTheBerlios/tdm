@@ -1,4 +1,4 @@
-// $Id: Patch.java,v 1.12 2006/02/03 16:42:23 ctl Exp $ D
+// $Id: Patch.java,v 1.13 2006/02/06 09:13:36 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -20,14 +20,13 @@
 //
 package tdm.lib;
 
-import java.util.Map;
 import java.util.HashMap;
-import java.util.Set;
-import java.util.HashSet;
+import java.util.Map;
 import java.util.Vector;
-import java.util.LinkedList;
-import org.xml.sax.SAXException;
+
 import org.xml.sax.ContentHandler;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.AttributesImpl;
 
 /** Patching algorithm.
  *  See the {@link patch(BaseNode, BranchNode, org.xml.sax.ContentHandler)
@@ -35,6 +34,8 @@ import org.xml.sax.ContentHandler;
  */
 
 public class Patch {
+
+  public static final Node DONT_EXPAND_COPY = new BaseNode(null);
 
   public Patch() {
   }
@@ -44,12 +45,12 @@ public class Patch {
    *  @param diff Parse tree of XML diff file, as produced by the Diff class
    *  @param ch Content handler that the patched tree is output to
    */
-  public void patch( BaseNode base, BranchNode diff, ContentHandler ch )
+  public void patch( Node base, BranchNode diff, ContentHandler ch )
       throws ParseException, SAXException{
     patch( base, diff, ch, new Diff.BFSIndex(base));
   }
 
-  public void patch( BaseNode base, BranchNode diff, ContentHandler ch, IdIndex index )
+  public void patch( Node base, BranchNode diff, ContentHandler ch, IdIndex index )
     throws ParseException, SAXException {
     BranchNode patched = patch( base, diff, index );
     ch.startDocument();
@@ -70,14 +71,26 @@ public class Patch {
     }
   }
 
-  protected BranchNode patch( BaseNode base, BranchNode diff, IdIndex index ) throws
+  protected BranchNode patch( Node base, BranchNode diff, IdIndex index ) throws
           ParseException  {
     BranchNode patch = new BranchNode( new XMLElementNode("$DUMMY$",
       new org.xml.sax.helpers.AttributesImpl() ) );
     // Getchild(0) to skip diff tag
     // Note that we need an $DUMMY$ node to which $ROOT$ is attached as an only child
     // we cant use <root> as start of copy, since root elem may be changed!
-    copy( patch,diff.getChild(0),base, index.getRootId(), index);
+    diff=diff.getChild(0); // Jump over $ROOT$ (fakeroot)... need to kill this eventually
+    XMLNode dc = diff.getContent();
+    if( !(dc instanceof XMLElementNode) ||
+        !Diff.DIFF_ROOT_TAG.equals(((XMLElementNode) dc).getQName()) )
+        throw new ParseException("Invalid root tag for diff");
+    String op = ((XMLElementNode) dc).getAttributes().getValue(Diff.DIFF_ROOTOP_ATTR);
+    if( op == null || op.length() == 0 )
+      // Default op, which is copy
+      copy( patch,diff,base, index.getRootId(), index);
+    else if( Diff.DIFF_ROOTOP_INS.equals(op) )
+      insert( patch, diff, index );
+    else
+      throw new ParseException("Invalid rootop for diff: "+op);
     return patch.getChild(0);
   }
 
@@ -98,8 +111,8 @@ public class Patch {
     } else {
       // Other ops..
       XMLElementNode ce = (XMLElementNode) cmdcontent;
-      if( ce.getQName().equals(Diff.DIFF_NS+"esc") ||
-          ce.getQName().equals(Diff.DIFF_NS+"insert") ) {
+      if( ce.getQName().equals(Diff.DIFF_ESC_TAG) ||
+          ce.getQName().equals(Diff.DIFF_INS_TAG) ) {
         // BUGFIX 030115
 	  //if( diff.getChildCount() == 0)
           //throw new ParseException("DIFFSYNTAX: insert/esc has no subtree " +
@@ -109,11 +122,11 @@ public class Patch {
           insert( patch, diff.getChild(i), index );
       } else {
         // Copy operation
-        BaseNode srcRoot = null;
+        Node srcRoot = null;
         String src = null;
         try {
-          src = ce.getAttributes().getValue("src");
-          srcRoot = (BaseNode) index.lookup(src) ;
+          src = ce.getAttributes().getValue(Diff.DIFF_CPYSRC_ATTR);
+          srcRoot = index.lookup(src) ;
         } catch ( Exception e ) {
             throw new ParseException(
               "DIFFSYNTAX: Invalid parameters in command " + ce.toString() );
@@ -124,7 +137,7 @@ public class Patch {
   }
 
   // Called on copy tag
-  protected void copy( BranchNode patch, BranchNode diff, BaseNode srcRoot, Object src,
+  protected void copy( BranchNode patch, BranchNode diff, Node srcRoot,Object src,
                       IdIndex index )
                       throws ParseException {
     // Gather the stopnodes for the copy
@@ -133,7 +146,8 @@ public class Patch {
     long nsrc=-1;
     long run = 1;
     try {
-      String runS = ((XMLElementNode) diff.getContent()).getAttributes().getValue("run");
+      String runS = ((XMLElementNode) diff.getContent()).getAttributes().
+          getValue(Diff.DIFF_CPYRUN_ATTR);
       if (runS != null)
         run = Long.parseLong(runS);
       if( run > 1 )
@@ -148,14 +162,15 @@ public class Patch {
       Node stopNode = null;
       // Sanity check
       if( content instanceof XMLTextNode || (
-        !((XMLElementNode) content).getQName().equals(Diff.DIFF_NS+"copy") &&
-        !((XMLElementNode) content).getQName().equals(Diff.DIFF_NS+"insert") ) )
+        !((XMLElementNode) content).getQName().equals(Diff.DIFF_COPY_TAG) &&
+        !((XMLElementNode) content).getQName().equals(Diff.DIFF_INS_TAG) ) )
         throw new ParseException("DIFFSYNTAX: Only copy or insert commands may"+
                                  " appear below a copy command");
       XMLElementNode stopCommand = (XMLElementNode) content;
       try {
         stopNode = index.lookup(
-                                stopCommand.getAttributes().getValue("dst"));
+                                stopCommand.getAttributes().
+                                getValue(Diff.DIFF_CPYDST_ATTR));
       } catch ( Exception e ) {
         throw new ParseException("DIFFSYNTAX: Invalid parameters in command " +
                                  stopNode.toString() );
@@ -168,10 +183,11 @@ public class Patch {
     // created nodes
 
     for( long iRun=1;iRun<run;iRun++) {
-      dfsCopy(patch,srcRoot,null);
-      srcRoot = (BaseNode) index.lookup(String.valueOf(nsrc+iRun));
+      dfsCopy(patch,srcRoot,null,src);
+      src = String.valueOf(nsrc+iRun);
+      srcRoot = index.lookup(src);
     }
-    dfsCopy( patch, srcRoot , stopNodes );
+    dfsCopy( patch, srcRoot , stopNodes, src );
     // Recurse for each diff child
     for( int i = 0; i < diff.getChildCount(); i++ ) {
       // DEBUG
@@ -188,7 +204,20 @@ public class Patch {
     }
   }
 
-  protected void dfsCopy( BranchNode dst, BaseNode src, Map stopNodes ) {
+  protected void dfsCopy( BranchNode dst, Node src, Map stopNodes, Object srcId ) {
+    if( src == DONT_EXPAND_COPY ) {
+      if( stopNodes != null && stopNodes.size() > 0 )
+        throw new IllegalStateException("Can't use noexpand with truncated subtrees");
+      AttributesImpl atts = new AttributesImpl();
+      atts.addAttribute("","",Diff.DIFF_CPYSRC_ATTR,"CDATA",srcId.toString());
+      BranchNode node = new BranchNode(
+        new XMLElementNode( Diff.DIFF_COPY_TAG, atts ));
+      dst.addChild(node);
+    } else
+      dfsCopyTree(dst,src,stopNodes);
+  }
+
+  protected void dfsCopyTree( BranchNode dst, Node src, Map stopNodes ) {
     BranchNode copied = new BranchNode( src.getContent() );
     dst.addChild( copied );
     if( stopNodes != null && stopNodes.containsKey(src) ) {
@@ -196,28 +225,7 @@ public class Patch {
       return; // We're done in this branch
     }
     for( int i =0;i<src.getChildCount();i++)
-      dfsCopy( copied, src.getChild(i), stopNodes );
+      dfsCopyTree( copied, src.getChildAsNode(i), stopNodes );
   }
 
-  private Vector nodeLookup = new Vector();
-
-  /*
-  protected BaseNode locateNode( int ix ) {
-    return (BaseNode) nodeLookup.elementAt(ix);
-  }*/
-
-  // BFS Enumeration of nodes. Useful beacuse adjacent nodes have subsequent ids =>
-  // diff can use the "run" attribute more often
-  // NOTE: Copied from diff, should really be moved to a common base class for
-  // patch & diff
-/*  protected void initLookup( Node start, Vector table) {
-    LinkedList queue = new LinkedList();
-    queue.add(start);
-    while( !queue.isEmpty() ) {
-      Node n = (Node) queue.removeFirst();
-      table.add(n);
-      for( int i=0;i<n.getChildCount();i++)
-        queue.add(n.getChildAsNode(i));
-    }
-  }*/
 }

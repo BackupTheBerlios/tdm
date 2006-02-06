@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.14 2006/02/06 09:01:39 ctl Exp $ D
+// $Id: Diff.java,v 1.15 2006/02/06 09:13:36 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -49,6 +49,19 @@ public class Diff {
   static final Set RESERVED;
 
   static final String DIFF_NS ="diff:";
+  public static final String DIFF_COPY_TAG = DIFF_NS+"copy";
+  public static final String DIFF_INS_TAG = DIFF_NS+"insert";
+  public static final String DIFF_ESC_TAG = DIFF_NS+"esc";
+  public static final String DIFF_ROOT_TAG = "diff";
+
+  public static final String DIFF_CPYSRC_ATTR = "src";
+  public static final String DIFF_CPYDST_ATTR = "dst";
+  public static final String DIFF_CPYRUN_ATTR = "run";
+  public static final String DIFF_ROOTOP_ATTR = "op";
+
+  public static final String DIFF_ROOTOP_INS = "insert";
+  
+
   static {
       RESERVED = new HashSet();
       RESERVED.add(DIFF_NS+"copy");
