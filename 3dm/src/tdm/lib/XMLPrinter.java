@@ -1,4 +1,4 @@
-// $Id: XMLPrinter.java,v 1.10 2006/02/06 09:07:27 ctl Exp $
+// $Id: XMLPrinter.java,v 1.11 2006/02/06 11:57:59 ctl Exp $
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -75,7 +75,8 @@ public class XMLPrinter extends DefaultHandler {
    public void startDocument ()
    {
       childcounter =HAS_CONTENT;
-      pw.print("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+      pw.print("<?xml version=\"1.0\" encoding=\"UTF-8\"?>"+
+        (prettyPrint ? "\n": ""));
       state = STATE_TAG;
    }
 

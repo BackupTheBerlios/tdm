@@ -1,4 +1,4 @@
-// $Id: Merge.java,v 1.41 2006/02/06 11:43:30 ctl Exp $ D
+// $Id: Merge.java,v 1.42 2006/02/06 11:57:59 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -70,7 +70,7 @@ public class Merge implements XMLNode.Merger {
     ch.endDocument();
   }
 
-///  int debug = 0; // Debug variable
+ int debug = 0; // Debug variable
 ///
   /** Main merging function. Merges the child lists of a and b, and then
    *  recurses for each child in the merged list.
@@ -79,6 +79,10 @@ public class Merge implements XMLNode.Merger {
   public void treeMerge( BranchNode a, BranchNode b, XMLNode.Externalizer ex,
                             XMLNode.Merger nodeMerger )
                             throws SAXException, IOException {
+/*    if (debug >= 0)
+      System.out.println("%%%% Recursion " + (a== null ? "-" : a.getContent()) + "," +
+                         (b==null ? "-" : b.getContent()));
+*/
 //$CUT
     if( (a != null && ((a.getBaseMatchType() | BranchNode.MATCH_CHILDREN) == 0 )) ||
         (b != null && ((b.getBaseMatchType() | BranchNode.MATCH_CHILDREN) == 0 ) ) )
@@ -92,27 +96,24 @@ public class Merge implements XMLNode.Merger {
 //    System.out.println("A = " + a ==null ? "-" : a.getContent().toString());
 //    System.out.println("B = " + b ==null ? "-" : b.getContent().toString());
 //    System.out.println("--------------------------");
-
-
 /*
-  if( mlistA.getEntryCount() > 30 )
+    if( mlistA.getEntryCount() > 0 )
       debug=1;
-*/
-/*
+    else debug=0;
+
     if(debug>=0 ) {
       System.out.println("#########################################Merge A list");
       if( mlistA != null )
         mlistA.print();
       else
         System.out.println("--none--");
-      System.out.println("Merge B list");
+      System.out.println("#####################################Merge B list");
       if( mlistB != null )
         mlistB.print();
       else
         System.out.println("--none--");
       debug =0;
-    }
-*/
+    }*/
 //$CUT
     // Generate merge pair List, store in the merged object
     if( mlistA != null && mlistB != null )
@@ -125,8 +126,7 @@ public class Merge implements XMLNode.Merger {
     if( debug>=0) {
       System.out.println("#########################################MERGED LIST");
       merged.print();
-    }
-*/
+    }*/
 //$CUT
     // Handle updates & Recurse
     for( int i=0;i<merged.getPairCount();i++) {
@@ -916,14 +916,17 @@ public class Merge implements XMLNode.Merger {
     }
 //$CUT
 
+    // node | child0 | inserts
     void print(int pos) {
       System.out.print(pos+": ");
       System.out.print(isMoved() ? 'm' : '-');
       System.out.print(locked ? '*' : '-');
       System.out.print(mergePartner!=null ? 'p' : '-');
-      System.out.print(' ' + node.getContent().toString() + ' ');
+      System.out.print(' ' + node.getContent().toString() + " |");
       if( node.getChildCount() > 0 )
-        System.out.print(' ' + node.getChild(0).getContent().toString() + ' ');
+        System.out.print(' ' + node.getChild(0).getContent().toString() + " | ");
+      else
+        System.out.print(" - | "); // No children
       System.out.println( inserts.toString() );
     }
 
