@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.13 2006/02/03 16:46:58 ctl Exp $ D
+// $Id: Diff.java,v 1.14 2006/02/06 09:01:39 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -228,7 +228,7 @@ public class Diff {
       return nodeToNumber.get(n);
     }
 
-    public Node lookup(String id) {
+    public Node lookup(Object id) {
       return (Node) numberToNode.get(id);
     }
 
