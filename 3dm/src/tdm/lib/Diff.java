@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.20 2006/02/06 11:08:57 ctl Exp $ D
+// $Id: Diff.java,v 1.21 2006/02/06 11:20:28 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -57,7 +57,7 @@ public class Diff extends DiffAlgorithm {
 //  static final Set RESERVED;
 
 // These need to be removed when there are no longer any external dependencies!
-  static final String DIFF_NS ="diff:";
+  static final String DIFF_NS = DEFAULT_CONFIG.DIFF_NS;
   public static final String DIFF_COPY_TAG = DIFF_NS+"copy";
   public static final String DIFF_INS_TAG = DIFF_NS+"insert";
   public static final String DIFF_ESC_TAG = DIFF_NS+"esc";
