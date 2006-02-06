@@ -1,4 +1,4 @@
-// $Id: Diff.java,v 1.15 2006/02/06 09:13:36 ctl Exp $ D
+// $Id: Diff.java,v 1.16 2006/02/06 09:33:54 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -60,13 +60,13 @@ public class Diff {
   public static final String DIFF_ROOTOP_ATTR = "op";
 
   public static final String DIFF_ROOTOP_INS = "insert";
-  
+
 
   static {
       RESERVED = new HashSet();
-      RESERVED.add(DIFF_NS+"copy");
-      RESERVED.add(DIFF_NS+"insert");
-      RESERVED.add(DIFF_NS+"esc");
+      RESERVED.add(DIFF_COPY_TAG);
+      RESERVED.add(DIFF_INS_TAG);
+      RESERVED.add(DIFF_ESC_TAG);
   }
 
   /** Construct a diff operating on the matched trees passed to the constructor.
@@ -88,16 +88,23 @@ public class Diff {
    */
   public void diff( ContentHandler ch ) throws SAXException {
     ch.startDocument();
-    ch.startElement("","","diff",EMPTY_ATTS);
-    Vector stopNodes = new Vector();
-    m.getAreaStopNodes(stopNodes, m.getBranchRoot());
-    copy(m.getBaseRoot(), m.getBranchRoot(), ch, stopNodes);
-    ch.endElement("","","diff");
+    boolean rootHasMatch = m.getBranchRoot().hasBaseMatch();
+    AttributesImpl rootAtts = new AttributesImpl();
+    if( !rootHasMatch )
+      rootAtts.addAttribute("","",DIFF_ROOTOP_ATTR,"CDATA",DIFF_ROOTOP_INS);
+    ch.startElement("","",DIFF_ROOT_TAG,rootAtts);
+    if( rootHasMatch ) {
+      Vector stopNodes = new Vector();
+      m.getAreaStopNodes(stopNodes, m.getBranchRoot());
+      copy(ch, stopNodes);
+    } else {
+      insert(m.getBranchRoot(),ch);
+    }
+    ch.endElement("","",DIFF_ROOT_TAG);
     ch.endDocument();
   }
 
-  protected void copy(BaseNode b, BranchNode branch, ContentHandler ch,
-                      Vector stopNodes) throws
+  protected void copy( ContentHandler ch, Vector stopNodes) throws
       SAXException {
     // Find stopnodes
     Sequence s = new Sequence();
@@ -107,9 +114,9 @@ public class Diff {
       // BUGFIX 030115
       if (stopNode.getChildCount() == 0) {
         AttributesImpl copyAtts = new AttributesImpl();
-        copyAtts.addAttribute("", "", "dst", "CDATA", String.valueOf(dst));
-        ch.startElement("", "", DIFF_NS + "insert", copyAtts);
-        ch.endElement("", "", DIFF_NS + "insert");
+        copyAtts.addAttribute("", "", DIFF_CPYDST_ATTR, "CDATA", String.valueOf(dst));
+        ch.startElement("", "",  DIFF_INS_TAG, copyAtts);
+        ch.endElement("", "",  DIFF_INS_TAG);
       }
       // ENDBUGFIX
       emitChildList(ch, s, stopNode, dst, false);
@@ -130,17 +137,17 @@ public class Diff {
       XMLElementNode ce = (XMLElementNode) content;
       boolean escape = RESERVED.contains(ce.getQName());
       if (escape)
-        ch.startElement("", "", DIFF_NS + "esc", EMPTY_ATTS);
+        ch.startElement("", "",  DIFF_ESC_TAG, EMPTY_ATTS);
       ch.startElement(ce.getNamespaceURI(), ce.getLocalName(), ce.getQName(),
                       ce.getAttributes());
       if (escape)
-        ch.endElement("", "", DIFF_NS + "esc");
+        ch.endElement("", "",  DIFF_ESC_TAG);
       emitChildList(ch, s, branch, NO_DST_REQUIRED , true);
       if (escape)
-        ch.startElement("", "", DIFF_NS + "esc", EMPTY_ATTS);
+        ch.startElement("", "",  DIFF_ESC_TAG, EMPTY_ATTS);
       ch.endElement(ce.getNamespaceURI(), ce.getLocalName(), ce.getQName());
       if (escape)
-        ch.endElement("", "", DIFF_NS + "esc");
+        ch.endElement("", "", DIFF_ESC_TAG);
     }
   }
 
@@ -174,7 +181,7 @@ public class Diff {
           }
           if (childStopNodes.size() > 0 || lastStopNode) {
             openCopy(src, dst, 1, ch);
-            copy(child.getBaseMatch(), child, ch, childStopNodes);
+            copy( ch, childStopNodes);
             closeCopy(ch);
             s.setEmpty(); // Reset sequence
           }
@@ -184,7 +191,7 @@ public class Diff {
         else { // appends to open sequence (other reason for seq. break)
           s.append();
           openCopy(s.src, s.dst, s.run, ch);
-          copy(child.getBaseMatch(), child, ch, childStopNodes);
+          copy( ch, childStopNodes);
           closeCopy(ch);
           s.setEmpty(); // Reset sequence
         }
@@ -199,15 +206,15 @@ public class Diff {
         if( !insMode ) {
           // Insert tree...
           AttributesImpl copyAtts = new AttributesImpl();
-          copyAtts.addAttribute("", "", "dst", "CDATA", String.valueOf(dst));
+          copyAtts.addAttribute("", "", DIFF_CPYDST_ATTR, "CDATA", String.valueOf(dst));
           // SHORTINS = Concatenate several <ins> tags to a single one
           if (ic == 0 || parent.getChild(ic - 1).hasBaseMatch()) // SHORTINS
-            ch.startElement("", "", DIFF_NS + "insert", copyAtts);
+            ch.startElement("", "", DIFF_INS_TAG, copyAtts);
         }
         insert(child, ch);
         if( !insMode ) {
           if (lastStopNode || parent.getChild(ic + 1).hasBaseMatch()) // SHORTINS
-            ch.endElement("", "", DIFF_NS + "insert");
+            ch.endElement("", "",  DIFF_INS_TAG);
         }
       }
     } // endfor children
@@ -220,7 +227,7 @@ public class Diff {
 
     protected Map nodeToNumber = new HashMap();
     protected Map numberToNode = new HashMap();
-    private String rootId = null;
+    private Object rootId = null;
 
     public BFSIndex( Node root ) {
       int id = 0;
@@ -242,10 +249,10 @@ public class Diff {
     }
 
     public Node lookup(Object id) {
-      return (Node) numberToNode.get(id);
+      return (Node) numberToNode.get(id.toString());
     }
 
-    public String getRootId() {
+    public Object getRootId() {
       return rootId;
     }
 
@@ -254,17 +261,17 @@ public class Diff {
   protected void openCopy( Object src, Object dst, long run, ContentHandler ch )
       throws SAXException {
     AttributesImpl copyAtts = new AttributesImpl();
-    copyAtts.addAttribute("", "", "src", "CDATA", String.valueOf(src));
+    copyAtts.addAttribute("", "", DIFF_CPYSRC_ATTR, "CDATA", String.valueOf(src));
     if( dst != NO_DST_REQUIRED )
-      copyAtts.addAttribute("", "", "dst", "CDATA", String.valueOf(dst));
+      copyAtts.addAttribute("", "", DIFF_CPYDST_ATTR, "CDATA", String.valueOf(dst));
     if( run > 1)
-      copyAtts.addAttribute("", "", "run", "CDATA", String.valueOf(run));
-    ch.startElement("", "", DIFF_NS + "copy", copyAtts);
+      copyAtts.addAttribute("", "", DIFF_CPYRUN_ATTR, "CDATA", String.valueOf(run));
+    ch.startElement("", "", DIFF_COPY_TAG, copyAtts);
   }
 
   protected void closeCopy( ContentHandler ch )
     throws SAXException {
-    ch.endElement("", "", DIFF_NS + "copy");
+    ch.endElement("", "", DIFF_COPY_TAG);
   }
 
   protected void openInsert( Object src, Object dst ) {
@@ -305,7 +312,7 @@ public class Diff {
     }
 
     boolean appends(Object asrc, Object adst) {
-      return !isEmpty() && adst.equals(dst) && srcIsNum &&
+      return !isEmpty()  && adst.equals(dst) && srcIsNum &&
           asrc instanceof Number && ((Number) asrc).longValue() == (nsrc + run);
     }
   }
