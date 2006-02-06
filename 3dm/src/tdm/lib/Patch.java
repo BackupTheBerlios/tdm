@@ -1,4 +1,4 @@
-// $Id: Patch.java,v 1.13 2006/02/06 09:13:36 ctl Exp $ D
+// $Id: Patch.java,v 1.14 2006/02/06 10:04:46 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -102,7 +102,7 @@ public class Patch {
     ParseException {
     XMLNode cmdcontent = diff.getContent();
     if( cmdcontent instanceof XMLTextNode ||
-      !Diff.RESERVED.contains(((XMLElementNode) cmdcontent).getQName())) {
+      !Diff.DEFAULT_CONFIG.RESERVED.contains(((XMLElementNode) cmdcontent).getQName())) {
       // Simple insert operation
       BranchNode node = new BranchNode( cmdcontent );
       patch.addChild(node);
