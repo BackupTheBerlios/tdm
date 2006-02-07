@@ -1,4 +1,4 @@
-// $Id: TreeDiffMerge.java,v 1.9 2003/01/30 09:28:02 ctl Exp $ D
+// $Id: TreeDiffMerge.java,v 1.10 2006/02/07 09:33:38 ctl Exp $ D
 //
 // Copyright (c) 2001, Tancred Lindholm <ctl@cs.hut.fi>
 //
@@ -37,8 +37,6 @@ import org.xml.sax.Attributes;
 public class TreeDiffMerge {
 
   public static void main(String[] args) throws java.io.IOException {
-    System.err.println(
-    "3DM XML Tree Differencing and Merging Tool. PROTOTYPE: $Revision: 1.9 $" );
     // Get command line options
     int firstFileIx = parseOpts( args );
     if( op == MERGE && (args.length - firstFileIx) == 3 )
@@ -54,6 +52,11 @@ public class TreeDiffMerge {
     else if( op == PATCH && (args.length - firstFileIx) == 3 )
       patch( firstFileIx, args, new FileOutputStream(args[firstFileIx+2]));
     else {
+      Package tdmPack = Package.getPackage("tdm.tool");
+      String ver = tdmPack.getSpecificationVersion();
+      String build = tdmPack.getImplementationVersion();
+      System.err.println("3DM XML Tree Differencing and Merging Tool version "+
+                         ver+" build "+build );
       System.err.println("Usage: 3dm [options] {-m base branch1 branch2|-d "+
       "base branch1 |-p base patch} [outfile]" );
       System.err.println("Use the -m (or --merge) option to merge the files "+

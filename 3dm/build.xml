@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="ISO-8859-1"?>
-<!-- $Id: build.xml,v 1.9 2006/02/03 11:27:45 ctl Exp $ -->
+<!-- $Id: build.xml,v 1.10 2006/02/07 09:33:38 ctl Exp $ -->
 <project name="3dm" default="3dm" basedir=".">
 
   <description>3DM build file</description>
@@ -9,7 +9,7 @@
   <property name="src" location="src"/>
   <property name="build" location="classes"/>
   <property name="tmpdir" location="tmp"/>
-  <property name="build-jar" location="lib"/>
+  <property name="build-jar" location="build"/>
   <property name="javalib" location="contrib/jar"/>
 
   <!-- Library path -->
@@ -148,6 +148,37 @@ message="The test is successful if there are no errors, and the diff below is &l
       <arg file="mergecases/a13/m.xml"/>
     </java>
     <delete file="mergecases/a13/tmp.xml" />
+  </target>
+
+  <target name="release" depends="compile">
+    <fail unless="3dm.version">
+    You need to set the 3dm.version ant property</fail>
+    <echo>Java used to build is version ${java.version}</echo>
+    <tstamp>
+      <format property="build.stamp" pattern="yyyy.MM.dd.hh.mm.ss" />
+    </tstamp>
+    <manifest file="${build-jar}/MANIFEST.MF">
+      <attribute name="Built-By" value="${user.name}"/>
+      <attribute name="Main-Class" value="tdm.tool.TreeDiffMerge"/>
+      <attribute name="Specification-Title" value="3dm" /> 
+      <attribute name="Specification-Version" value="${3dm.version}" />
+      <attribute name="Implementation-Title" 
+                value="3DM XML differencing and merging tool" />
+      <attribute name="Implementation-Version" 
+                value="${3dm.version}-${build.stamp}" />
+    </manifest>
+    <jar jarfile="${build-jar}/3dm.jar" basedir="${build}"
+         manifest="${build-jar}/MANIFEST.MF" >
+      <include name="tdm/**" />
+      <exclude name="tdm/test/**" />
+    </jar>
+    <tar destfile="${build-jar}/3dm-${3dm.version}-src.tar.gz"
+         basedir="."
+         compression="gzip"
+         includes=
+"build.xml,COPYING,contrib/*.xml,mergecases/**,src/**,usecases/**"
+         excludes="*~" 
+         longfile="gnu" />
   </target>
 
   <target name="clean">
