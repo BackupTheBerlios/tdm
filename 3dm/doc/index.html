@@ -14,21 +14,39 @@ h1, h2 {font-family: Helvetica;}
 <i>Keywords: tree, diff, differencing, merge, merging, 3-way, XML, 
 treediff, xmldiff</i> 
 <h2>1. What is 3DM?</h2>
-          The 3DM tool is a tool for performing 3-way merging and differencing
-   of  XML files. Unlike line-based tools, such as <tt>diff</tt> and <tt>
-diff3</tt>, 3DM is aware of the structure of the processed XML documents.
-3DM   is  not  limited to update/insert/delete operations, it also handles
-<b>  moves</b>       and <b>copies</b> of entire subtrees. 3DM is not
+
+
+The 3DM tool is a tool for performing 3-way merging and differencing
+of XML files. Unlike line-based tools, such as <tt>diff</tt> and
+<tt>diff3</tt>, 3DM is aware of the structure of the processed XML
+documents.  3DM is not limited to update/insert/delete operations,
+it also handles
+<b>moves</b>       and <b>copies</b> of entire subtrees. 3DM is not
 reliant  on edit   histories;  the only input needed are the XML files. The
 tool was  implemented   as a part  of my master's thesis 
 (<a href="thesis.pdf">2.0M pdf, updated 26/12/2001</a>,
 <a href="thesis.ps.gz">3.9M .ps.gz, updated 26/12/2001</a>)
           , which is the currently recommended reading for those interested 
- in  detailed   examples (chapter 2 and 10) and the algorithms (chapters 5-9).<br>
-          These web pages will probably be updated to be more extensive if
- enough    interest for the tool arises :)<br>
- 
-<h2>2. An XML differencing example</h2>
+ in  detailed   examples (chapter 2 and 10) and the algorithms (chapters 5-9).
+<p>A more elegant (in my opinion) variation of the algorithm discards support
+for copy operations, at the same time gaining enormously in clarity and
+simplicity. The algorithm is described in the paper<br>
+Tancred Lindholm. <i>A Three-way Merge for XML Documents</i>. 
+In ACM Symposium on Document Engineering, October 2004<br>
+An author's version can be found 
+<a href="http://www.hiit.fi/fuego/fc/papers/doceng04-pc.pdf">here</a>.
+<br>
+
+
+<h2>2. News</h2>
+<ul>
+<li>7.3.2006: Updated web pages, added link to DocEng 2004 paper</li>
+<li>7.2.2006: Releases 0.1.0 and 0.1.5beta1</li>
+<li>1.1.2006: Code that handles XML specifics (e.g. comments,verbatim differencing,  DTDs) better
+  is available in CVS on the verbatim branch.
+</ul> 
+
+<h2>3. An XML differencing example</h2>
           Consider the two XML files (merge case A16 in the thesis):<br>
  <br>
  
@@ -94,7 +112,7 @@ node  identifier. &nbsp;The diff says that <tt>2.xml</tt> is formed by setting
  and node 5 from <tt>b.xml</tt>. The differencing algorithm and the format
  of the diff is described in chapter 8 of the thesis. <br>
  
-<h2>3. A 3-way merging example</h2>
+<h2>4. A 3-way merging example</h2>
     Consider the three XML files shown below: a base file (<tt>b.xml</tt>
 )  and two parallell versions (branches), <tt>1.xml</tt> and <tt>2.xml</tt>
 ,  obtained by editing <tt>b.xml</tt> in different ways. When performing
@@ -199,78 +217,48 @@ for      <tt>&lt;m&gt;</tt> which is moved as the last child of <tt>&lt;R&gt;</t
    The merging algorithm is described in chapers 6-7 of the thesis.<br>
  
 <h2>4. Obtaining 3DM</h2>
-   The Java source of &nbsp;3DM is released under the Gnu Public License
-(GPL)  and can be downloaded <a href="3dm_src.tar.gz">here (3dm_src.tar.gz)</a>
-    and <a href="3dm_src.zip">here (3dm_src.zip)</a>
-   . A pre-compiled JAR file is also available <a href="3dm.jar">here (3dm.jar)</a>
-   . <br>
-   To run 3dm, you will also need a SAX2 compilant XML parser (the default
- parser is the <a href="http://xml.apache.org/xerces-j/">Xerces parser</a>
- from the Apache project) and the GNU java-getopt package (<a href="http://www.urbanophile.com/arenn/hacking/download.html">
-home page</a>
-, <a href="java-getopt-1.0.8.jar">local copy of java-getopt-1.0.8.jar</a>
-). <br>
+   The Java source of &nbsp;3DM is released under the Lesser Gnu Public License
+(LGPL). The latest version can be found form the Files section of the
+<a href="http://developer.berlios.de/projects/tdm/">3dm project page</a>. 
+To save you a few clicks, here are links to release 0.1.0:
+<ul>
+<li><a href="http://prdownload.berlios.de/tdm/3dm-0.1.0.jar">3dm 0.1.0 binary [.jar]</a></li>
+<li><a href="http://prdownload.berlios.de/tdm/3dm-0.1.0-src.tar.gz">3dm 0.1.0 sources [.tar.gz]</a></li>
+</ul>
+
+To run 3dm, you will also need a SAX2 compilant XML parser (the
+default parser is the <a
+href="http://xml.apache.org/xerces-j/">Xerces parser</a> from the
+Apache project) and the GNU java-getopt package (<a
+href="http://www.urbanophile.com/arenn/hacking/download.html"> home
+page</a> , <a href="java-getopt-1.0.8.jar">local copy of
+java-getopt-1.0.8.jar</a> ). <br>
  
 <h2>5. Running 3DM</h2>
-   Running 3DM is easy, just start java with Xerces, java-getopt and 3dm.jar 
- (or the directory of compiled classes) in the classpath and <tt>TreeDiffMerge</tt>
-    as main class. Below are shell scripts for Linux and Windows.<br>
- 
-<h3>Linux 3dm<br>
- </h3>
- 
-<table cellpadding="0" cellspacing="0" border="1" width="100%" bgcolor="#ffff99">
-   <tbody>
-     <tr>
-       <td valign="Top"><tt>#!/bin/sh<br>
-   # 3DM startup script<br>
-   JAVA=/usr/local/jbuilder4/jdk1.3/bin/java<br>
-   JARPATH=/home/ctl/ubidoc-support/lib<br>
-   COMPILEPATH=3dm.jar<br>
-   $JAVA -cp $JARPATH/java-getopt-1.0.8.jar:$JARPATH/xerces.jar:$COMPILEPATH 
-TreeDiffMerge $*</tt><br>
-       </td>
-     </tr>
-   
-  </tbody> 
-</table>
- 
-<h3>Windows 3dm.bat<br>
- </h3>
- 
-<table cellpadding="0" cellspacing="0" border="1" width="100%" bgcolor="#ffff99">
-   <tbody>
-     <tr>
-       <td valign="Top"><tt>@echo off<br>
-   rem 3DM startup script<br>
- set JAVA=c:\bin\jbuilder5\jdk1.3\bin\java<br>
-   set JARPATH=c:\data\ubidoc-support\lib<br>
-   set COMPILEPATH=3dm.jar<br>
-   %JAVA% -cp %JARPATH%\java-getopt-1.0.8.jar;%JARPATH%/xerces.jar;%COMPILEPATH% 
-TreeDiffMerge %1 %2 %3 %4 %5 %6 %7</tt><br>
-       </td>
-     </tr>
-   
-  </tbody> 
-</table>
+
+Running 3dm is straightforward, just start java with Xerces,
+java-getopt and 3dm.jar (or the directory of compiled classes) in the
+classpath and <tt>tdm.tool.TreeDiffMerge</tt> as main class. Below
+are shell scripts for Linux and Windows.<br>
+For instance:<br>
+<code>java -cp java-getopt-1.0.8.jar:xerces.jar:3dm.jar tdm.tool.TreeDiffMerge</code>   
  
 <h2>6. Visualizing the merge</h2>
- 3DM can produce a "merge log" that lists the changes in the merged file
-compared to the base version. I've written a quick hack to visualize the
-merge log (<a href="treediff_src.tar.gz">sources .tar.gz</a>
-, <a href="treediff_src.zip">sources .zip</a>
-  and <a href="treediff.jar">.jar</a>
-  file). The main class is <tt>TreeDiff</tt>, and it requires a SAX2 parser 
-in the classpath; the .jar file is compiled for Xerces.&nbsp; The figure below
-visualizes the merge log obtained by running the previously mentioned merge
-example.<br>
- <br>
- <img src="44.png" alt="TreeDiff screenshot">
- <br>
+
+3dm can produce a "merge log" that lists the changes in the merged
+file compared to the base version. I've written a quick hack to
+visualize the merge log (<a href="treediff_src.tar.gz">sources
+.tar.gz</a> , <a href="treediff_src.zip">sources .zip</a> and <a
+href="treediff.jar">.jar</a> file). The main class is
+<tt>TreeDiff</tt>, and it requires a SAX2 parser in the classpath; the
+.jar file is compiled for Xerces.&nbsp; The figure below visualizes
+the merge log obtained by running the previously mentioned merge
+example.<br> <br> <img src="44.png" alt="TreeDiff screenshot"> <br>
  
 <h2>7. Current Limitations</h2>
- Being prototype code, some less crucial things are currently missing from 
-3DM:<br>
+
+The 0.1.0 release concentrated on core features, leaving out any "XML corner cases", 
+such as:<br> 
  
 <ol>
    <li>DTD processing. 3DM simply assumes the DTD of the input files are
@@ -281,6 +269,7 @@ entity declarations.</li>
  
 </ol>
  See chapter 10 of the thesis for a more in-depth description of the limitations.<br>
+
  
 <h2>8. Development</h2>
 An open source development project is being set up here at berliOS. Some links:
@@ -293,7 +282,7 @@ An open source development project is being set up here at berliOS. Some links:
 <table width="100%">
 <tr>
 <td>
-<i>$Id: index.html,v 1.6 2002/06/01 20:22:06 ctl Exp $</i><br>
+<i>$Id: index.html,v 1.7 2006/03/07 13:53:55 ctl Exp $</i><br>
  <br>
 </td>
 <td align="right">
